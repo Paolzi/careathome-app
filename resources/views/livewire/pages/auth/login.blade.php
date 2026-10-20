@@ -38,8 +38,12 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function quickLogin(string $role): void
     {
+        if ($role === 'admin') {
+            $this->addError('form.email', 'Akun Administrator tidak tersedia untuk simulasi 1-klik demi keamanan data.');
+            return;
+        }
+
         $email = match ($role) {
-            'admin' => 'admin@careathome.com',
             'perawat' => 'perawat@careathome.com',
             'pasien' => 'pasien@careathome.com',
             default => 'pasien@careathome.com',
@@ -82,7 +86,8 @@ new #[Layout('layouts.guest')] class extends Component
     <!-- Session Status -->
     <x-auth-session-status class="mb-4 text-xs font-semibold text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200" :status="session('status')" />
 
-    <!-- Quick Simulation Buttons (One-Click Login for Evaluators/Testing) -->
+    @if (app()->environment('local'))
+    <!-- Quick Simulation Buttons (One-Click Login for Evaluators/Testing - Pasien & Perawat Saja) -->
     <div class="mb-6 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
         <div class="flex items-center justify-between mb-2.5">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
@@ -91,30 +96,27 @@ new #[Layout('layouts.guest')] class extends Component
                 </svg>
                 Simulasi Akun 1-Klik (Demo Testing)
             </span>
-            <span class="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">Seeder Aktif</span>
+            <span class="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">Dev Local</span>
         </div>
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-2 gap-2.5">
             <button 
                 type="button" 
                 wire:click="quickLogin('pasien')"
-                class="py-2 px-2 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-[11px] font-bold text-slate-700 hover:text-emerald-800 transition shadow-sm text-center flex flex-col items-center gap-1 group">
-                <span class="text-base group-hover:scale-110 transition-transform">👤</span>
-                <span>Pasien</span>
+                class="py-2.5 px-3 rounded-xl bg-white border-2 border-emerald-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-xs font-bold text-slate-800 hover:text-emerald-900 transition shadow-sm text-center flex flex-col items-center gap-1 group">
+                <span class="text-lg group-hover:scale-110 transition-transform">👤</span>
+                <span>Masuk Pasien</span>
             </button>
             <button 
                 type="button" 
                 wire:click="quickLogin('perawat')"
-                class="py-2 px-2 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-[11px] font-bold text-slate-700 hover:text-emerald-800 transition shadow-sm text-center flex flex-col items-center gap-1 group">
-                <span class="text-base group-hover:scale-110 transition-transform">🩺</span>
-                <span>Perawat</span>
+                class="py-2.5 px-3 rounded-xl bg-white border-2 border-teal-200 hover:border-teal-500 hover:bg-teal-50/50 text-xs font-bold text-slate-800 hover:text-teal-900 transition shadow-sm text-center flex flex-col items-center gap-1 group">
+                <span class="text-lg group-hover:scale-110 transition-transform">🩺</span>
+                <span>Masuk Perawat</span>
             </button>
-            <button 
-                type="button" 
-                wire:click="quickLogin('admin')"
-                class="py-2 px-2 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-[11px] font-bold text-slate-700 hover:text-emerald-800 transition shadow-sm text-center flex flex-col items-center gap-1 group">
-                <span class="text-base group-hover:scale-110 transition-transform">🛡️</span>
-                <span>Admin</span>
-            </button>
+        </div>
+        <div class="mt-2.5 p-2 rounded-lg bg-emerald-50/60 border border-emerald-100 text-[10px] text-slate-600 leading-tight flex items-start gap-1.5">
+            <span class="text-emerald-700">🔒</span>
+            <span><strong>Catatan:</strong> Akun Admin wajib login kredensial manual demi integritas data rekam medis & keuangan.</span>
         </div>
     </div>
 
@@ -123,6 +125,7 @@ new #[Layout('layouts.guest')] class extends Component
         <div class="border-t border-slate-200 w-full"></div>
         <span class="bg-white px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Atau Masuk Manual</span>
     </div>
+    @endif
 
     <!-- Standard Login Form -->
     <form wire:submit="login" class="space-y-4">
