@@ -20,8 +20,15 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::get('demo-login/{role}', function (string $role) {
+    if (!app()->environment('local')) {
+        abort(403, 'Akses simulasi instan hanya tersedia pada environment local testing.');
+    }
+
+    if ($role === 'admin') {
+        abort(403, 'Akses simulasi untuk akun Administrator dinonaktifkan demi alasan keamanan data.');
+    }
+
     $email = match ($role) {
-        'admin' => 'admin@careathome.com',
         'perawat' => 'perawat@careathome.com',
         'pasien' => 'pasien@careathome.com',
         default => 'pasien@careathome.com',
