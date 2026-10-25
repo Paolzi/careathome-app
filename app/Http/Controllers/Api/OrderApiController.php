@@ -233,4 +233,80 @@ class OrderApiController extends Controller
             'data' => $orders,
         ]);
     }
+
+    /**
+     * Pembatalan Pesanan & Refund Escrow API (SCRUM-47).
+     * Endpoint: POST /api/v1/orders/{orderNumberOrId}/cancel
+     */
+    public function cancel(Request $request, string $orderNumberOrId): JsonResponse
+    {
+        $order = Order::where('order_number', $orderNumberOrId)
+            ->orWhere('id', $orderNumberOrId)
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pesanan tidak ditemukan.',
+            ], 404);
+        }
+
+        if (!$order->isCancellable()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pesanan tidak dapat dibatalkan karena nakes telah dalam perjalanan atau tindakan sedang berlangsung.',
+            ], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'reason' => ['required', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Alasan pembatalan wajib diisi.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $reason = $request->input('reason');
+        if ($request->filled('notes')) {
+            $reason .= ' - ' . $request->input('notes');
+        }
+
+        $refundAmount = 0.0;
+        if ($order->payment_status === 'paid') {
+            $refundAmount = (float) $order->total_amount;
+            $order->payment_status = 'refunded';
+            $order->refund_status = 'refunded';
+            $order->refund_amount = $refundAmount;
+            $order->refunded_at = now();
+            $order->refund_notes = 'Escrow refund 100% diproses via API pembatalan pesanan.';
+        } else {
+            $order->refund_status = 'none';
+        }
+
+        $order->status = 'dibatalkan';
+        $order->cancellation_reason = $reason;
+        $order->cancelled_at = now();
+        $order->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $refundAmount > 0 
+                ? 'Pesanan berhasil dibatalkan. Pengembalian dana Escrow 100% senilai Rp ' . number_format($refundAmount, 0, ',', '.') . ' telah diproses.'
+                : 'Pesanan berhasil dibatalkan.',
+            'data' => [
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'payment_status' => $order->payment_status,
+                'refund_status' => $order->refund_status,
+                'refund_amount' => $order->refund_amount,
+                'refunded_at' => $order->refunded_at?->toIso8601String(),
+                'cancelled_at' => $order->cancelled_at?->toIso8601String(),
+            ],
+        ]);
+    }
 }

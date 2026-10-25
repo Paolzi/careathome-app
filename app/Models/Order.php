@@ -35,6 +35,10 @@ class Order extends Model
         'payment_status',
         'cancellation_reason',
         'cancelled_at',
+        'refund_status',
+        'refund_amount',
+        'refunded_at',
+        'refund_notes',
     ];
 
     protected $casts = [
@@ -48,7 +52,9 @@ class Order extends Model
         'total_amount' => 'float',
         'commission_amount' => 'float',
         'nurse_earnings' => 'float',
+        'refund_amount' => 'float',
         'cancelled_at' => 'datetime',
+        'refunded_at' => 'datetime',
     ];
 
     /**
@@ -157,6 +163,27 @@ class Order extends Model
             'selesai' => 'Selesai',
             'dibatalkan' => 'Dibatalkan',
             default => ucfirst($this->status),
+        };
+    }
+
+    /**
+     * Memeriksa apakah pesanan masih memenuhi syarat untuk dibatalkan oleh pasien (SCRUM-47).
+     * Pesanan hanya dapat dibatalkan jika belum dalam perjalanan/tindakan.
+     */
+    public function isCancellable(): bool
+    {
+        return in_array($this->status, ['menunggu_konfirmasi', 'diterima']);
+    }
+
+    /**
+     * Label status refund escrow.
+     */
+    public function getRefundStatusLabelAttribute(): string
+    {
+        return match ($this->refund_status) {
+            'refunded' => 'Dana Escrow Dikembalikan (100% Refund)',
+            'pending' => 'Proses Pengembalian Escrow',
+            default => 'Tidak Ada Refund',
         };
     }
 }

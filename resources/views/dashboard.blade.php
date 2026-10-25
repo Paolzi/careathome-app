@@ -121,10 +121,10 @@
                             </p>
                         </div>
                         <div class="pt-5 mt-4 border-t border-slate-100">
-                            <a href="{{ route('pasien.katalog') }}" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
-                                <span>Pesan Kunjungan Baru</span>
+                            <a href="{{ route('pasien.pesanan') }}" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold transition">
+                                <span>Buka Jadwal Kunjungan</span>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                 </svg>
                             </a>
                         </div>

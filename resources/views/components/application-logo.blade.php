@@ -1,3 +1,5 @@
+@props(['dark' => false])
+
 <div {{ $attributes->merge(['class' => 'flex items-center gap-2.5 font-bold tracking-tight select-none']) }}>
     <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-md shadow-emerald-500/25 border border-emerald-400/30">
         <!-- Medical Cross with subtle pulse -->
@@ -10,10 +12,10 @@
         </span>
     </div>
     <div class="flex flex-col text-left">
-        <span class="text-xl font-extrabold tracking-tight text-white flex items-center gap-1">
-            Care<span class="text-emerald-400">AtHome</span>
+        <span class="text-xl font-extrabold tracking-tight {{ $dark ? 'text-slate-900' : 'text-white' }} flex items-center gap-1">
+            Care<span class="text-emerald-500">AtHome</span>
         </span>
-        <span class="text-[10px] font-semibold tracking-wider uppercase text-emerald-200/80 -mt-1">
+        <span class="text-[10px] font-semibold tracking-wider uppercase {{ $dark ? 'text-emerald-700 font-bold' : 'text-emerald-200/80' }} -mt-1">
             HomeCare Medical
         </span>
     </div>

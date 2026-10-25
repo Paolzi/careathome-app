@@ -62,7 +62,7 @@
                             Katalog Layanan
                         </a>
                         <a href="{{ route('pasien.pesanan') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            Jadwal Kunjungan Saya
+                            Jadwal Kunjungan
                         </a>
                     </nav>
                 </div>

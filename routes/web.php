@@ -23,6 +23,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('pasien/katalog', [\App\Http\Controllers\Patient\CatalogController::class, 'index'])->name('pasien.katalog');
     Route::get('pasien/pesanan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'index'])->name('pasien.pesanan');
     Route::post('pasien/pesanan/{order}/bayar', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'pay'])->name('pasien.pesanan.pay');
+    Route::post('pasien/pesanan/{order}/batal', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancel'])->name('pasien.pesanan.cancel');
 });
 
 Route::get('demo-login/{role}', function (string $role) {
