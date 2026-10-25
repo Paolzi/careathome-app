@@ -13,10 +13,14 @@ Route::view('profile', 'profile')
     ->name('profile');
 
 Route::middleware(['auth'])->group(function () {
+    // Portal Perawat
     Route::get('perawat/verifikasi', [\App\Http\Controllers\NurseVerificationController::class, 'index'])->name('perawat.verifikasi');
     Route::post('perawat/verifikasi/draft', [\App\Http\Controllers\NurseVerificationController::class, 'saveDraft'])->name('perawat.verifikasi.draft');
     Route::post('perawat/verifikasi/submit', [\App\Http\Controllers\NurseVerificationController::class, 'submit'])->name('perawat.verifikasi.submit');
     Route::delete('perawat/verifikasi/document/{type}', [\App\Http\Controllers\NurseVerificationController::class, 'deleteDocument'])->name('perawat.verifikasi.delete-doc');
+
+    // Portal Pasien (SCRUM-40: FE Katalog Layanan, Filter Kategori, Tarif & Search)
+    Route::get('pasien/katalog', [\App\Http\Controllers\Patient\CatalogController::class, 'index'])->name('pasien.katalog');
 });
 
 Route::get('demo-login/{role}', function (string $role) {
@@ -42,6 +46,10 @@ Route::get('demo-login/{role}', function (string $role) {
 
         if ($role === 'perawat') {
             return redirect()->route('perawat.verifikasi');
+        }
+
+        if ($role === 'pasien') {
+            return redirect()->route('pasien.katalog');
         }
 
         return redirect()->route('dashboard');

@@ -18,6 +18,11 @@ class NurseVerificationController extends Controller
     {
         $user = Auth::user();
 
+        // Cegah akun Pasien masuk ke alur verifikasi Nakes
+        if ($user->hasRole('pasien') && !$user->hasRole('perawat')) {
+            return redirect()->route('dashboard')->with('error', 'Halaman ini khusus untuk verifikasi mitra perawat.');
+        }
+
         // Cari atau buat profil perawat di database
         $nurseProfile = NurseProfile::firstOrCreate(
             ['user_id' => $user->id],
