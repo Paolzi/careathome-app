@@ -321,7 +321,7 @@
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                            SCRUM-37 &bull; Verifikasi Legalitas
+                            Verifikasi Mitra &bull; Legalitas Profesi
                         </span>
                         <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2">
                             Unggah Dokumen Legalitas Nakes

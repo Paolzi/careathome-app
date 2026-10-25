@@ -10,7 +10,7 @@ use Illuminate\View\View;
 class CatalogController extends Controller
 {
     /**
-     * Tampilkan katalog layanan medis untuk pasien (SCRUM-40).
+     * Tampilkan katalog layanan medis untuk pasien.
      */
     public function index(Request $request): View
     {

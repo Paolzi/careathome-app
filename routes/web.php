@@ -19,8 +19,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('perawat/verifikasi/submit', [\App\Http\Controllers\NurseVerificationController::class, 'submit'])->name('perawat.verifikasi.submit');
     Route::delete('perawat/verifikasi/document/{type}', [\App\Http\Controllers\NurseVerificationController::class, 'deleteDocument'])->name('perawat.verifikasi.delete-doc');
 
-    // Portal Pasien (SCRUM-40: FE Katalog Layanan, Filter Kategori, Tarif & Search)
+    // Portal Pasien (Katalog Layanan & Pemesanan)
     Route::get('pasien/katalog', [\App\Http\Controllers\Patient\CatalogController::class, 'index'])->name('pasien.katalog');
+    Route::get('pasien/pesanan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'index'])->name('pasien.pesanan');
+    Route::post('pasien/pesanan/{order}/bayar', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'pay'])->name('pasien.pesanan.pay');
 });
 
 Route::get('demo-login/{role}', function (string $role) {

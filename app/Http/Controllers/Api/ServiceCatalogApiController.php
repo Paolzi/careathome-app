@@ -11,7 +11,6 @@ class ServiceCatalogApiController extends Controller
 {
     /**
      * Display a listing of active service catalog with search & filtering.
-     * (SCRUM-41: BE API Master Katalog & Filtering Layanan)
      */
     public function index(Request $request): JsonResponse
     {

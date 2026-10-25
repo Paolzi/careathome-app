@@ -13,7 +13,13 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->group(function () {
-    // SCRUM-41: BE API Master Katalog & Filtering Layanan
     Route::get('/katalog', [ServiceCatalogApiController::class, 'index'])->name('api.katalog.index');
     Route::get('/katalog/{slugOrId}', [ServiceCatalogApiController::class, 'show'])->name('api.katalog.show');
+
+    // API Pemesanan & Kalkulasi Biaya (Order Booking & Price Engine)
+    Route::post('/orders/calculate-price', [\App\Http\Controllers\Api\OrderApiController::class, 'calculatePrice'])->name('api.orders.calculate-price');
+    Route::post('/orders', [\App\Http\Controllers\Api\OrderApiController::class, 'store'])->name('api.orders.store');
+    Route::get('/orders/{orderNumberOrId}', [\App\Http\Controllers\Api\OrderApiController::class, 'show'])->name('api.orders.show');
+    Route::get('/orders', [\App\Http\Controllers\Api\OrderApiController::class, 'index'])->name('api.orders.index');
 });
+

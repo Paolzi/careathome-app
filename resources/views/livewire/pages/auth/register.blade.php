@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
+use Spatie\Permission\Models\Role;
 
 new #[Layout('layouts.guest')] class extends Component
 {
@@ -62,7 +63,8 @@ new #[Layout('layouts.guest')] class extends Component
             'password' => Hash::make($this->password),
         ]);
 
-        // Tetapkan Spatie Role
+        // Tetapkan Spatie Role (pastikan role ada di database)
+        Role::firstOrCreate(['name' => $this->role, 'guard_name' => 'web']);
         $user->assignRole($this->role);
 
         event(new Registered($user));

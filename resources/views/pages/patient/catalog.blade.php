@@ -14,8 +14,13 @@
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    <!-- Leaflet CSS & JS for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <style>
         [x-cloak] { display: none !important; }
+        .leaflet-container { font-family: inherit; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col"
@@ -55,6 +60,9 @@
                         </a>
                         <a href="{{ route('pasien.katalog') }}" class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 transition">
                             Katalog Layanan
+                        </a>
+                        <a href="{{ route('pasien.pesanan') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Jadwal Kunjungan Saya
                         </a>
                     </nav>
                 </div>
@@ -496,9 +504,9 @@
         </div>
     </div>
 
-    <!-- 8. MODAL: BOOKING PREVIEW MODAL -->
+    <!-- 8. MODAL: MULTI-STEP PEMESANAN & PENJADWALAN KUNJUNGAN PASIEN -->
     <div x-show="bookingModalOpen" x-cloak
-        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
         x-transition:enter="ease-out duration-200"
         x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100"
@@ -506,70 +514,428 @@
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0">
 
-        <div @click.away="bookingModalOpen = false"
-            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800"
+        <div @click.away="if (!submittingOrder && !orderSuccess) bookingModalOpen = false"
+            class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 flex flex-col max-h-[92vh]"
             x-transition:enter="ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100">
 
-            <div class="p-6 bg-emerald-600 text-white flex items-center justify-between">
-                <div>
-                    <span class="text-emerald-100 text-xs font-semibold uppercase tracking-wider">Konfirmasi Pemilihan Layanan</span>
-                    <h3 class="text-xl font-bold mt-0.5">Siap Melakukan Pemesanan</h3>
+            <!-- Modal Header -->
+            <div class="px-6 py-5 bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-2xl" x-text="activeService?.image_emoji"></div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/40 border border-white/20 text-emerald-100">
+                                Formulir Pemesanan &amp; Penjadwalan
+                            </span>
+                            <span class="text-xs text-emerald-200 font-medium" x-show="!orderSuccess">
+                                Langkah <span x-text="bookingStep"></span> dari 3
+                            </span>
+                        </div>
+                        <h3 class="text-lg sm:text-xl font-bold tracking-tight mt-0.5" x-text="activeService?.name"></h3>
+                    </div>
                 </div>
-                <button type="button" @click="bookingModalOpen = false" class="text-emerald-200 hover:text-white p-1">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="button" @click="closeBookingModal()" class="text-emerald-200 hover:text-white p-1 rounded-xl hover:bg-white/10 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
-            <div class="p-6 space-y-4">
-                <div class="flex items-center gap-3.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-                    <div class="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-2xl" x-text="activeService?.image_emoji"></div>
-                    <div>
-                        <h4 class="text-sm font-bold text-slate-900" x-text="activeService?.name"></h4>
-                        <p class="text-xs text-slate-500" x-text="activeService?.category"></p>
+            <!-- Stepper Progress Bar (Only visible before success) -->
+            <div x-show="!orderSuccess" class="bg-slate-50 border-b border-slate-200 px-6 py-3 shrink-0">
+                <div class="flex items-center justify-between max-w-md mx-auto">
+                    <!-- Step 1 Indicator -->
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                            :class="bookingStep >= 1 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200 text-slate-500'">
+                            1
+                        </div>
+                        <span class="text-xs font-semibold" :class="bookingStep === 1 ? 'text-emerald-700' : 'text-slate-500'">Jadwal &amp; Pasien</span>
                     </div>
-                </div>
 
-                <!-- Price Breakdown Estimate -->
-                <div class="space-y-2 text-xs">
-                    <p class="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Estimasi Rincian Biaya (Price Breakdown):</p>
-                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                        <div class="flex justify-between text-slate-600">
-                            <span>Tarif Tindakan Medis:</span>
-                            <span class="font-semibold text-slate-900" x-text="activeService?.formatted_price"></span>
+                    <div class="h-0.5 w-8 sm:w-12 bg-slate-200" :class="bookingStep >= 2 ? 'bg-emerald-500' : 'bg-slate-200'"></div>
+
+                    <!-- Step 2 Indicator -->
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                            :class="bookingStep >= 2 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200 text-slate-500'">
+                            2
                         </div>
-                        <div class="flex justify-between text-slate-600">
-                            <span>Biaya Layanan Platform:</span>
-                            <span class="font-semibold text-slate-900">Rp 5.000</span>
-                        </div>
-                        <div class="flex justify-between text-slate-600">
-                            <span>Ongkos Transport GPS:</span>
-                            <span class="text-emerald-600 font-semibold italic">Dihitung pada tahap penentuan alamat</span>
-                        </div>
+                        <span class="text-xs font-semibold" :class="bookingStep === 2 ? 'text-emerald-700' : 'text-slate-500'">Alamat &amp; GPS</span>
                     </div>
-                </div>
 
-                <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
-                    <span class="text-base">ℹ️</span>
-                    <p>
-                        Tahap selanjutnya adalah <strong>Penentuan Tanggal &amp; Waktu Kunjungan serta Titik Alamat GPS</strong>.
-                    </p>
+                    <div class="h-0.5 w-8 sm:w-12 bg-slate-200" :class="bookingStep >= 3 ? 'bg-emerald-500' : 'bg-slate-200'"></div>
+
+                    <!-- Step 3 Indicator -->
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                            :class="bookingStep >= 3 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200 text-slate-500'">
+                            3
+                        </div>
+                        <span class="text-xs font-semibold" :class="bookingStep === 3 ? 'text-emerald-700' : 'text-slate-500'">Rincian Biaya</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="p-4 sm:p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
-                <button type="button" @click="bookingModalOpen = false" class="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition">
-                    Kembali ke Katalog
-                </button>
-                <button type="button" @click="proceedToBooking()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center gap-1.5">
-                    <span>Lanjut ke Penjadwalan &amp; Alamat</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                </button>
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-6 overflow-y-auto space-y-5 grow">
+
+                <!-- Alert Pesan Error Validasi -->
+                <div x-show="errorMessage" x-cloak class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-3">
+                    <span class="text-base font-bold text-rose-500">⚠️</span>
+                    <div class="grow" x-text="errorMessage"></div>
+                    <button type="button" @click="errorMessage = ''" class="text-rose-400 hover:text-rose-700 font-bold">✕</button>
+                </div>
+
+                <!-- ==================== STEP 1: JADWAL & DATA PASIEN ==================== -->
+                <div x-show="bookingStep === 1 && !orderSuccess" class="space-y-4">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h4 class="text-sm font-bold text-slate-900">Penentuan Jadwal &amp; Data Penerima Layanan</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">Pilih tanggal dan sesi jam kunjungan perawat ke lokasi Anda.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Tanggal Kunjungan -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Tanggal Kunjungan <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="date"
+                                x-model="bookingForm.scheduled_date"
+                                :min="todayDate"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs" />
+                            <p class="text-[10px] text-slate-400 mt-1">Dapat dijadwalkan mulai hari ini atau hari berikutnya.</p>
+                        </div>
+
+                        <!-- Sesi Waktu Kunjungan -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Sesi Waktu Kunjungan <span class="text-rose-500">*</span>
+                            </label>
+                            <select x-model="bookingForm.scheduled_time"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs">
+                                <option value="08:00 - 10:00">Pagi (08:00 - 10:00 WIB)</option>
+                                <option value="10:30 - 12:30">Siang (10:30 - 12:30 WIB)</option>
+                                <option value="13:30 - 15:30">Siang-Sore (13:30 - 15:30 WIB)</option>
+                                <option value="16:00 - 18:00">Sore (16:00 - 18:00 WIB)</option>
+                                <option value="19:00 - 21:00">Malam (19:00 - 21:00 WIB)</option>
+                            </select>
+                            <p class="text-[10px] text-slate-400 mt-1">Estimasi kedatangan perawat di awal rentang sesi.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Nama Lengkap Pasien -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Nama Pasien <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text"
+                                x-model="bookingForm.patient_name"
+                                placeholder="Contoh: Bpk. Gunawan / Ibu Ratna"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs" />
+                        </div>
+
+                        <!-- Nomor Kontak WhatsApp -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                Nomor WhatsApp / HP Aktif <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="tel"
+                                x-model="bookingForm.patient_phone"
+                                placeholder="08xxxxxxxxxx"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs" />
+                        </div>
+                    </div>
+
+                    <!-- Catatan Kondisi Klinis / Keluhan Awal -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Catatan Kondisi Medis / Keluhan Awal Pasien
+                        </label>
+                        <textarea x-model="bookingForm.clinical_notes"
+                            rows="2"
+                            placeholder="Deskripsikan kondisi terkini, misal: luka pasca operasi hari ke-5, sudah ada resep salep dokter, pasien tirah baring..."
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs"></textarea>
+                    </div>
+
+                    <!-- Unggah Foto Kondisi Medis (Opsional) -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Foto Area Tindakan / Luka (Opsional)
+                        </label>
+                        <input type="file"
+                            accept="image/*"
+                            @change="handlePhotoUpload($event)"
+                            class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" />
+                        <p class="text-[10px] text-slate-400 mt-1">Membantu perawat mempersiapkan alat steril &amp; balutan yang sesuai (Maksimal 5 MB, JPG/PNG).</p>
+                    </div>
+                </div>
+
+                <!-- ==================== STEP 2: ALAMAT & LOKASI GPS (LEAFLET) ==================== -->
+                <div x-show="bookingStep === 2 && !orderSuccess" class="space-y-4">
+                    <div class="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-900">Alamat Kunjungan &amp; Titik Lokasi GPS</h4>
+                            <p class="text-xs text-slate-500 mt-0.5">Tentukan titik akurat untuk navigasi perawat dan perhitungan tarif transportasi.</p>
+                        </div>
+                        <button type="button"
+                            @click="detectCurrentLocation()"
+                            :disabled="detectingLocation"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition shrink-0">
+                            <span x-show="!detectingLocation">📍</span>
+                            <span x-show="detectingLocation" class="animate-spin text-xs">⏳</span>
+                            <span x-text="detectingLocation ? 'Mencari GPS...' : 'Deteksi Lokasi Saya'"></span>
+                        </button>
+                    </div>
+
+                    <!-- Alamat Lengkap & Patokan -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                            Alamat Lengkap Rumah / Patokan Lokasi <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea x-model="bookingForm.address"
+                            rows="2"
+                            placeholder="Jl. Mawar No. 12, RT 03/RW 05 (Pagar hitam samping pos satpam), Kelurahan..."
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs"></textarea>
+                    </div>
+
+                    <!-- Peta Leaflet Interaktif -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-xs font-bold text-slate-700">
+                                Titik Pinpoint Peta Digital (Geser marker untuk menyesuaikan titik)
+                            </label>
+                            <span class="text-[11px] text-slate-500 font-medium">
+                                Koordinat: <span class="font-mono text-emerald-700 font-semibold" x-text="bookingForm.latitude + ', ' + bookingForm.longitude"></span>
+                            </span>
+                        </div>
+                        
+                        <div id="bookingLeafletMap" class="w-full h-56 rounded-2xl border border-slate-200 shadow-inner z-0"></div>
+                        <p class="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
+                            <span>💡</span> Klik di peta atau geser pin merah untuk menggeser titik koordinat penjemputan perawat.
+                        </p>
+                    </div>
+
+                    <!-- Jarak & Radius Operasional Box -->
+                    <div class="p-3.5 rounded-2xl border flex items-center justify-between"
+                        :class="bookingForm.distance_km <= 10.0 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                                :class="bookingForm.distance_km <= 10.0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'">
+                                <span x-show="bookingForm.distance_km <= 10.0">🛵</span>
+                                <span x-show="bookingForm.distance_km > 10.0">⚠️</span>
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold">
+                                    Estimasi Jarak dari Pusat Nakes: <span class="text-sm font-black" x-text="bookingForm.distance_km + ' km'"></span>
+                                </div>
+                                <div class="text-[11px]"
+                                    x-text="bookingForm.distance_km <= 10.0 ? '✓ Lokasi berada di dalam radius operasional layanan homecare (Maks. 10 km)' : 'Lokasi melebihi radius operasional maksimal (10 km).'"></div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Ongkos Transport</span>
+                            <span class="text-xs font-bold text-emerald-700" x-text="breakdown.formatted.transport_fee"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== STEP 3: RINCIAN BIAYA & KONFIRMASI ==================== -->
+                <div x-show="bookingStep === 3 && !orderSuccess" class="space-y-4">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h4 class="text-sm font-bold text-slate-900">Rincian Biaya (Price Breakdown) &amp; Konfirmasi</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">Periksa kembali ringkasan pesanan dan transparansi biaya sebelum mengonfirmasi.</p>
+                    </div>
+
+                    <!-- Ringkasan Informasi Pesanan -->
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Layanan Tindakan</span>
+                                <span class="font-bold text-slate-900" x-text="activeService?.name"></span>
+                                <span class="text-[11px] text-slate-500 block" x-text="'Durasi: ' + activeService?.estimated_duration"></span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Jadwal Kunjungan</span>
+                                <span class="font-bold text-slate-900" x-text="formatDisplayDate(bookingForm.scheduled_date)"></span>
+                                <span class="text-[11px] text-emerald-700 font-semibold block" x-text="bookingForm.scheduled_time"></span>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-200/80 pt-2 grid grid-cols-2 gap-3">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Nama Pasien &amp; Kontak</span>
+                                <span class="font-semibold text-slate-900" x-text="bookingForm.patient_name"></span>
+                                <span class="text-[11px] text-slate-500 block" x-text="bookingForm.patient_phone"></span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Alamat Kunjungan</span>
+                                <span class="text-slate-800 line-clamp-2" x-text="bookingForm.address"></span>
+                            </div>
+                        </div>
+
+                        <template x-if="bookingForm.clinical_notes">
+                            <div class="border-t border-slate-200/80 pt-2">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Catatan Medis Awal:</span>
+                                <p class="text-slate-700 italic" x-text="bookingForm.clinical_notes"></p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Breakdown Biaya Transparan -->
+                    <div class="rounded-2xl border border-slate-200 overflow-hidden text-xs">
+                        <div class="px-4 py-2.5 bg-slate-100/80 font-bold text-slate-700 flex justify-between items-center">
+                            <span>Komponen Rincian Biaya</span>
+                            <span>Tarif Transparan</span>
+                        </div>
+                        <div class="p-4 space-y-2.5 bg-white">
+                            <div class="flex justify-between items-center text-slate-600">
+                                <span>Tarif Tindakan Medis Standar:</span>
+                                <span class="font-semibold text-slate-900" x-text="breakdown.formatted.base_price"></span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-600">
+                                <span class="flex items-center gap-1">
+                                    <span>Ongkos Transportasi GPS:</span>
+                                    <span class="text-[10px] text-slate-400" x-text="'(' + bookingForm.distance_km + ' km)'"></span>
+                                </span>
+                                <span class="font-semibold text-slate-900" x-text="breakdown.formatted.transport_fee"></span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-600">
+                                <span>Biaya Layanan Aplikasi (Platform Fee):</span>
+                                <span class="font-semibold text-slate-900" x-text="breakdown.formatted.platform_fee"></span>
+                            </div>
+
+                            <div class="border-t border-slate-200 pt-3 flex justify-between items-baseline">
+                                <div>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-900 block">Total Tagihan</span>
+                                    <span class="text-[10px] text-slate-500">Sudah termasuk PPN &amp; seluruh komponen</span>
+                                </div>
+                                <span class="text-xl font-extrabold text-emerald-700" x-text="breakdown.formatted.total_amount"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Perlindungan Escrow -->
+                    <div class="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-teal-900 text-xs flex items-start gap-2.5">
+                        <span class="text-lg">🛡️</span>
+                        <div>
+                            <span class="font-bold block">Garansi Perlindungan Rekening Penampung (Escrow)</span>
+                            <span class="text-[11px] text-teal-800 leading-relaxed block mt-0.5">
+                                Pembayaran ditampung di rekening bersama platform dan baru diteruskan kepada perawat setelah kunjungan medis terlaksana dan E-Report telah Anda setujui.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== STEP 4: ORDER CREATED SUCCESS STATE ==================== -->
+                <div x-show="orderSuccess" class="py-6 text-center space-y-4">
+                    <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center text-3xl shadow-sm">
+                        ✓
+                    </div>
+                    <div>
+                        <span class="text-xs uppercase font-bold tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                            Pesanan Kunjungan Berhasil Dibuat
+                        </span>
+                        <h3 class="text-xl font-bold text-slate-900 mt-2">Permintaan Layanan Siap Diteruskan</h3>
+                        <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                            Pesanan Anda telah tercatat ke dalam sistem CareAtHome dan akan segera dikonfirmasi oleh mitra perawat terdekat.
+                        </p>
+                    </div>
+
+                    <div class="max-w-md mx-auto p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Nomor Pesanan:</span>
+                            <span class="font-mono font-bold text-slate-900" x-text="createdOrderData?.order_number"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Layanan:</span>
+                            <span class="font-semibold text-slate-900" x-text="activeService?.name"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Jadwal:</span>
+                            <span class="font-semibold text-slate-900" x-text="createdOrderData?.scheduled_date + ' (' + createdOrderData?.scheduled_time + ')'"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Total Biaya:</span>
+                            <span class="font-bold text-emerald-700" x-text="createdOrderData?.price_breakdown?.formatted?.total_amount"></span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+                            <span class="text-slate-500">Status Awal:</span>
+                            <span class="px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-[11px]">
+                                Menunggu Konfirmasi Perawat
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer Controls -->
+            <div class="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+                <!-- Left Action -->
+                <div>
+                    <button type="button"
+                        x-show="bookingStep > 1 && !orderSuccess"
+                        @click="prevStep()"
+                        class="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span>Kembali</span>
+                    </button>
+                    <button type="button"
+                        x-show="bookingStep === 1 && !orderSuccess"
+                        @click="closeBookingModal()"
+                        class="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition">
+                        Batal
+                    </button>
+                </div>
+
+                <!-- Right Action -->
+                <div>
+                    <!-- Step 1 & 2: Tombol Lanjut -->
+                    <button type="button"
+                        x-show="bookingStep < 3 && !orderSuccess"
+                        @click="nextStep()"
+                        class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
+                        <span>Lanjut ke Tahap Berikutnya</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+
+                    <!-- Step 3: Tombol Konfirmasi Pesanan -->
+                    <button type="button"
+                        x-show="bookingStep === 3 && !orderSuccess"
+                        @click="submitOrder()"
+                        :disabled="submittingOrder || bookingForm.distance_km > 10.0"
+                        class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition flex items-center gap-2">
+                        <span x-show="submittingOrder" class="animate-spin text-sm">⏳</span>
+                        <span x-text="submittingOrder ? 'Memproses Pesanan...' : 'Konfirmasi &amp; Buat Pesanan'"></span>
+                        <svg x-show="!submittingOrder" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </button>
+
+                    <!-- Success State: Tombol Selesai & Ke Jadwal Saya -->
+                    <div x-show="orderSuccess" class="flex items-center gap-2">
+                        <a href="{{ route('pasien.pesanan') }}"
+                            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md">
+                            <span>Lihat di Jadwal Saya &amp; Bayar</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </a>
+                        <button type="button"
+                            @click="closeBookingModal()"
+                            class="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition">
+                            Tutup
+                        </button>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -582,9 +948,11 @@
         </div>
     </footer>
 
-    <!-- Alpine App Logic for Instant Filtering and Search -->
+    <!-- Alpine App Logic for Instant Filtering, Search, and Multi-Step Booking -->
     <script>
         function patientCatalogApp() {
+            const today = new Date().toISOString().split('T')[0];
+
             return {
                 rawServices: @json($services),
                 availableCategories: @json($categories),
@@ -596,6 +964,45 @@
                 detailModalOpen: false,
                 bookingModalOpen: false,
                 activeService: null,
+
+                // State Booking & Penjadwalan
+                bookingStep: 1,
+                todayDate: today,
+                submittingOrder: false,
+                orderSuccess: false,
+                createdOrderData: null,
+                errorMessage: '',
+                detectingLocation: false,
+                uploadedPhotoFile: null,
+
+                bookingForm: {
+                    scheduled_date: today,
+                    scheduled_time: '08:00 - 10:00',
+                    patient_name: @json(auth()->user()?->name ?? 'Pasien CareAtHome'),
+                    patient_phone: '081234567890',
+                    address: '',
+                    latitude: -6.2088,
+                    longitude: 106.8456,
+                    distance_km: 2.5,
+                    clinical_notes: '',
+                },
+
+                breakdown: {
+                    base_price: 0,
+                    distance_km: 2.5,
+                    transport_fee: 10000,
+                    platform_fee: 5000,
+                    total_amount: 15000,
+                    formatted: {
+                        base_price: 'Rp 0',
+                        transport_fee: 'Rp 10.000',
+                        platform_fee: 'Rp 5.000',
+                        total_amount: 'Rp 15.000',
+                    }
+                },
+
+                map: null,
+                marker: null,
 
                 initData() {
                     this.filterServices();
@@ -622,12 +1029,10 @@
                 filterServices() {
                     let items = [...this.rawServices];
 
-                    // 1. Filter Kategori
                     if (this.selectedCategory && this.selectedCategory !== 'Semua') {
                         items = items.filter(s => s.category === this.selectedCategory);
                     }
 
-                    // 2. Filter Search Keyword
                     if (this.search && this.search.trim().length > 0) {
                         const q = this.search.toLowerCase().trim();
                         items = items.filter(s => {
@@ -639,7 +1044,6 @@
                         });
                     }
 
-                    // 3. Filter Rentang Tarif
                     if (this.priceBracket === 'under_150k') {
                         items = items.filter(s => parseFloat(s.price) < 150000);
                     } else if (this.priceBracket === '150k_200k') {
@@ -648,7 +1052,6 @@
                         items = items.filter(s => parseFloat(s.price) > 200000);
                     }
 
-                    // 4. Pengurutan (Sorting)
                     items.sort((a, b) => {
                         if (this.sortBy === 'termurah') {
                             return parseFloat(a.price) - parseFloat(b.price);
@@ -671,15 +1074,291 @@
 
                 openBookingModal(service) {
                     this.activeService = service;
+                    this.bookingStep = 1;
+                    this.orderSuccess = false;
+                    this.createdOrderData = null;
+                    this.errorMessage = '';
+                    this.uploadedPhotoFile = null;
                     this.bookingModalOpen = true;
+
+                    this.fetchPriceBreakdown();
                 },
 
-                proceedToBooking() {
-                    alert('Layanan "' + this.activeService.name + '" dipilih! Menuju modul form pemesanan dan jadwal.');
+                closeBookingModal() {
                     this.bookingModalOpen = false;
+                    this.bookingStep = 1;
+                    this.errorMessage = '';
+                    this.orderSuccess = false;
+                },
+
+                nextStep() {
+                    this.errorMessage = '';
+
+                    // Validasi Step 1
+                    if (this.bookingStep === 1) {
+                        if (!this.bookingForm.scheduled_date) {
+                            this.errorMessage = 'Silakan pilih tanggal kunjungan terlebih dahulu.';
+                            return;
+                        }
+                        if (!this.bookingForm.scheduled_time) {
+                            this.errorMessage = 'Silakan pilih sesi waktu kunjungan.';
+                            return;
+                        }
+                        if (!this.bookingForm.patient_name || this.bookingForm.patient_name.trim().length === 0) {
+                            this.errorMessage = 'Nama lengkap pasien wajib diisi.';
+                            return;
+                        }
+                        if (!this.bookingForm.patient_phone || this.bookingForm.patient_phone.trim().length < 8) {
+                            this.errorMessage = 'Nomor telepon/WhatsApp aktif wajib diisi minimal 8 digit.';
+                            return;
+                        }
+
+                        this.bookingStep = 2;
+                        this.initLeafletMap();
+                        return;
+                    }
+
+                    // Validasi Step 2
+                    if (this.bookingStep === 2) {
+                        if (!this.bookingForm.address || this.bookingForm.address.trim().length < 5) {
+                            this.errorMessage = 'Silakan masukkan alamat lengkap rumah atau patokan lokasi kunjungan.';
+                            return;
+                        }
+                        if (this.bookingForm.distance_km > 10.0) {
+                            this.errorMessage = 'Lokasi di luar radius operasional maksimal (10 km). Silakan pilih lokasi terdekat.';
+                            return;
+                        }
+
+                        this.bookingStep = 3;
+                        this.fetchPriceBreakdown();
+                        return;
+                    }
+                },
+
+                prevStep() {
+                    this.errorMessage = '';
+                    if (this.bookingStep > 1) {
+                        this.bookingStep--;
+                        if (this.bookingStep === 2) {
+                            this.initLeafletMap();
+                        }
+                    }
+                },
+
+                initLeafletMap() {
+                    this.$nextTick(() => {
+                        const container = document.getElementById('bookingLeafletMap');
+                        if (!container) return;
+
+                        if (!this.map) {
+                            const lat = this.bookingForm.latitude;
+                            const lng = this.bookingForm.longitude;
+
+                            this.map = L.map('bookingLeafletMap').setView([lat, lng], 14);
+
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 19,
+                                attribution: '&copy; OpenStreetMap'
+                            }).addTo(this.map);
+
+                            this.marker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
+
+                            this.marker.on('dragend', (e) => {
+                                const pos = e.target.getLatLng();
+                                this.updateLocation(pos.lat, pos.lng);
+                            });
+
+                            this.map.on('click', (e) => {
+                                this.marker.setLatLng(e.latlng);
+                                this.updateLocation(e.latlng.lat, e.latlng.lng);
+                            });
+                        } else {
+                            setTimeout(() => {
+                                this.map.invalidateSize();
+                            }, 100);
+                        }
+                    });
+                },
+
+                detectCurrentLocation() {
+                    if (!navigator.geolocation) {
+                        this.errorMessage = 'Fitur geolokasi tidak didukung oleh browser Anda.';
+                        return;
+                    }
+
+                    this.detectingLocation = true;
+                    this.errorMessage = '';
+
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            this.detectingLocation = false;
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+
+                            this.updateLocation(lat, lng);
+
+                            if (this.map && this.marker) {
+                                this.map.setView([lat, lng], 15);
+                                this.marker.setLatLng([lat, lng]);
+                            }
+                        },
+                        (err) => {
+                            this.detectingLocation = false;
+                            this.errorMessage = 'Gagal mendeteksi lokasi GPS: ' + (err.message || 'Izin akses lokasi ditolak');
+                        },
+                        { timeout: 10000, enableHighAccuracy: true }
+                    );
+                },
+
+                updateLocation(lat, lng) {
+                    this.bookingForm.latitude = parseFloat(lat.toFixed(6));
+                    this.bookingForm.longitude = parseFloat(lng.toFixed(6));
+
+                    // Titik koordinat acuan pos layanan/nakes
+                    const baseLat = -6.1754;
+                    const baseLng = 106.8272;
+                    const dist = this.haversineDistance(baseLat, baseLng, lat, lng);
+
+                    this.bookingForm.distance_km = Math.min(Math.max(parseFloat(dist.toFixed(1)), 0.5), 15.0);
+                    this.fetchPriceBreakdown();
+                },
+
+                haversineDistance(lat1, lon1, lat2, lon2) {
+                    const R = 6371; // km
+                    const dLat = (lat2 - lat1) * Math.PI / 180;
+                    const dLon = (lon2 - lon1) * Math.PI / 180;
+                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    return R * c;
+                },
+
+                fetchPriceBreakdown() {
+                    if (!this.activeService) return;
+
+                    const servicePrice = parseFloat(this.activeService.price);
+                    const distance = this.bookingForm.distance_km || 2.5;
+
+                    // Hitung lokal instan
+                    let transport = 10000;
+                    if (distance > 3.0) {
+                        transport = 10000 + (Math.ceil(distance - 3.0) * 2500);
+                    }
+                    const platform = 5000;
+                    const total = servicePrice + transport + platform;
+
+                    this.breakdown = {
+                        base_price: servicePrice,
+                        distance_km: distance,
+                        transport_fee: transport,
+                        platform_fee: platform,
+                        total_amount: total,
+                        formatted: {
+                            base_price: 'Rp ' + Number(servicePrice).toLocaleString('id-ID'),
+                            transport_fee: 'Rp ' + Number(transport).toLocaleString('id-ID'),
+                            platform_fee: 'Rp ' + Number(platform).toLocaleString('id-ID'),
+                            total_amount: 'Rp ' + Number(total).toLocaleString('id-ID'),
+                        }
+                    };
+
+                    // Sinkronisasi via API kalkulasi harga resmi
+                    fetch('{{ route("api.orders.calculate-price") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify({
+                            service_catalog_id: this.activeService.id,
+                            distance_km: distance,
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res.status === 'success' && res.data) {
+                            this.breakdown = res.data;
+                        }
+                    })
+                    .catch(() => {
+                        // Fallback ke hitungan lokal jika offline
+                    });
+                },
+
+                handlePhotoUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('Ukuran berkas melebihi 5 MB. Silakan pilih foto lain.');
+                            event.target.value = '';
+                            return;
+                        }
+                        this.uploadedPhotoFile = file;
+                    }
+                },
+
+                submitOrder() {
+                    if (this.submittingOrder) return;
+                    this.submittingOrder = true;
+                    this.errorMessage = '';
+
+                    const formData = new FormData();
+                    formData.append('service_catalog_id', this.activeService.id);
+                    formData.append('scheduled_date', this.bookingForm.scheduled_date);
+                    formData.append('scheduled_time', this.bookingForm.scheduled_time);
+                    formData.append('patient_name', this.bookingForm.patient_name);
+                    formData.append('patient_phone', this.bookingForm.patient_phone);
+                    formData.append('address', this.bookingForm.address);
+                    formData.append('latitude', this.bookingForm.latitude);
+                    formData.append('longitude', this.bookingForm.longitude);
+                    formData.append('distance_km', this.bookingForm.distance_km);
+
+                    if (this.bookingForm.clinical_notes) {
+                        formData.append('clinical_notes', this.bookingForm.clinical_notes);
+                    }
+                    if (this.uploadedPhotoFile) {
+                        formData.append('medical_photo', this.uploadedPhotoFile);
+                    }
+
+                    fetch('{{ route("api.orders.store") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: formData,
+                    })
+                    .then(async (response) => {
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Terjadi kesalahan saat memproses pesanan.');
+                        }
+                        return data;
+                    })
+                    .then((data) => {
+                        this.submittingOrder = false;
+                        this.orderSuccess = true;
+                        this.createdOrderData = data.data;
+                    })
+                    .catch((err) => {
+                        this.submittingOrder = false;
+                        this.errorMessage = err.message || 'Gagal mengirim pesanan. Silakan coba kembali.';
+                    });
+                },
+
+                formatDisplayDate(dateStr) {
+                    if (!dateStr) return '-';
+                    const parts = dateStr.split('-');
+                    if (parts.length === 3) {
+                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                        return parts[2] + ' ' + months[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
+                    }
+                    return dateStr;
                 }
             };
         }
     </script>
 </body>
 </html>
+
