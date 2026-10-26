@@ -28,7 +28,7 @@
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                
+
                 <!-- Left: Brand Logo & Portal Tag -->
                 <div class="flex items-center gap-3">
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 group">
@@ -164,7 +164,7 @@
             <div class="flex items-center justify-between border-b border-slate-200 pb-3">
                 <div>
                     <h2 class="text-base font-extrabold text-slate-900">Tagihan Menunggu Pembayaran</h2>
-                    <p class="text-xs text-slate-500">Pilih metode pembayaran non-tunai untuk mengunci dana ke rekening penampung sebelum nakes menuju lokasi.</p>
+                    <p class="text-xs text-slate-500">Silakan pilih metode pembayaran non-tunai untuk mengunci dana ke rekening penampung sebelum nakes menuju lokasi.</p>
                 </div>
                 <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                     {{ $totalPending }} Menunggu Pembayaran
@@ -448,3 +448,4 @@
     </script>
 </body>
 </html>
+{{-- SCRUM-44: UI gateway pembayaran escrow dan konfirmasi pasien --}}
