@@ -68,14 +68,9 @@
                     </nav>
                 </div>
 
-                <!-- Right Actions: User Info & CTA -->
+                <!-- Right Actions: User Info -->
                 <div class="flex items-center gap-3">
-                    <a href="{{ route('pasien.katalog') }}"
-                        class="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm shadow-emerald-600/20 transition">
-                        <span>+ Pesan Layanan Baru</span>
-                    </a>
-
-                    <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                    <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold">
                             {{ substr(auth()->user()?->name ?? 'P', 0, 1) }}
                         </div>
