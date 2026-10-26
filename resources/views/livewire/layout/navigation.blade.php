@@ -60,8 +60,19 @@ new class extends Component
                         </a>
 
                         <a href="{{ route('pasien.pesanan') }}" 
-                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('pasien.pesanan*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            {{ __('Jadwal Kunjungan') }}
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('pasien.pesanan') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Jadwal & Detail Booking') }}
+                        </a>
+
+                        <a href="{{ route('pasien.pembayaran') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 {{ request()->routeIs('pasien.pembayaran') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            <span>{{ __('Pembayaran Escrow') }}</span>
+                            <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Escrow</span>
+                        </a>
+
+                        <a href="{{ route('pasien.pembatalan') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('pasien.pembatalan') ? 'font-bold text-rose-700 bg-rose-50 border border-rose-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Pembatalan & Refund') }}
                         </a>
                     @endif
                 </div>
@@ -131,8 +142,16 @@ new class extends Component
                     {{ __('Katalog Layanan') }}
                 </a>
 
-                <a href="{{ route('pasien.pesanan') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.pesanan*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
-                    {{ __('Jadwal Kunjungan') }}
+                <a href="{{ route('pasien.pesanan') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.pesanan') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Jadwal & Detail Booking') }}
+                </a>
+
+                <a href="{{ route('pasien.pembayaran') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.pembayaran') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Pembayaran Escrow') }}
+                </a>
+
+                <a href="{{ route('pasien.pembatalan') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.pembatalan') ? 'font-bold text-rose-700 bg-rose-50 border border-rose-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Pembatalan & Refund') }}
                 </a>
             @endif
         </div>

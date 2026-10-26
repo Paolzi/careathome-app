@@ -14,9 +14,12 @@
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- Leaflet CSS & JS for Interactive Map Tracking (SCRUM-46) -->
+    <!-- Leaflet CSS & JS for Interactive Map Tracking -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Midtrans Snap JS (Sandbox) -->
+    <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ config('services.midtrans.client_key') }}"></script>
 
     <style>
         [x-cloak] { display: none !important; }
@@ -26,7 +29,7 @@
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col"
     x-data="patientOrdersApp()">
 
-    <!-- 1. TOP NAVBAR (KONSISTEN 100% DENGAN KATALOG & DASHBOARD) -->
+    <!-- 1. TOP NAVBAR -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
@@ -52,7 +55,7 @@
                     <!-- Nav separator -->
                     <div class="hidden sm:block h-6 w-px bg-slate-200 ml-2"></div>
 
-                    <!-- Desktop Nav Links (Pill Style) -->
+                    <!-- Desktop Nav Links -->
                     <nav class="hidden sm:flex items-center space-x-1 ml-2">
                         <a href="{{ route('dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
                             Dashboard
@@ -60,8 +63,18 @@
                         <a href="{{ route('pasien.katalog') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
                             Katalog Layanan
                         </a>
-                        <a href="{{ route('pasien.pesanan') }}" class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 transition">
-                            Jadwal Kunjungan
+                        <a href="{{ route('pasien.pesanan') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 transition">
+                            Jadwal &amp; Detail Booking
+                        </a>
+                        <a href="{{ route('pasien.pembayaran') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
+                            <span>Pembayaran Escrow</span>
+                            <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Escrow</span>
+                        </a>
+                        <a href="{{ route('pasien.pembatalan') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Pembatalan &amp; Refund
                         </a>
                     </nav>
                 </div>
@@ -98,13 +111,13 @@
             <div class="space-y-2 relative z-10">
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    SCRUM-46 &amp; SCRUM-47: Live Tracking &amp; Escrow Protection
+                    Gateway Pembayaran Escrow &amp; Pelacakan Kunjungan Real-time
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
                     Jadwal Kunjungan &amp; Pelacakan Pesanan
                 </h1>
                 <p class="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
-                    Pantau tahapan kedatangan nakes melalui <strong>Status Stepper</strong>, lacak posisi GPS secara real-time, serta kelola pembatalan dengan jaminan <strong>100% Refund Escrow</strong>.
+                    Pantau tahapan kedatangan nakes melalui <strong>Status Stepper</strong>, amankan transaksi via <strong>Rekening Penampung (Escrow)</strong>, serta kelola pembatalan dengan jaminan <strong>100% Refund Otomatis</strong>.
                 </p>
             </div>
 
@@ -147,7 +160,7 @@
             </button>
         </div>
 
-        <!-- 4. TAB CONTENT: ACTIVE ORDERS (SCRUM-46 & SCRUM-47) -->
+        <!-- 4. TAB CONTENT: ACTIVE ORDERS -->
         <div x-show="activeTab === 'active'" class="space-y-6">
             @if ($activeOrders->isEmpty())
                 <!-- EMPTY STATE -->
@@ -158,7 +171,7 @@
                     <div class="space-y-1.5">
                         <h3 class="text-xl font-bold text-slate-900">Belum Ada Jadwal Kunjungan Aktif</h3>
                         <p class="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-md mx-auto">
-                            Saat ini belum ada pesanan kunjungan nakes yang sedang berlangsung. Karena tindakan medis dan tarif diatur oleh admin melalui katalog resmi, silakan jelajahi katalog layanan untuk membuat jadwal baru.
+                            Saat ini belum ada pesanan kunjungan nakes yang sedang berlangsung. Silakan telusuri katalog layanan medis terstandar untuk memesan tindakan perawat ke rumah Anda.
                         </p>
                     </div>
                     <div class="pt-3">
@@ -171,7 +184,7 @@
                     </div>
                 </div>
             @else
-                <!-- DAFTAR KARTU PESANAN AKTIF DENGAN STEPPER (SCRUM-46) -->
+                <!-- DAFTAR KARTU PESANAN AKTIF DENGAN STEPPER -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     @foreach ($activeOrders as $order)
                         @php
@@ -203,7 +216,7 @@
                                                 {{ $order->order_number }}
                                             </span>
                                             <span class="text-[9px] font-bold px-2 py-0.5 rounded-full {{ $order->payment_status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
-                                                {{ $order->payment_status === 'paid' ? 'Escrow Paid' : 'Belum Bayar' }}
+                                                {{ $order->payment_status === 'paid' ? '🛡️ Escrow Paid' : 'Menunggu Bayar' }}
                                             </span>
                                         </div>
                                         <h3 class="text-sm font-bold text-slate-900 leading-snug">
@@ -228,7 +241,7 @@
                                 </span>
                             </div>
 
-                            <!-- SCRUM-46: VISUAL STATUS STEPPER ORDER -->
+                            <!-- VISUAL STATUS STEPPER ORDER -->
                             <div class="p-5 border-b border-slate-100 bg-white space-y-2">
                                 <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
                                     <span class="text-slate-400 uppercase tracking-wider text-[10px]">Alur Tracking Pesanan</span>
@@ -329,7 +342,7 @@
                                 </div>
 
                                 <div class="flex items-center gap-2">
-                                    <!-- SCRUM-46: Detail & Tracking Button -->
+                                    <!-- Detail & Tracking Button -->
                                     <button type="button"
                                         @click="openTrackingModal({{ json_encode($order) }})"
                                         class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">
@@ -344,7 +357,7 @@
                                         </button>
                                     @endif
 
-                                    <!-- SCRUM-47: Pembatalan Button -->
+                                    <!-- Pembatalan Button -->
                                     @if ($order->isCancellable())
                                         <button type="button"
                                             @click="openCancelModal({{ json_encode($order) }})"
@@ -361,7 +374,7 @@
             @endif
         </div>
 
-        <!-- 5. TAB CONTENT: PAST ORDERS (RIWAYAT SELESAI & BATAL - SCRUM-47) -->
+        <!-- 5. TAB CONTENT: PAST ORDERS (RIWAYAT SELESAI & BATAL) -->
         <div x-show="activeTab === 'past'" x-cloak class="space-y-4">
             @if ($pastOrders->isEmpty())
                 <div class="bg-white rounded-3xl border border-slate-200 p-10 text-center max-w-lg mx-auto space-y-3">
@@ -389,7 +402,7 @@
                                 </div>
                             </div>
 
-                            <!-- SCRUM-47: Detail Pembatalan & Refund Escrow -->
+                            <!-- Detail Pembatalan & Refund Escrow -->
                             @if ($order->status === 'dibatalkan')
                                 <div class="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 text-xs space-y-2">
                                     <div class="flex items-center justify-between">
@@ -422,7 +435,7 @@
 
     </main>
 
-    <!-- 6. MODAL SCRUM-46: DETAIL BOOKING & LIVE TRACKING GPS -->
+    <!-- 6. MODAL: DETAIL BOOKING & LIVE TRACKING GPS -->
     <div x-show="trackingModalOpen" x-cloak
         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
         x-transition:enter="ease-out duration-200"
@@ -441,7 +454,7 @@
             <!-- Modal Header -->
             <div class="px-6 py-5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between shrink-0">
                 <div>
-                    <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-300">SCRUM-46 • Detail Booking &amp; Pelacakan Real-time</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-300">Detail Booking &amp; Pelacakan Real-time</span>
                     <h3 class="text-lg font-bold mt-0.5" x-text="selectedOrder?.service_catalog?.name || 'Detail Pesanan Kunjungan'"></h3>
                     <p class="text-xs text-slate-300 font-mono" x-text="'No. Pesanan: ' + (selectedOrder?.order_number || '-')"></p>
                 </div>
@@ -530,7 +543,7 @@
                     </div>
                 </div>
 
-                <!-- 4. Rincian Biaya (Price Breakdown Engine) -->
+                <!-- 4. Rincian Biaya -->
                 <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                     <span class="font-bold text-slate-900 block text-xs">Rincian Plafon Tarif &amp; Escrow</span>
                     <div class="space-y-1 text-slate-600">
@@ -581,7 +594,7 @@
         </div>
     </div>
 
-    <!-- 7. MODAL SCRUM-47: PEMBATALAN PESANAN & REFUND ESCROW -->
+    <!-- 7. MODAL: PEMBATALAN PESANAN & REFUND ESCROW -->
     <div x-show="cancelModalOpen" x-cloak
         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
         x-transition:enter="ease-out duration-200"
@@ -600,7 +613,7 @@
             <!-- Modal Header -->
             <div class="px-6 py-5 bg-gradient-to-r from-rose-700 to-rose-900 text-white flex items-center justify-between">
                 <div>
-                    <span class="text-[10px] uppercase font-bold tracking-wider text-rose-200">SCRUM-47 • Pembatalan &amp; Refund</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-rose-200">Pembatalan &amp; Pengembalian Dana</span>
                     <h3 class="text-lg font-bold mt-0.5">Konfirmasi Pembatalan Pesanan</h3>
                 </div>
                 <button type="button" @click="cancelModalOpen = false" :disabled="processingCancel" class="text-rose-200 hover:text-white p-1">
@@ -622,7 +635,7 @@
                             <div class="space-y-1">
                                 <span class="font-bold block text-emerald-950">Jaminan 100% Pengembalian Dana Escrow</span>
                                 <p class="text-emerald-800">
-                                    Pesanan ini telah lunas dan dana tersimpan di rekening penampung. Karena dibatalkan sebelum nakes berangkat, dana senilai <strong x-text="'Rp ' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></strong> akan otomatis dikembalikan penuh (100% Refund).
+                                    Pesanan ini telah lunas dan dana tersimpan di rekening penampung. Karena dibatalkan sebelum nakes berangkat, dana senilai <strong x-text="'Rp ' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></strong> akan otomatis dikembalikan penuh (100% Refund tanpa potongan).
                                 </p>
                             </div>
                         </div>
@@ -633,7 +646,7 @@
                             <div class="space-y-1">
                                 <span class="font-bold block text-slate-900">Pembatalan Pesanan Belum Dibayar</span>
                                 <p class="text-slate-600">
-                                    Pesanan ini belum melalui proses pembayaran escrow, sehingga pembatalan dapat dilakukan langsung tanpa pengembalian dana.
+                                    Pesanan ini belum melalui proses pembayaran escrow, sehingga pembatalan dapat dilakukan langsung tanpa ada proses pengembalian dana.
                                 </p>
                             </div>
                         </div>
@@ -709,7 +722,7 @@
         </div>
     </div>
 
-    <!-- 8. MODAL PEMBAYARAN ESCROW INTERAKTIF -->
+    <!-- 8. MODAL GATEWAY PEMBAYARAN ESCROW & KONFIRMASI -->
     <div x-show="paymentModalOpen" x-cloak
         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
         x-transition:enter="ease-out duration-200"
@@ -720,16 +733,21 @@
         x-transition:leave-end="opacity-0">
 
         <div @click.away="if (!processingPayment) paymentModalOpen = false"
-            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800"
+            class="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800"
             x-transition:enter="ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100">
 
             <!-- Modal Header -->
-            <div class="px-6 py-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex items-center justify-between">
+            <div class="px-6 py-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-800 text-white flex items-center justify-between">
                 <div>
-                    <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-200">Gateway Pembayaran Escrow</span>
-                    <h3 class="text-lg font-bold mt-0.5">Konfirmasi Pembayaran Aman</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-200 bg-emerald-700/60 px-2 py-0.5 rounded-full border border-emerald-400/40">
+                            🛡️ Rekening Penampung (Escrow)
+                        </span>
+                        <span class="text-[10px] text-emerald-200">Midtrans Gateway</span>
+                    </div>
+                    <h3 class="text-lg font-bold mt-1">Konfirmasi Pembayaran Aman</h3>
                 </div>
                 <button type="button" @click="paymentModalOpen = false" class="text-emerald-200 hover:text-white p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -741,67 +759,143 @@
             <!-- Modal Body -->
             <div class="p-6 space-y-4 text-xs">
                 
-                <!-- Ringkasan Order -->
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                    <div class="flex justify-between">
+                <!-- Ringkasan Order & Price Breakdown -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                    <div class="flex justify-between items-center">
                         <span class="text-slate-500">Nomor Pesanan:</span>
-                        <span class="font-mono font-bold text-slate-900" x-text="selectedOrder?.order_number"></span>
+                        <span class="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200" x-text="selectedOrder?.order_number"></span>
                     </div>
-                    <div class="flex justify-between">
+                    <div class="flex justify-between items-center">
                         <span class="text-slate-500">Tindakan Medis:</span>
                         <span class="font-semibold text-slate-900" x-text="selectedOrder?.service_catalog?.name || 'Tindakan Keperawatan'"></span>
                     </div>
+                    <div class="space-y-1 pt-2 border-t border-slate-200/80 text-[11px] text-slate-500">
+                        <div class="flex justify-between">
+                            <span>Tarif Tindakan Medis:</span>
+                            <span class="font-medium text-slate-700" x-text="'Rp ' + Number(selectedOrder?.base_price || 0).toLocaleString('id-ID')"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Biaya Transportasi GPS (<span x-text="(selectedOrder?.distance_km || 0) + ' km'"></span>):</span>
+                            <span class="font-medium text-slate-700" x-text="'Rp ' + Number(selectedOrder?.transport_fee || 0).toLocaleString('id-ID')"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Biaya Layanan Platform:</span>
+                            <span class="font-medium text-slate-700">Rp 5.000</span>
+                        </div>
+                    </div>
                     <div class="flex justify-between items-baseline pt-2 border-t border-slate-200">
-                        <span class="text-slate-800 font-bold">Total Pembayaran:</span>
-                        <span class="text-lg font-black text-emerald-700" x-text="'Rp ' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
+                        <div>
+                            <span class="text-slate-800 font-bold block">Total Tagihan:</span>
+                            <span class="text-[10px] text-emerald-700 font-semibold">Tersimpan aman di Escrow CareAtHome</span>
+                        </div>
+                        <span class="text-xl font-black text-emerald-700" x-text="'Rp ' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></span>
                     </div>
                 </div>
 
                 <!-- Pilihan Metode Pembayaran Escrow -->
                 <div class="space-y-2">
-                    <label class="block font-bold text-slate-700">Pilih Metode Pembayaran Non-Tunai:</label>
+                    <div class="flex items-center justify-between">
+                        <label class="block font-bold text-slate-700">Pilih Metode Pembayaran Non-Tunai:</label>
+                        <span class="text-[10px] text-slate-400">Verifikasi Otomatis</span>
+                    </div>
                     
                     <div class="grid grid-cols-2 gap-2">
-                        <label class="p-3 rounded-xl border cursor-pointer transition flex items-center gap-2"
-                            :class="paymentMethod === 'bca_va' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900 font-bold' : 'border-slate-200 hover:bg-slate-50'">
-                            <input type="radio" value="bca_va" x-model="paymentMethod" class="text-emerald-600" />
-                            <span>BCA Virtual Account</span>
+                        <!-- BCA VA -->
+                        <label class="p-3 rounded-2xl border cursor-pointer transition flex items-center justify-between"
+                            @click="changePaymentMethod('bca_va')"
+                            :class="paymentMethod === 'bca_va' ? 'border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/20 font-bold' : 'border-slate-200 hover:bg-slate-50'">
+                            <div class="flex items-center gap-2">
+                                <input type="radio" value="bca_va" x-model="paymentMethod" class="text-emerald-600" />
+                                <span>BCA Virtual Account</span>
+                            </div>
+                            <span class="text-[10px] bg-blue-100 text-blue-800 font-extrabold px-1.5 py-0.5 rounded">BCA</span>
                         </label>
 
-                        <label class="p-3 rounded-xl border cursor-pointer transition flex items-center gap-2"
-                            :class="paymentMethod === 'mandiri_va' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900 font-bold' : 'border-slate-200 hover:bg-slate-50'">
-                            <input type="radio" value="mandiri_va" x-model="paymentMethod" class="text-emerald-600" />
-                            <span>Mandiri VA</span>
+                        <!-- Mandiri VA -->
+                        <label class="p-3 rounded-2xl border cursor-pointer transition flex items-center justify-between"
+                            @click="changePaymentMethod('mandiri_va')"
+                            :class="paymentMethod === 'mandiri_va' ? 'border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/20 font-bold' : 'border-slate-200 hover:bg-slate-50'">
+                            <div class="flex items-center gap-2">
+                                <input type="radio" value="mandiri_va" x-model="paymentMethod" class="text-emerald-600" />
+                                <span>Mandiri VA / Bill</span>
+                            </div>
+                            <span class="text-[10px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded">MDR</span>
                         </label>
 
-                        <label class="p-3 rounded-xl border cursor-pointer transition flex items-center gap-2"
-                            :class="paymentMethod === 'bni_va' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900 font-bold' : 'border-slate-200 hover:bg-slate-50'">
-                            <input type="radio" value="bni_va" x-model="paymentMethod" class="text-emerald-600" />
-                            <span>BNI Virtual Account</span>
+                        <!-- BNI VA -->
+                        <label class="p-3 rounded-2xl border cursor-pointer transition flex items-center justify-between"
+                            @click="changePaymentMethod('bni_va')"
+                            :class="paymentMethod === 'bni_va' ? 'border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/20 font-bold' : 'border-slate-200 hover:bg-slate-50'">
+                            <div class="flex items-center gap-2">
+                                <input type="radio" value="bni_va" x-model="paymentMethod" class="text-emerald-600" />
+                                <span>BNI Virtual Account</span>
+                            </div>
+                            <span class="text-[10px] bg-orange-100 text-orange-800 font-extrabold px-1.5 py-0.5 rounded">BNI</span>
                         </label>
 
-                        <label class="p-3 rounded-xl border cursor-pointer transition flex items-center gap-2"
-                            :class="paymentMethod === 'qris' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900 font-bold' : 'border-slate-200 hover:bg-slate-50'">
-                            <input type="radio" value="qris" x-model="paymentMethod" class="text-emerald-600" />
-                            <span>QRIS / E-Wallet</span>
+                        <!-- QRIS / E-Wallet -->
+                        <label class="p-3 rounded-2xl border cursor-pointer transition flex items-center justify-between"
+                            @click="changePaymentMethod('qris')"
+                            :class="paymentMethod === 'qris' ? 'border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/20 font-bold' : 'border-slate-200 hover:bg-slate-50'">
+                            <div class="flex items-center gap-2">
+                                <input type="radio" value="qris" x-model="paymentMethod" class="text-emerald-600" />
+                                <span>QRIS &amp; E-Wallet</span>
+                            </div>
+                            <span class="text-[10px] bg-rose-100 text-rose-800 font-extrabold px-1.5 py-0.5 rounded">QRIS</span>
                         </label>
                     </div>
                 </div>
 
+                <!-- KOTAK INSTRUKSI BAYAR & NOMOR VIRTUAL ACCOUNT -->
+                <div class="p-4 rounded-2xl bg-slate-900 text-white space-y-3 relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-300">
+                        <span class="text-[11px] flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span x-text="paymentMethod === 'qris' ? 'Kode Bayar QRIS Instan:' : 'Nomor Virtual Account ' + (paymentData?.bank || 'BCA') + ':'"></span>
+                        </span>
+                        <span class="text-[10px] text-amber-300 font-mono" x-text="'Batas Bayar: ' + (paymentData?.expiry_time || '2 Jam')"></span>
+                    </div>
+
+                    <template x-if="paymentMethod !== 'qris'">
+                        <div class="flex items-center justify-between gap-3 bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                            <div>
+                                <span class="font-mono text-base sm:text-lg font-black tracking-wider text-emerald-400 select-all"
+                                    x-text="paymentData?.va_number || '880128123456789'"></span>
+                                <span class="text-[10px] text-slate-400 block mt-0.5">Atas Nama: <strong>CareAtHome Escrow</strong></span>
+                            </div>
+                            <button type="button" @click="copyVaNumber()"
+                                class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1">
+                                <span x-text="copiedVa ? '✓ Tersalin' : 'Salin'"></span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template x-if="paymentMethod === 'qris'">
+                        <div class="bg-white p-3 rounded-xl text-slate-900 flex flex-col items-center justify-center space-y-2 text-center">
+                            <div class="w-36 h-36 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center p-2">
+                                <span class="text-4xl">📱</span>
+                                <span class="text-[10px] font-mono font-bold mt-1 text-slate-600 block">QRIS Dinamis</span>
+                                <span class="text-[9px] text-emerald-700 font-bold">GoPay • OVO • Dana</span>
+                            </div>
+                            <p class="text-[11px] text-slate-600">Pindai kode QR melalui aplikasi perbankan atau dompet digital Anda.</p>
+                        </div>
+                    </template>
+                </div>
+
                 <!-- Jaminan Rekening Penampung (Escrow) -->
                 <div class="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-teal-900 flex items-start gap-2.5">
-                    <span class="text-lg">🛡️</span>
+                    <span class="text-xl">🛡️</span>
                     <div class="leading-relaxed">
-                        <span class="font-bold block">Jaminan Perlindungan Escrow CareAtHome</span>
+                        <span class="font-bold block">Jaminan Perlindungan Escrow CareAtHome:</span>
                         <span class="text-[11px] text-teal-800 block mt-0.5">
-                            Dana ditampung sementara di rekening platform. Dana baru akan diteruskan ke perawat setelah kunjungan selesai dan E-Report telah Anda verifikasi. Jika pesanan dibatalkan sebelum tindakan, dana dikembalikan 100%.
+                            Dana Anda 100% aman tersimpan di rekening penampung resmi. Kompensasi baru akan diteruskan ke rekening perawat setelah tindakan selesai dan E-Report telah Anda verifikasi. Jika pesanan dibatalkan sebelum tindakan, dana dikembalikan 100% penuh.
                         </span>
                     </div>
                 </div>
 
                 <!-- Pesan Notifikasi Sukses / Error -->
                 <template x-if="paymentSuccessMsg">
-                    <div class="p-3 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-semibold" x-text="paymentSuccessMsg"></div>
+                    <div class="p-3 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-semibold flex items-center gap-2" x-text="paymentSuccessMsg"></div>
                 </template>
                 <template x-if="paymentErrorMsg">
                     <div class="p-3 rounded-xl bg-rose-100 text-rose-800 text-xs font-semibold" x-text="paymentErrorMsg"></div>
@@ -810,16 +904,28 @@
             </div>
 
             <!-- Modal Footer -->
-            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
                 <button type="button" @click="paymentModalOpen = false" :disabled="processingPayment"
                     class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition">
-                    Batal
+                    Tutup
                 </button>
-                <button type="button" @click="submitPayment()" :disabled="processingPayment"
-                    class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition flex items-center gap-2">
-                    <span x-show="processingPayment" class="animate-spin text-sm">⏳</span>
-                    <span x-text="processingPayment ? 'Memproses Escrow...' : 'Konfirmasi Pembayaran Escrow'"></span>
-                </button>
+
+                <div class="flex items-center gap-2 ml-auto">
+                    <!-- Tombol Midtrans Snap Popup (jika Snap aktif) -->
+                    <template x-if="paymentData?.snap_token && window.snap">
+                        <button type="button" @click="openSnapPopup()"
+                            class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                            <span>Buka Snap Window</span>
+                        </button>
+                    </template>
+
+                    <!-- Tombol Konfirmasi Bayar Escrow (Sandbox / Instant Pay) -->
+                    <button type="button" @click="submitPayment()" :disabled="processingPayment"
+                        class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition flex items-center gap-2">
+                        <span x-show="processingPayment" class="animate-spin text-sm">⏳</span>
+                        <span x-text="processingPayment ? 'Memproses Escrow...' : 'Konfirmasi Bayar (Simulasi Escrow)'"></span>
+                    </button>
+                </div>
             </div>
 
         </div>
@@ -832,7 +938,7 @@
         </div>
     </footer>
 
-    <!-- Alpine App Logic for Orders, Tracking & Cancellation -->
+    <!-- Alpine App Logic for Orders, Escrow Payments, Tracking & Cancellation -->
     <script>
         function patientOrdersApp() {
             return {
@@ -842,32 +948,123 @@
                 cancelModalOpen: false,
                 selectedOrder: null,
 
-                // Payment state
+                // Payment & Escrow state
                 paymentMethod: 'bca_va',
+                paymentData: null,
                 processingPayment: false,
                 paymentSuccessMsg: '',
                 paymentErrorMsg: '',
+                copiedVa: false,
 
-                // Cancel state (SCRUM-47)
+                // Cancel state
                 cancelReason: 'Perubahan jadwal mendadak / ada keperluan lain',
                 cancelNotes: '',
                 processingCancel: false,
                 cancelSuccessMsg: '',
                 cancelErrorMsg: '',
 
-                // Leaflet Map state (SCRUM-46)
+                // Leaflet Map state
                 trackingMap: null,
                 patientMarker: null,
                 nurseMarker: null,
                 routeLine: null,
                 radiusCircle: null,
 
-                openPaymentModal(order) {
+                init() {
+                    const params = new URLSearchParams(window.location.search);
+                    if (params.get('tab') === 'past') {
+                        this.activeTab = 'past';
+                    }
+                    if (params.get('action') === 'pay') {
+                        const unpaid = @json($activeOrders->firstWhere('payment_status', 'unpaid') ?? $activeOrders->first());
+                        if (unpaid && unpaid.payment_status !== 'paid') {
+                            this.$nextTick(() => {
+                                this.openPaymentModal(unpaid);
+                            });
+                        }
+                    }
+                    if (params.get('action') === 'track') {
+                        const activeOrder = @json($activeOrders->first());
+                        if (activeOrder) {
+                            this.$nextTick(() => {
+                                this.openTrackingModal(activeOrder);
+                            });
+                        }
+                    }
+                },
+
+                async openPaymentModal(order) {
                     this.selectedOrder = order;
                     this.paymentMethod = 'bca_va';
+                    this.paymentData = null;
                     this.paymentSuccessMsg = '';
                     this.paymentErrorMsg = '';
+                    this.copiedVa = false;
                     this.paymentModalOpen = true;
+
+                    // Muat parameter token dan VA dari backend
+                    await this.loadPaymentToken();
+                },
+
+                async changePaymentMethod(method) {
+                    this.paymentMethod = method;
+                    await this.loadPaymentToken();
+                },
+
+                async loadPaymentToken() {
+                    if (!this.selectedOrder) return;
+                    try {
+                        const response = await fetch(`/pasien/pesanan/${this.selectedOrder.id}/bayar/token`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify({
+                                payment_method: this.paymentMethod
+                            })
+                        });
+
+                        const res = await response.json();
+                        if (response.ok && res.data) {
+                            this.paymentData = res.data;
+                        }
+                    } catch (e) {
+                        console.warn('Gagal memuat token pembayaran:', e);
+                    }
+                },
+
+                copyVaNumber() {
+                    const va = this.paymentData?.va_number || '';
+                    if (va) {
+                        navigator.clipboard.writeText(va).then(() => {
+                            this.copiedVa = true;
+                            setTimeout(() => { this.copiedVa = false; }, 2500);
+                        });
+                    }
+                },
+
+                openSnapPopup() {
+                    if (!this.paymentData?.snap_token || !window.snap) {
+                        alert('Snap popup belum tersedia atau token sedang disiapkan.');
+                        return;
+                    }
+                    const self = this;
+                    window.snap.pay(this.paymentData.snap_token, {
+                        onSuccess: function(result) {
+                            self.submitPayment();
+                        },
+                        onPending: function(result) {
+                            alert('Menunggu pembayaran via ' + (result.payment_type || 'Virtual Account'));
+                        },
+                        onError: function(result) {
+                            alert('Pembayaran gagal atau dibatalkan.');
+                        },
+                        onClose: function() {
+                            console.log('Snap popup ditutup pengguna');
+                        }
+                    });
                 },
 
                 openCancelModal(order) {
@@ -893,7 +1090,7 @@
                     const lat = parseFloat(order.latitude) || -6.2088;
                     const lng = parseFloat(order.longitude) || 106.8456;
                     
-                    // Posisi simulasi perawat (dalam radius operasional ~3 km)
+                    // Posisi perawat (dalam radius operasional ~3 km)
                     const nurseLat = lat + 0.015;
                     const nurseLng = lng - 0.012;
 
@@ -998,7 +1195,7 @@
                     })
                     .catch((err) => {
                         this.processingPayment = false;
-                        this.paymentErrorMsg = err.message || 'Terjadi kesalahan sistem.';
+                        this.paymentErrorMsg = err.message || 'Terjadi kesalahan sistem saat memproses pembayaran.';
                     });
                 },
 

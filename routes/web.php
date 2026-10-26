@@ -22,9 +22,15 @@ Route::middleware(['auth'])->group(function () {
     // Portal Pasien (Katalog Layanan & Pemesanan)
     Route::get('pasien/katalog', [\App\Http\Controllers\Patient\CatalogController::class, 'index'])->name('pasien.katalog');
     Route::get('pasien/pesanan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'index'])->name('pasien.pesanan');
+    Route::get('pasien/pembayaran', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'paymentView'])->name('pasien.pembayaran');
+    Route::get('pasien/pembatalan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancellationView'])->name('pasien.pembatalan');
+    Route::post('pasien/pesanan/{order}/bayar/token', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'getPaymentToken'])->name('pasien.pesanan.payment-token');
     Route::post('pasien/pesanan/{order}/bayar', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'pay'])->name('pasien.pesanan.pay');
     Route::post('pasien/pesanan/{order}/batal', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancel'])->name('pasien.pesanan.cancel');
 });
+
+// Midtrans Webhook Handler Callback
+Route::post('payments/webhook', [\App\Http\Controllers\Api\PaymentWebhookController::class, 'handleWebhook'])->name('payments.webhook');
 
 Route::get('demo-login/{role}', function (string $role) {
     if (!app()->environment('local')) {

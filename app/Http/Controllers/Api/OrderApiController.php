@@ -235,10 +235,10 @@ class OrderApiController extends Controller
     }
 
     /**
-     * Pembatalan Pesanan & Refund Escrow API (SCRUM-47).
+     * Pembatalan Pesanan & Refund Escrow API.
      * Endpoint: POST /api/v1/orders/{orderNumberOrId}/cancel
      */
-    public function cancel(Request $request, string $orderNumberOrId): JsonResponse
+    public function cancel(Request $request, string $orderNumberOrId, \App\Services\MidtransPaymentService $paymentService): JsonResponse
     {
         $order = Order::where('order_number', $orderNumberOrId)
             ->orWhere('id', $orderNumberOrId)
@@ -278,12 +278,8 @@ class OrderApiController extends Controller
 
         $refundAmount = 0.0;
         if ($order->payment_status === 'paid') {
-            $refundAmount = (float) $order->total_amount;
-            $order->payment_status = 'refunded';
-            $order->refund_status = 'refunded';
-            $order->refund_amount = $refundAmount;
-            $order->refunded_at = now();
-            $order->refund_notes = 'Escrow refund 100% diproses via API pembatalan pesanan.';
+            $refundRes = $paymentService->processEscrowRefund($order, $reason);
+            $refundAmount = (float) $refundRes['refund_amount'];
         } else {
             $order->refund_status = 'none';
         }

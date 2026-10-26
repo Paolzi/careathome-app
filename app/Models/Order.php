@@ -82,6 +82,22 @@ class Order extends Model
     }
 
     /**
+     * Relasi ke riwayat pembayaran & transaksi gateway escrow.
+     */
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'order_id');
+    }
+
+    /**
+     * Relasi ke pembayaran terakhir yang tercatat.
+     */
+    public function latestPayment()
+    {
+        return $this->hasOne(Payment::class, 'order_id')->latestOfMany();
+    }
+
+    /**
      * Engine Perhitungan Price Breakdown.
      * Aturan:
      * - Base Price: Tarif tindakan katalog
@@ -167,7 +183,7 @@ class Order extends Model
     }
 
     /**
-     * Memeriksa apakah pesanan masih memenuhi syarat untuk dibatalkan oleh pasien (SCRUM-47).
+     * Memeriksa apakah pesanan masih memenuhi syarat untuk dibatalkan oleh pasien.
      * Pesanan hanya dapat dibatalkan jika belum dalam perjalanan/tindakan.
      */
     public function isCancellable(): bool
