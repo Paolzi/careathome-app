@@ -440,7 +440,7 @@ $services = [
         </div>
     </section>
 
-    <!-- 5. KATALOG LAYANAN KEPERAWATAN RUMAH SECTION (SCRUM-35 & MOCKUP) -->
+    <!-- 5. KATALOG LAYANAN KEPERAWATAN RUMAH SECTION -->
     <section id="katalog" class="py-20 px-4 sm:px-6 lg:px-8 bg-slate-100 border-b border-slate-200">
         <div class="max-w-7xl mx-auto space-y-10">
 

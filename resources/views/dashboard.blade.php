@@ -114,19 +114,24 @@
                                 <span class="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
                                     Radius GPS 10 KM
                                 </span>
-                                <h3 class="text-base font-bold text-slate-900 mt-1">Pelacakan Status Pesanan</h3>
+                                <h3 class="text-base font-bold text-slate-900 mt-1">Jadwal, Pelacakan &amp; Escrow</h3>
                             </div>
                             <p class="text-xs text-slate-600 leading-relaxed">
-                                Pantau pergerakan nakes secara real-time melalui status stepper: mulai dari konfirmasi, perjalanan nakes, hingga tindakan medis selesai.
+                                Pantau pergerakan nakes secara real-time, lakukan pembayaran aman via rekening penampung (Escrow), serta batalkan pesanan dengan jaminan 100% refund otomatis.
                             </p>
                         </div>
-                        <div class="pt-5 mt-4 border-t border-slate-100">
-                            <a href="{{ route('pasien.pesanan') }}" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold transition">
-                                <span>Buka Jadwal Kunjungan</span>
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                </svg>
+                        <div class="pt-4 mt-4 border-t border-slate-100 space-y-2">
+                            <a href="{{ route('pasien.pesanan') }}" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition shadow-sm">
+                                <span>🗺️ Detail Booking &amp; Pelacakan</span>
                             </a>
+                            <div class="grid grid-cols-2 gap-2">
+                                <a href="{{ route('pasien.pembayaran') }}" class="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold transition">
+                                    <span>💳 Bayar Escrow</span>
+                                </a>
+                                <a href="{{ route('pasien.pembatalan') }}" class="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-[11px] font-bold transition">
+                                    <span>Batalkan / Refund</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
 
