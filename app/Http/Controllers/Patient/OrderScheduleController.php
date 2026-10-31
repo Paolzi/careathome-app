@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\ServiceCatalog;
 use App\Models\User;
-use App\Services\MidtransPaymentService;
+use App\Services\OrderPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,17 +14,15 @@ use Illuminate\View\View;
 
 class OrderScheduleController extends Controller
 {
-    protected MidtransPaymentService $paymentService;
+    protected OrderPaymentService $paymentService;
 
-    public function __construct(MidtransPaymentService $paymentService)
+    public function __construct(OrderPaymentService $paymentService)
     {
         $this->paymentService = $paymentService;
     }
 
     /**
      * Helper privat untuk memuat data pesanan pasien.
-     * Khusus akun demo pasien (pasien@careathome.com), jika DB kosong akan disediakan data in-memory lokal
-     * tanpa memasukkannya ke database. Akun terdaftar riil tetap membaca murni dari database.
      */
     protected function getPatientOrders(Request $request): array
     {
@@ -55,111 +53,6 @@ class OrderScheduleController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Jika akun adalah akun simulasi demo (pasien@careathome.com) dan basis data kosong,
-        // sediakan mock objek in-memory lokal (TIDAK dimasukkan ke database)
-        $isDemoAccount = $currentUser && $currentUser->email === 'pasien@careathome.com';
-        if ($isDemoAccount && $activeOrders->isEmpty() && $pastOrders->isEmpty()) {
-            $demoService = ServiceCatalog::first() ?? new ServiceCatalog([
-                'id' => 1,
-                'name' => 'Perawatan Luka Diabetes & Ganti Balutan',
-                'category' => 'wound_care',
-                'price' => 150000,
-                'estimated_duration' => '45 - 60 Menit',
-                'image_emoji' => '🩹',
-            ]);
-
-            $demoNurse = User::whereHas('roles', function ($q) {
-                $q->where('name', 'perawat');
-            })->first() ?? new User([
-                'id' => 99,
-                'name' => 'Ns. Siti Nurhaliza, S.Kep',
-                'email' => 'perawat@careathome.com',
-            ]);
-
-            // Status lokal yang disimpan di session untuk demo interaktif tanpa menyentuh database
-            $demoOrderStatus = session('demo_order_status', 'menunggu_konfirmasi');
-            $demoPaymentStatus = session('demo_payment_status', 'unpaid');
-            $demoRefundStatus = session('demo_refund_status', 'none');
-            $demoRefundAmount = session('demo_refund_amount', 0);
-            $demoReason = session('demo_cancellation_reason', null);
-
-            // Objek simulasi in-memory: Pesanan Aktif (Menunggu Pembayaran Escrow)
-            $mockActive = new Order([
-                'id' => 9001,
-                'order_number' => 'CAH-' . date('Ymd') . '-DEMO1',
-                'patient_id' => $userId,
-                'service_catalog_id' => $demoService->id ?? 1,
-                'nurse_id' => $demoNurse->id ?? 99,
-                'scheduled_date' => now()->toDateString(),
-                'scheduled_time' => '10:00 - 11:30 WIB',
-                'patient_name' => $currentUser->name,
-                'patient_phone' => '081234567890',
-                'address' => 'Jl. Kesehatan No. 45, Kebayoran Baru, Jakarta Selatan',
-                'latitude' => -6.2088,
-                'longitude' => 106.8456,
-                'distance_km' => 3.2,
-                'clinical_notes' => 'Pembersihan luka gangren diabetes melitus tipe 2 dan pergantian perban hidrokoloid steril.',
-                'base_price' => 150000,
-                'transport_fee' => 12500,
-                'platform_fee' => 5000,
-                'total_amount' => 167500,
-                'commission_amount' => 22500,
-                'nurse_earnings' => 140000,
-                'status' => $demoOrderStatus,
-                'payment_status' => $demoPaymentStatus,
-                'refund_status' => $demoRefundStatus,
-                'refund_amount' => $demoRefundAmount,
-                'cancellation_reason' => $demoReason,
-                'cancelled_at' => $demoOrderStatus === 'dibatalkan' ? now() : null,
-                'refunded_at' => $demoRefundStatus === 'refunded' ? now() : null,
-                'refund_notes' => $demoRefundStatus === 'refunded' ? 'Dana Escrow 100% senilai Rp 167.500 telah otomatis dikembalikan ke rekening/e-wallet pasien.' : null,
-            ]);
-            $mockActive->setRelation('serviceCatalog', $demoService);
-            $mockActive->setRelation('nurse', $demoNurse);
-
-            // Objek simulasi in-memory: Riwayat Pembatalan & 100% Refund Escrow
-            $mockPast = new Order([
-                'id' => 9002,
-                'order_number' => 'CAH-' . date('Ymd', strtotime('-1 day')) . '-DEMO2',
-                'patient_id' => $userId,
-                'service_catalog_id' => $demoService->id ?? 1,
-                'nurse_id' => $demoNurse->id ?? 99,
-                'scheduled_date' => now()->subDay()->toDateString(),
-                'scheduled_time' => '14:00 - 15:00 WIB',
-                'patient_name' => $currentUser->name,
-                'patient_phone' => '081234567890',
-                'address' => 'Jl. Kesehatan No. 45, Kebayoran Baru, Jakarta Selatan',
-                'latitude' => -6.2088,
-                'longitude' => 106.8456,
-                'distance_km' => 3.2,
-                'clinical_notes' => 'Permintaan tindakan injeksi berkala sesuai resep dokter.',
-                'base_price' => 120000,
-                'transport_fee' => 10000,
-                'platform_fee' => 5000,
-                'total_amount' => 135000,
-                'commission_amount' => 18000,
-                'nurse_earnings' => 112000,
-                'status' => 'dibatalkan',
-                'payment_status' => 'refunded',
-                'cancellation_reason' => 'Perubahan jadwal mendadak / ada keperluan keluarga',
-                'cancelled_at' => now()->subDay(),
-                'refund_status' => 'refunded',
-                'refund_amount' => 135000,
-                'refunded_at' => now()->subDay(),
-                'refund_notes' => 'Dana Escrow 100% senilai Rp 135.000 telah otomatis dikembalikan ke rekening/e-wallet pasien.',
-            ]);
-            $mockPast->setRelation('serviceCatalog', $demoService);
-            $mockPast->setRelation('nurse', $demoNurse);
-
-            if ($demoOrderStatus === 'dibatalkan') {
-                $activeOrders = collect([]);
-                $pastOrders = collect([$mockActive, $mockPast]);
-            } else {
-                $activeOrders = collect([$mockActive]);
-                $pastOrders = collect([$mockPast]);
-            }
-        }
-
         return [$activeOrders, $pastOrders];
     }
 
@@ -178,7 +71,7 @@ class OrderScheduleController extends Controller
     }
 
     /**
-     * Tampilan 2: Halaman Gateway Pembayaran Escrow & Konfirmasi Tagihan.
+     * Tampilan 2: Halaman Gateway Pembayaran & Konfirmasi Tagihan (Simplified: Satu Tombol Bayar Sekarang).
      */
     public function paymentView(Request $request): View
     {
@@ -193,11 +86,12 @@ class OrderScheduleController extends Controller
             'totalPending' => $unpaidOrders->count(),
             'totalHeld' => $escrowHeldOrders->count(),
             'totalOrders' => $activeOrders->count(),
+            'paymentService' => $this->paymentService,
         ]);
     }
 
     /**
-     * Tampilan 3: Halaman Pusat Pembatalan Pesanan & Refund Escrow.
+     * Tampilan 3: Halaman Pusat Pembatalan Pesanan & Refund.
      */
     public function cancellationView(Request $request): View
     {
@@ -218,136 +112,89 @@ class OrderScheduleController extends Controller
     }
 
     /**
-     * Menerbitkan Snap Token & Detail Virtual Account untuk Gateway Pembayaran Escrow.
+     * Endpoint token pembayaran (kompatibilitas frontend).
      */
     public function getPaymentToken(Request $request, $order): JsonResponse
     {
-        if ((int) $order === 9001 || (string) $order === '9001') {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Sesi pembayaran escrow siap (Simulasi Demo Pasien).',
-                'data' => [
-                    'order_id' => 9001,
-                    'order_number' => 'CAH-' . date('Ymd') . '-DEMO1',
-                    'gross_amount' => 167500,
-                    'payment_method' => $request->input('payment_method', 'bca_va'),
-                    'va_number' => '88012' . rand(10000000, 99999999),
-                    'bank' => 'bca',
-                    'snap_token' => 'demo-token-' . uniqid(),
-                    'escrow_status' => 'pending',
-                ],
-            ]);
-        }
-
         $orderModel = $order instanceof Order ? $order : Order::findOrFail($order);
 
         if ($orderModel->payment_status === 'paid') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pesanan ini sudah lunas dan dana tersimpan di rekening escrow CareAtHome.',
+                'message' => 'Pesanan ini sudah lunas.',
             ], 422);
         }
 
-        $paymentMethod = (string) $request->input('payment_method', 'bca_va');
-        $paymentData = $this->paymentService->createPayment($orderModel, $paymentMethod);
+        $breakdown = $this->paymentService->calculateBreakdown($orderModel->total_amount);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Sesi pembayaran escrow siap.',
-            'data' => $paymentData,
+            'message' => 'Tagihan siap dibayar.',
+            'data' => [
+                'order_id' => $orderModel->id,
+                'order_number' => $orderModel->order_number,
+                'gross_amount' => $breakdown['total_amount'],
+                'admin_fee' => $breakdown['admin_fee'],
+                'nurse_earning' => $breakdown['nurse_earning'],
+                'fee_percent' => $breakdown['fee_percent'],
+            ],
         ]);
     }
 
     /**
-     * Proses pembayaran pesanan ke dalam rekening penampung aman (Escrow Payment).
+     * Proses pembayaran langsung "Bayar Sekarang".
+     * Dalam satu DB transaction:
+     * - Status payment = paid, paid_at = now()
+     * - Hitung pembagian (15% platform, 85% perawat)
+     * - Langsung kredit saldo: wallet perawat & wallet admin
+     * - Catat 2 baris di wallet_transactions (tipe order_income)
+     * - Status pesanan lanjut ke tahap berikutnya ('diterima')
      */
     public function pay(Request $request, $order): JsonResponse
     {
-        $request->validate([
-            'payment_method' => ['required', 'string', 'in:bca_va,mandiri_va,bni_va,bri_va,qris'],
-        ], [
-            'payment_method.required' => 'Metode pembayaran wajib dipilih.',
-            'payment_method.in' => 'Metode pembayaran tidak valid.',
-        ]);
+        $orderModel = $order instanceof Order ? $order : Order::findOrFail($order);
 
-        if ((int) $order === 9001 || (string) $order === '9001') {
-            session([
-                'demo_payment_status' => 'paid',
-                'demo_order_status' => 'diterima',
-            ]);
+        try {
+            $result = $this->paymentService->payOrder($orderModel);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Simulasi Pembayaran Escrow Berhasil! Dana senilai Rp 167.500 telah tersimpan aman di Rekening Penampung (Escrow). [Simulasi Demo Pasien]',
+                'message' => 'Pembayaran berhasil dikonfirmasi! Dana telah dicatat dan dialokasikan ke dompet mitra perawat & platform.',
                 'data' => [
-                    'order_number' => 'CAH-' . date('Ymd') . '-DEMO1',
-                    'gross_amount' => 167500,
+                    'order_number' => $result['order']->order_number,
+                    'gross_amount' => $result['total_amount'],
+                    'admin_fee' => $result['admin_fee'],
+                    'nurse_earning' => $result['nurse_earning'],
+                    'fee_percent' => $result['fee_percent'],
                     'payment_status' => 'paid',
-                    'escrow_status' => 'held_in_escrow',
+                    'order_status' => $result['order']->status,
                     'settlement_time' => now()->toIso8601String(),
                 ],
             ]);
-        }
-
-        $orderModel = $order instanceof Order ? $order : Order::findOrFail($order);
-
-        if ($orderModel->payment_status === 'paid') {
+        } catch (\DomainException $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pesanan ini sudah dibayar sebelumnya dan dana telah tersimpan di rekening escrow.',
+                'message' => $e->getMessage(),
             ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal memproses pembayaran: ' . $e->getMessage(),
+            ], 500);
         }
-
-        $paymentMethod = (string) $request->input('payment_method', 'bca_va');
-        $result = $this->paymentService->simulateInstantPayment($orderModel, $paymentMethod);
-
-        return response()->json($result);
     }
 
     /**
-     * Memproses pembatalan pesanan oleh pasien dan pengembalian dana escrow otomatis 100%.
+     * Memproses pembatalan pesanan dan refund reversal dompet jika sudah dibayar.
      */
     public function cancel(Request $request, $order): JsonResponse
     {
-        if ((int) $order === 9001 || (string) $order === '9001' || (int) $order === 9002 || (string) $order === '9002') {
-            $reason = (string) $request->input('reason', 'Perubahan jadwal mendadak / ada keperluan keluarga');
-            $notes = (string) $request->input('notes', '');
-            if (!empty($notes)) {
-                $reason .= ' - Catatan: ' . $notes;
-            }
-
-            session([
-                'demo_order_status' => 'dibatalkan',
-                'demo_payment_status' => 'refunded',
-                'demo_refund_status' => 'refunded',
-                'demo_refund_amount' => 167500,
-                'demo_cancellation_reason' => $reason,
-            ]);
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Pesanan berhasil dibatalkan. Pengembalian dana (Escrow Refund) sebesar Rp 167.500 telah diproses 100% dan dikembalikan ke rekening/e-wallet Anda. [Simulasi Demo Pasien]',
-                'data' => [
-                    'order_number' => 'CAH-' . date('Ymd') . '-DEMO1',
-                    'status' => 'dibatalkan',
-                    'status_label' => 'Dibatalkan',
-                    'payment_status' => 'refunded',
-                    'refund_status' => 'refunded',
-                    'refund_amount' => 167500,
-                    'refunded_at' => now()->toIso8601String(),
-                    'cancelled_at' => now()->toIso8601String(),
-                    'cancellation_reason' => $reason,
-                ],
-            ]);
-        }
-
         $orderModel = $order instanceof Order ? $order : Order::findOrFail($order);
 
         /** @var User|null $currentUser */
         $currentUser = Auth::user();
         $userId = $currentUser?->id;
 
-        // Otorisasi: hanya pemilik pesanan atau admin yang dapat membatalkan
         if ($userId && (int) $orderModel->patient_id !== (int) $userId && !($currentUser?->hasRole('admin') ?? false)) {
             return response()->json([
                 'status' => 'error',
@@ -358,7 +205,7 @@ class OrderScheduleController extends Controller
         if (!$orderModel->isCancellable()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pesanan dengan status "' . $orderModel->status_label . '" sudah tidak dapat dibatalkan secara mandiri karena perawat telah dalam perjalanan atau tindakan telah berlangsung. Silakan hubungi pusat bantuan.',
+                'message' => 'Pesanan dengan status "' . $orderModel->status_label . '" sudah tidak dapat dibatalkan secara mandiri karena perawat telah dalam perjalanan atau tindakan telah berlangsung.',
             ], 422);
         }
 
@@ -374,42 +221,29 @@ class OrderScheduleController extends Controller
             $fullReason .= ' - Catatan: ' . $validated['notes'];
         }
 
-        $refundProcessed = false;
-        $refundAmount = 0.0;
+        try {
+            $updatedOrder = $this->paymentService->cancelOrder($orderModel, $fullReason);
 
-        // Logika Otomatisasi Refund Escrow (KF-07, KF-10)
-        if ($orderModel->payment_status === 'paid') {
-            $refundRes = $this->paymentService->processEscrowRefund($orderModel, $fullReason);
-            $refundProcessed = true;
-            $refundAmount = $refundRes['refund_amount'];
-        } else {
-            $orderModel->refund_status = 'none';
-            $orderModel->refund_amount = 0.00;
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Pesanan berhasil dibatalkan dan reversal dana telah dicatat.',
+                'data' => [
+                    'order_number' => $updatedOrder->order_number,
+                    'status' => $updatedOrder->status,
+                    'status_label' => $updatedOrder->status_label,
+                    'payment_status' => $updatedOrder->payment_status,
+                    'refund_status' => $updatedOrder->refund_status,
+                    'refund_amount' => $updatedOrder->refund_amount,
+                    'refunded_at' => $updatedOrder->refunded_at?->toIso8601String(),
+                    'cancelled_at' => $updatedOrder->cancelled_at?->toIso8601String(),
+                    'cancellation_reason' => $updatedOrder->cancellation_reason,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal membatalkan pesanan: ' . $e->getMessage(),
+            ], 500);
         }
-
-        $orderModel->status = 'dibatalkan';
-        $orderModel->cancellation_reason = $fullReason;
-        $orderModel->cancelled_at = now();
-        $orderModel->save();
-
-        $message = $refundProcessed
-            ? 'Pesanan berhasil dibatalkan. Pengembalian dana (Escrow Refund) sebesar Rp ' . number_format($refundAmount, 0, ',', '.') . ' telah diproses 100% dan dikembalikan ke rekening/e-wallet Anda.'
-            : 'Pesanan #' . $orderModel->order_number . ' telah berhasil dibatalkan.';
-
-        return response()->json([
-            'status' => 'success',
-            'message' => $message,
-            'data' => [
-                'order_number' => $orderModel->order_number,
-                'status' => $orderModel->status,
-                'status_label' => $orderModel->status_label,
-                'payment_status' => $orderModel->payment_status,
-                'refund_status' => $orderModel->refund_status,
-                'refund_amount' => $orderModel->refund_amount,
-                'refunded_at' => $orderModel->refunded_at?->toIso8601String(),
-                'cancelled_at' => $orderModel->cancelled_at?->toIso8601String(),
-                'cancellation_reason' => $orderModel->cancellation_reason,
-            ],
-        ]);
     }
 }

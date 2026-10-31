@@ -59,6 +59,7 @@ class OrderApiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'service_catalog_id' => ['required', 'exists:service_catalogs,id'],
+            'nurse_id' => ['nullable', 'exists:users,id'],
             'scheduled_date' => ['required', 'date', 'after_or_equal:today'],
             'scheduled_time' => ['required', 'string', 'max:50'],
             'patient_name' => ['required', 'string', 'max:150'],
@@ -106,13 +107,52 @@ class OrderApiController extends Controller
         }
 
         $distanceKm = (float) ($validated['distance_km'] ?? 2.5);
+        $selectedNurseId = $validated['nurse_id'] ?? null;
+
+        // VALIDASI BACKEND RADIUS 10 KM & STATUS AKTIF NAKES (BAGIAN 3)
+        if ($selectedNurseId) {
+            $nurse = \App\Models\User::find($selectedNurseId);
+            $profile = $nurse?->nurseProfile;
+            $timeoutMin = \App\Models\Setting::getInt('location_timeout_minutes', 15);
+            $maxRadius = \App\Models\Setting::getFloat('max_radius_km', 10.0);
+
+            if (!$profile || $profile->verification_status !== 'verified' || !$profile->is_online || $nurse->isSuspended()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Perawat yang dipilih saat ini sedang offline atau tidak aktif menerima pesanan.',
+                ], 422);
+            }
+
+            if (!$profile->location_updated_at || $profile->location_updated_at < now()->subMinutes($timeoutMin)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Perawat yang dipilih tidak aktif (lokasi perawat tidak diperbarui dalam ' . $timeoutMin . ' menit terakhir).',
+                ], 422);
+            }
+
+            if (isset($validated['latitude']) && isset($validated['longitude'])) {
+                $patientLat = (float) $validated['latitude'];
+                $patientLng = (float) $validated['longitude'];
+                $calculatedDist = $profile->distanceTo($patientLat, $patientLng);
+
+                if ($calculatedDist > $maxRadius) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Perawat berada di luar radius operasional maksimal ' . $maxRadius . ' km (jarak terhitung: ' . round($calculatedDist, 1) . ' km). Silakan pilih perawat lain yang lebih dekat.',
+                    ], 422);
+                }
+
+                $distanceKm = $calculatedDist;
+            }
+        }
+
         $breakdown = Order::calculatePriceBreakdown((float) $service->price, $distanceKm);
 
         $order = Order::create([
             'order_number' => Order::generateOrderNumber(),
             'patient_id' => $userId,
             'service_catalog_id' => $service->id,
-            'nurse_id' => null, // Belum ditentukan sampai diterima perawat
+            'nurse_id' => $selectedNurseId,
             'scheduled_date' => $validated['scheduled_date'],
             'scheduled_time' => $validated['scheduled_time'],
             'patient_name' => $validated['patient_name'],
@@ -120,6 +160,8 @@ class OrderApiController extends Controller
             'address' => $validated['address'],
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
+            'patient_latitude' => $validated['latitude'] ?? null,
+            'patient_longitude' => $validated['longitude'] ?? null,
             'distance_km' => $breakdown['distance_km'],
             'clinical_notes' => $validated['clinical_notes'] ?? null,
             'medical_photo_path' => $photoPath,

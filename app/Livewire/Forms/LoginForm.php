@@ -38,6 +38,15 @@ class LoginForm extends Form
             ]);
         }
 
+        $user = Auth::user();
+        if ($user && $user->isSuspended()) {
+            $reason = $user->suspended_reason ? ": {$user->suspended_reason}" : '.';
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'form.email' => "Akun Anda sedang disuspensi oleh Administrator{$reason}",
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

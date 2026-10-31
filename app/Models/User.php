@@ -22,6 +22,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'status',
+        'suspended_reason',
+        'suspended_at',
     ];
 
     /**
@@ -44,11 +47,42 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'suspended_at' => 'datetime',
         ];
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status !== 'suspended';
     }
 
     public function nurseProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(NurseProfile::class);
+    }
+
+    public function wallet(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function payoutRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PayoutRequest::class, 'nurse_user_id');
+    }
+
+    public function patientOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class, 'patient_id');
+    }
+
+    public function nurseOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class, 'nurse_id');
     }
 }

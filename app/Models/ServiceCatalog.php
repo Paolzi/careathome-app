@@ -110,4 +110,20 @@ class ServiceCatalog extends Model
     {
         return 'Rp ' . number_format($this->price, 0, ',', '.');
     }
+
+    public function tariffs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ServiceTariff::class, 'service_id')->orderBy('effective_from', 'desc');
+    }
+
+    public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class, 'service_catalog_id');
+    }
+
+    public function nurses(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(NurseProfile::class, 'nurse_services', 'service_id', 'nurse_profile_id')
+            ->withTimestamps();
+    }
 }

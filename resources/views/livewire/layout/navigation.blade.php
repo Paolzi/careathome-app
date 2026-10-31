@@ -48,10 +48,39 @@ new class extends Component
                         {{ __('Dashboard') }}
                     </a>
 
-                    @if (auth()->user()?->hasRole('perawat'))
+                    @if (auth()->user()?->hasRole('admin'))
+                        <a href="{{ route('admin.dashboard') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('admin.dashboard') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Financial GMV') }}
+                        </a>
+                        <a href="{{ route('admin.nurses.index') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('admin.nurses*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Audit Legalitas') }}
+                        </a>
+                        <a href="{{ route('admin.services.index') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('admin.services*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Katalog & Tarif') }}
+                        </a>
+                        <a href="{{ route('admin.escrow.index') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('admin.escrow*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Audit Escrow') }}
+                        </a>
+                        <a href="{{ route('admin.payouts.index') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('admin.payouts*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Otorisasi Payout') }}
+                        </a>
+                        <a href="{{ route('admin.users.index') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('admin.users*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Manajemen User') }}
+                        </a>
+                    @elseif (auth()->user()?->hasRole('perawat'))
+                        <a href="{{ route('perawat.dashboard') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('perawat.dashboard') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Panel Kerja & Lokasi') }}
+                        </a>
                         <a href="{{ route('perawat.verifikasi') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('perawat.verifikasi*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            {{ __('Verifikasi Legalitas Nakes') }}
+                            {{ __('Verifikasi Dokumen') }}
                         </a>
                     @else
                         <a href="{{ route('pasien.katalog') }}" 
@@ -66,13 +95,12 @@ new class extends Component
 
                         <a href="{{ route('pasien.pembayaran') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 {{ request()->routeIs('pasien.pembayaran') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            <span>{{ __('Pembayaran Escrow') }}</span>
-                            <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Escrow</span>
+                            <span>{{ __('Pembayaran') }}</span>
                         </a>
 
                         <a href="{{ route('pasien.pembatalan') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('pasien.pembatalan') ? 'font-bold text-rose-700 bg-rose-50 border border-rose-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            {{ __('Pembatalan & Refund') }}
+                            {{ __('Pembatalan') }}
                         </a>
                     @endif
                 </div>
@@ -133,9 +161,31 @@ new class extends Component
                 {{ __('Dashboard') }}
             </a>
 
-            @if (auth()->user()?->hasRole('perawat'))
+            @if (auth()->user()?->hasRole('admin'))
+                <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('admin.dashboard') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Financial GMV') }}
+                </a>
+                <a href="{{ route('admin.nurses.index') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('admin.nurses*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Audit Legalitas') }}
+                </a>
+                <a href="{{ route('admin.services.index') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('admin.services*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Katalog & Tarif') }}
+                </a>
+                <a href="{{ route('admin.escrow.index') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('admin.escrow*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Audit Escrow') }}
+                </a>
+                <a href="{{ route('admin.payouts.index') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('admin.payouts*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Otorisasi Payout') }}
+                </a>
+                <a href="{{ route('admin.users.index') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('admin.users*') ? 'font-bold text-indigo-700 bg-indigo-50 border border-indigo-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Manajemen User') }}
+                </a>
+            @elseif (auth()->user()?->hasRole('perawat'))
+                <a href="{{ route('perawat.dashboard') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('perawat.dashboard') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Panel Kerja & Lokasi') }}
+                </a>
                 <a href="{{ route('perawat.verifikasi') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('perawat.verifikasi*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
-                    {{ __('Verifikasi Legalitas Nakes') }}
+                    {{ __('Verifikasi Dokumen') }}
                 </a>
             @else
                 <a href="{{ route('pasien.katalog') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.katalog*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
@@ -147,11 +197,11 @@ new class extends Component
                 </a>
 
                 <a href="{{ route('pasien.pembayaran') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.pembayaran') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
-                    {{ __('Pembayaran Escrow') }}
+                    {{ __('Pembayaran') }}
                 </a>
 
                 <a href="{{ route('pasien.pembatalan') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.pembatalan') ? 'font-bold text-rose-700 bg-rose-50 border border-rose-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
-                    {{ __('Pembatalan & Refund') }}
+                    {{ __('Pembatalan') }}
                 </a>
             @endif
         </div>

@@ -14,6 +14,11 @@ class Payment extends Model
         'order_id',
         'order_number',
         'transaction_id',
+        'total_amount',
+        'admin_fee',
+        'nurse_earning',
+        'fee_percent',
+        'status',
         'payment_method',
         'payment_type',
         'bank',
@@ -34,12 +39,21 @@ class Payment extends Model
 
     protected $casts = [
         'gross_amount' => 'float',
+        'total_amount' => 'integer',
+        'admin_fee' => 'integer',
+        'nurse_earning' => 'integer',
+        'fee_percent' => 'float',
         'refund_amount' => 'float',
         'payment_payload' => 'array',
         'paid_at' => 'datetime',
         'settlement_time' => 'datetime',
         'refunded_at' => 'datetime',
     ];
+
+    public function walletTransactions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(WalletTransaction::class);
+    }
 
     /**
      * Relasi ke entitas Pesanan Kunjungan (Order).
