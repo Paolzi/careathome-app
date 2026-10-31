@@ -173,7 +173,7 @@
                 </div>
             </div>
 
-            <form :action="'/admin/payouts/' + activePayout.id + '/transfer'" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <form x-bind:action="'/admin/payouts/' + activePayout.id + '/transfer'" method="POST" enctype="multipart/form-data" class="space-y-4">
                 @csrf
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tanggal Transfer <span class="text-rose-500">*</span></label>
@@ -201,7 +201,7 @@
                 </p>
             </div>
 
-            <form :action="'/admin/payouts/' + activePayout.id + '/reject'" method="POST" class="space-y-4">
+            <form x-bind:action="'/admin/payouts/' + activePayout.id + '/reject'" method="POST" class="space-y-4">
                 @csrf
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Alasan Penolakan <span class="text-rose-500">*</span></label>

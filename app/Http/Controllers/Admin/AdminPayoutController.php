@@ -9,13 +9,14 @@ use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AdminPayoutController extends Controller
 {
     /**
-     * [SCRUM-59] Manajemen Otorisasi Payout & Daftar Permohonan.
+     * Manajemen Otorisasi Payout & Daftar Permohonan.
      */
     public function index(Request $request): View
     {
@@ -58,7 +59,7 @@ class AdminPayoutController extends Controller
                 'status' => 'transferred',
                 'proof_path' => $path,
                 'transferred_at' => $request->transferred_at,
-                'processed_by' => auth()->id(),
+                'processed_by' => Auth::id(),
             ]);
 
             // Ambil / pastikan instance wallet perawat tersedia
@@ -112,7 +113,7 @@ class AdminPayoutController extends Controller
             $payout->update([
                 'status' => 'rejected',
                 'rejection_reason' => $request->rejection_reason,
-                'processed_by' => auth()->id(),
+                'processed_by' => Auth::id(),
             ]);
 
             WalletTransaction::create([

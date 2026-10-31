@@ -58,20 +58,37 @@
 
             @if (auth()->user()->hasRole('perawat'))
                 <!-- Khusus Tampilan Jika Login Sebagai Perawat -->
+                @php
+                    $nurseProfile = \App\Models\NurseProfile::where('user_id', auth()->id())->first();
+                    $isVerified = $nurseProfile && $nurseProfile->verification_status === 'verified';
+                @endphp
                 <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
                     <div class="flex items-start justify-between gap-4">
                         <div class="space-y-2">
                             <span class="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
                                 Portal Mitra Perawat
                             </span>
-                            <h3 class="text-lg font-bold text-slate-900">Verifikasi Berkas Legalitas STR &amp; SIP</h3>
-                            <p class="text-xs text-slate-600 max-w-xl">
-                                Kelola kelengkapan dokumen resmi profesi (KTP, STR aktif, SIP, dan ijazah keperawatan) untuk dapat menerima pesanan kunjungan homecare.
-                            </p>
+                            @if ($isVerified)
+                                <h3 class="text-lg font-bold text-slate-900">Dashboard Kerja &amp; Ketersediaan</h3>
+                                <p class="text-xs text-slate-600 max-w-xl">
+                                    Akun Anda telah terverifikasi. Buka dashboard untuk mengaktifkan status kerja dan mulai menerima order kunjungan homecare.
+                                </p>
+                            @else
+                                <h3 class="text-lg font-bold text-slate-900">Verifikasi Berkas Legalitas STR &amp; SIP</h3>
+                                <p class="text-xs text-slate-600 max-w-xl">
+                                    Kelola kelengkapan dokumen resmi profesi (KTP, STR aktif, SIP, dan ijazah keperawatan) untuk dapat menerima pesanan kunjungan homecare.
+                                </p>
+                            @endif
                         </div>
-                        <a href="{{ route('perawat.verifikasi') }}" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow transition whitespace-nowrap">
-                            Buka Verifikasi Nakes &rarr;
-                        </a>
+                        @if ($isVerified)
+                            <a href="{{ route('perawat.dashboard') }}" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition whitespace-nowrap">
+                                Buka Dashboard Kerja &rarr;
+                            </a>
+                        @else
+                            <a href="{{ route('perawat.verifikasi') }}" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow transition whitespace-nowrap">
+                                Buka Verifikasi Nakes &rarr;
+                            </a>
+                        @endif
                     </div>
                 </div>
             @else

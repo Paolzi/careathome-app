@@ -1,6 +1,6 @@
 <x-admin-layout>
     <x-slot name="header">
-        Master Data Katalog Layanan &amp; CRUD Tarif (SCRUM-57)
+        Master Data Katalog Layanan &amp; Tarif Medis
     </x-slot>
 
     <div class="space-y-6">
@@ -12,7 +12,7 @@
                 <!-- Category Filter & Search Form -->
                 <form action="{{ route('admin.services.index') }}" method="GET" class="flex flex-wrap items-center gap-3">
                     <select name="category" onchange="this.form.submit()"
-                        class="text-xs rounded-xl border-slate-200 font-semibold text-slate-700 focus:ring-indigo-500 focus:border-indigo-500 py-1.5 px-3">
+                        class="text-xs rounded-xl border-slate-200 font-semibold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 py-1.5 px-3">
                         <option value="all">Semua Kategori</option>
                         @foreach ($categories as $cat)
                             <option value="{{ $cat }}" {{ $category === $cat ? 'selected' : '' }}>{{ $cat }}</option>
@@ -20,16 +20,16 @@
                     </select>
 
                     <input type="text" name="search" value="{{ $search }}" placeholder="Cari layanan medis..."
-                        class="text-xs rounded-xl border-slate-200 focus:ring-indigo-500 focus:border-indigo-500 py-1.5 px-3 w-48 sm:w-64">
+                        class="text-xs rounded-xl border-slate-200 focus:ring-emerald-500 focus:border-emerald-500 py-1.5 px-3 w-48 sm:w-64">
 
-                    <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800">Cari</button>
+                    <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">Cari</button>
                     @if ($search || $category !== 'all')
                         <a href="{{ route('admin.services.index') }}" class="text-xs text-rose-600 font-bold hover:underline">Reset</a>
                     @endif
                 </form>
 
                 <a href="{{ route('admin.services.create') }}"
-                    class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition flex items-center gap-1.5 self-start sm:self-auto">
+                    class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 self-start sm:self-auto">
                     <span>+ Tambah Layanan Baru</span>
                 </a>
 
@@ -92,7 +92,7 @@
                                 <td class="p-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <a href="{{ route('admin.services.edit', $s->id) }}"
-                                            class="px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold text-xs transition">
+                                            class="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 font-bold text-xs transition">
                                             Edit &amp; Ubah Tarif
                                         </a>
 

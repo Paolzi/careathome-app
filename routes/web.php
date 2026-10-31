@@ -35,9 +35,11 @@ Route::middleware(['auth'])->group(function () {
 
     // Portal Admin (Role Admin)
     Route::prefix('admin')->middleware(['role:admin'])->name('admin.')->group(function () {
-        Route::get('dashboard', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('dashboard', function () {
+            return redirect()->route('admin.nurses.index');
+        })->name('dashboard');
 
-        // SCRUM-55: Audit Legalitas Nakes
+        // Audit Legalitas Nakes
         Route::get('nurses', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'index'])->name('nurses.index');
         Route::post('nurses/{nurseProfile}/approve', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'approve'])->name('nurses.approve');
         Route::post('nurses/{nurseProfile}/reject', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'reject'])->name('nurses.reject');
@@ -87,6 +89,11 @@ Route::get('demo-login/{role}', function (string $role) {
         request()->session()->regenerate();
 
         if ($role === 'perawat') {
+            // Jika sudah verified, langsung ke dashboard kerja
+            $nurseProfile = \App\Models\NurseProfile::where('user_id', $user->id)->first();
+            if ($nurseProfile && $nurseProfile->verification_status === 'verified') {
+                return redirect()->route('perawat.dashboard');
+            }
             return redirect()->route('perawat.verifikasi');
         }
 

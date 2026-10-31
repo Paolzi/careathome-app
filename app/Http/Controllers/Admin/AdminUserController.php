@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
@@ -51,7 +52,7 @@ class AdminUserController extends Controller
     public function toggleStatus(Request $request, User $user): RedirectResponse
     {
         // Admin tidak boleh menonaktifkan akunnya sendiri
-        if (auth()->id() === $user->id) {
+        if (Auth::id() === $user->id) {
             return back()->with('error', 'Anda tidak dapat menangguhkan akun Anda sendiri!');
         }
 
