@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\NurseDocument;
 use App\Models\NurseProfile;
 use App\Models\NurseVerification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,7 @@ class NurseVerificationController extends Controller
      */
     public function index()
     {
+        /** @var User $user */
         $user = Auth::user();
 
         // Cegah akun Pasien masuk ke alur verifikasi Nakes
@@ -45,6 +47,7 @@ class NurseVerificationController extends Controller
      */
     public function saveDraft(Request $request)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         $nurseProfile = NurseProfile::firstOrCreate(
@@ -56,7 +59,10 @@ class NurseVerificationController extends Controller
             'nik' => $request->input('nik'),
             'str_number' => $request->input('str_number'),
             'str_expiry' => $request->input('str_expiry') ?: null,
+            'str_expired_at' => $request->input('str_expiry') ?: null,
             'sip_number' => $request->input('sip_number'),
+            'sip_expiry' => $request->input('sip_expiry') ?: null,
+            'sip_expired_at' => $request->input('sip_expiry') ?: null,
             'verification_status' => 'draft',
         ]);
 
@@ -115,6 +121,7 @@ class NurseVerificationController extends Controller
      */
     public function submit(Request $request)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         $request->validate([
@@ -131,7 +138,10 @@ class NurseVerificationController extends Controller
             'nik' => $request->input('nik'),
             'str_number' => $request->input('str_number'),
             'str_expiry' => $request->input('str_expiry'),
+            'str_expired_at' => $request->input('str_expiry'),
             'sip_number' => $request->input('sip_number'),
+            'sip_expiry' => $request->input('sip_expiry') ?: null,
+            'sip_expired_at' => $request->input('sip_expiry') ?: null,
             'verification_status' => 'pending',
         ]);
 
@@ -192,6 +202,7 @@ class NurseVerificationController extends Controller
      */
     public function deleteDocument($type)
     {
+        /** @var User $user */
         $user = Auth::user();
         $nurseProfile = NurseProfile::where('user_id', $user->id)->first();
 
@@ -206,6 +217,13 @@ class NurseVerificationController extends Controller
                 }
                 $doc->delete();
             }
+        }
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Dokumen ' . strtoupper($type) . ' berhasil dihapus.',
+            ]);
         }
 
         return redirect()->back()->with('status', 'Dokumen ' . strtoupper($type) . ' berhasil dihapus.');

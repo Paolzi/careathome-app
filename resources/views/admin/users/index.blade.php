@@ -60,7 +60,6 @@
                         <th class="p-4 pl-6">Pengguna</th>
                         <th class="p-4">Role</th>
                         <th class="p-4">Status & Info</th>
-                        <th class="p-4">Saldo Wallet</th>
                         <th class="p-4">Terdaftar</th>
                         <th class="p-4 pr-6 text-right">Aksi Status</th>
                     </tr>
@@ -110,13 +109,6 @@
                                     @endif
                                 @endif
                             </td>
-                            <td class="p-4 font-mono font-semibold text-slate-700">
-                                @if($u->wallet)
-                                    Rp {{ number_format($u->wallet->balance, 0, ',', '.') }}
-                                @else
-                                    <span class="text-slate-300">-</span>
-                                @endif
-                            </td>
                             <td class="p-4 text-xs text-slate-500">
                                 {{ $u->created_at->format('d M Y') }}
                             </td>
@@ -145,7 +137,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="p-8 text-center text-slate-400">Tidak ada pengguna ditemukan.</td>
+                            <td colspan="5" class="p-8 text-center text-slate-400">Tidak ada pengguna ditemukan.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -166,7 +158,7 @@
                 </p>
             </div>
 
-            <form :action="'/admin/users/' + activeUserId + '/toggle-status'" method="POST" class="space-y-4">
+            <form x-bind:action="'/admin/users/' + activeUserId + '/toggle-status'" method="POST" class="space-y-4">
                 @csrf
                 <input type="hidden" name="status" value="suspended">
                 <div>

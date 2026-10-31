@@ -31,7 +31,13 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         if ($user && $user->hasRole('perawat')) {
-            $this->redirect(route('perawat.dashboard'), navigate: true);
+            // Jika sudah verified, langsung ke dashboard kerja
+            $nurseProfile = \App\Models\NurseProfile::where('user_id', $user->id)->first();
+            if ($nurseProfile && $nurseProfile->verification_status === 'verified') {
+                $this->redirect(route('perawat.dashboard'), navigate: true);
+            } else {
+                $this->redirect(route('perawat.verifikasi'), navigate: true);
+            }
             return;
         }
 
@@ -61,7 +67,13 @@ new #[Layout('layouts.guest')] class extends Component
             Session::regenerate();
 
             if ($role === 'perawat') {
-                $this->redirect(route('perawat.verifikasi'), navigate: true);
+                // Jika sudah verified, langsung ke dashboard kerja
+                $nurseProfile = \App\Models\NurseProfile::where('user_id', $user->id)->first();
+                if ($nurseProfile && $nurseProfile->verification_status === 'verified') {
+                    $this->redirect(route('perawat.dashboard'), navigate: true);
+                } else {
+                    $this->redirect(route('perawat.verifikasi'), navigate: true);
+                }
                 return;
             }
 

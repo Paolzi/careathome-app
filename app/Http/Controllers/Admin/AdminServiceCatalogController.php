@@ -15,7 +15,7 @@ use Illuminate\View\View;
 class AdminServiceCatalogController extends Controller
 {
     /**
-     * [SCRUM-57] Master Data Katalog Layanan & Riwayat Tarif.
+     * Master Data Katalog Layanan & Riwayat Tarif.
      */
     public function index(Request $request): View
     {
@@ -77,8 +77,8 @@ class AdminServiceCatalogController extends Controller
                 'estimated_duration' => $validated['estimated_duration'],
                 'estimated_duration_minutes' => $validated['estimated_duration_minutes'],
                 'price' => $validated['price'],
-                'image_emoji' => $validated['image_emoji'] ?: '🩺',
-                'badge_color' => $validated['badge_color'] ?: 'emerald',
+                'image_emoji' => !empty($validated['image_emoji']) ? $validated['image_emoji'] : '🩺',
+                'badge_color' => !empty($validated['badge_color']) ? $validated['badge_color'] : 'emerald',
                 'is_active' => $validated['is_active'] ?? true,
             ]);
 
@@ -134,8 +134,8 @@ class AdminServiceCatalogController extends Controller
                 'estimated_duration' => $validated['estimated_duration'],
                 'estimated_duration_minutes' => $validated['estimated_duration_minutes'],
                 'price' => $newPrice,
-                'image_emoji' => $validated['image_emoji'] ?: $service->image_emoji,
-                'badge_color' => $validated['badge_color'] ?: $service->badge_color,
+                'image_emoji' => !empty($validated['image_emoji']) ? $validated['image_emoji'] : $service->image_emoji,
+                'badge_color' => !empty($validated['badge_color']) ? $validated['badge_color'] : ($service->badge_color ?? 'emerald'),
                 'is_active' => $validated['is_active'] ?? $service->is_active,
             ]);
 

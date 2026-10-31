@@ -14,7 +14,7 @@ use Illuminate\View\View;
 class AdminNurseVerificationController extends Controller
 {
     /**
-     * [SCRUM-55] Daftar Verifikasi Dokumen Legalitas STR/SIP Nakes.
+     * Daftar Verifikasi Dokumen Legalitas STR/SIP Nakes.
      */
     public function index(Request $request): View
     {
@@ -44,6 +44,7 @@ class AdminNurseVerificationController extends Controller
         $counts = [
             'all' => NurseProfile::count(),
             'pending' => NurseProfile::where('verification_status', 'pending')->count(),
+            'draft' => NurseProfile::where('verification_status', 'draft')->count(),
             'verified' => NurseProfile::where('verification_status', 'verified')->count(),
             'rejected' => NurseProfile::where('verification_status', 'rejected')->count(),
         ];

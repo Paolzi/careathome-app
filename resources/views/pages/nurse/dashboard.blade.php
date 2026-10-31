@@ -102,7 +102,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 <!-- KOLOM KIRI: DOMPET, SALDO & PENARIKAN DANA (TARIK SALDO) -->
-                <div class="lg:col-span-1 space-y-6">
+                <div id="rekening-saldo" class="lg:col-span-1 space-y-6">
 
                     <!-- Kartu Saldo Dompet -->
                     <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-5">
@@ -122,7 +122,7 @@
                         </div>
 
                         <!-- Form Tarik Saldo -->
-                        <div class="pt-4 border-t border-slate-100 space-y-3" x-data="{ openForm: false }">
+                        <div class="pt-4 border-t border-slate-100 space-y-3" x-data="{ openForm: window.location.hash === '#rekening-saldo' }">
                             <button type="button" @click="openForm = !openForm"
                                 class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center justify-center gap-1.5">
                                 <span>💸 Tarik Saldo (Payout)</span>

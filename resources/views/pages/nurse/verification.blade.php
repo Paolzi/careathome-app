@@ -13,6 +13,14 @@
 
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        [x-cloak] { display: none !important; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col" x-data="{
     draftSaved: false,
@@ -79,11 +87,26 @@
     },
 
     removeDoc(docType) {
+        if (this.documents[docType] && this.documents[docType].fromDb) {
+            // Hapus dari database via AJAX
+            fetch('/perawat/verifikasi/document/' + docType, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    'Accept': 'application/json'
+                }
+            }).catch(console.error);
+        }
         this.documents[docType] = null;
         const sampleInput = document.getElementById('sample_' + docType);
         if (sampleInput) sampleInput.value = '';
         const fileInput = document.getElementById('file_' + docType);
         if (fileInput) fileInput.value = '';
+    },
+
+    changeDoc(docType) {
+        const fileInput = document.getElementById('file_' + docType);
+        if (fileInput) fileInput.click();
     },
 
     // SIMPAN DRAF ke DATABASE via AJAX (tanpa navigasi halaman)
@@ -181,17 +204,42 @@
                         {{ auth()->check() ? substr(auth()->user()->name, 0, 2) : 'NS' }}
                     </div>
                     <div class="hidden md:block text-left text-xs leading-tight">
-                        <p class="font-bold text-slate-900">{{ auth()->check() ? auth()->user()->name : 'Ns. Siti Nurhaliza, S.Kep' }}</p>
-                        <p class="text-emerald-600 font-medium">Mitra Perawat (Menunggu Verifikasi)</p>
+                        <p class="font-bold text-slate-900">{{ auth()->check() ? auth()->user()->name : 'Mitra Perawat' }}</p>
+                        @if(($nurseProfile->verification_status ?? '') === 'verified')
+                            <p class="text-emerald-600 font-bold flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Mitra Perawat (Terverifikasi &bull; Siap Bekerja)
+                            </p>
+                        @elseif(($nurseProfile->verification_status ?? '') === 'pending')
+                            <p class="text-amber-600 font-semibold flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                Mitra Perawat (Menunggu Review)
+                            </p>
+                        @elseif(($nurseProfile->verification_status ?? '') === 'rejected')
+                            <p class="text-rose-600 font-semibold flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Mitra Perawat (Perlu Perbaikan)
+                            </p>
+                        @else
+                            <p class="text-slate-500 font-medium">Mitra Perawat (Draf)</p>
+                        @endif
                     </div>
                 </div>
 
-                <!-- Ke Landing Page Button -->
-                <a href="/" class="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-200 transition flex items-center gap-1.5 shadow-sm">
+                <!-- Tombol Dashboard Kerja -->
+                <a href="{{ route('perawat.dashboard') }}" class="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-200 transition flex items-center gap-1.5 shadow-sm">
                     <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <span>Dashboard Kerja</span>
+                </a>
+
+                <!-- Ke Landing Page Button -->
+                <a href="/" class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                     </svg>
-                    <span>Ke Landing Page</span>
+                    <span class="hidden sm:inline">Ke Beranda</span>
                 </a>
 
                 <!-- Keluar (Logout) -->
@@ -205,7 +253,7 @@
     <!-- Main Container with Sidebar -->
     <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
         
-        <!-- Sidebar Navigation (SCRUM-37) -->
+        <!-- Sidebar Navigation -->
         <aside class="w-full lg:w-64 shrink-0">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sticky top-24 space-y-6">
                 
@@ -217,37 +265,63 @@
                         </div>
                         <div class="overflow-hidden">
                             <h3 class="font-bold text-xs truncate">{{ auth()->check() ? auth()->user()->name : 'Ns. Siti Nurhaliza' }}</h3>
-                            <span class="inline-block mt-0.5 text-[10px] bg-amber-400/20 text-amber-300 font-semibold px-2 py-0.5 rounded-full border border-amber-400/30">
-                                Dokumen Pending
-                            </span>
+                            @if(($nurseProfile->verification_status ?? '') === 'verified')
+                                <span class="inline-block mt-0.5 text-[10px] bg-emerald-400/20 text-emerald-300 font-extrabold px-2 py-0.5 rounded-full border border-emerald-400/30">
+                                    ✓ Akun Terverifikasi
+                                </span>
+                            @elseif(($nurseProfile->verification_status ?? '') === 'pending')
+                                <span class="inline-block mt-0.5 text-[10px] bg-amber-400/20 text-amber-300 font-semibold px-2 py-0.5 rounded-full border border-amber-400/30">
+                                    Dokumen Pending
+                                </span>
+                            @elseif(($nurseProfile->verification_status ?? '') === 'rejected')
+                                <span class="inline-block mt-0.5 text-[10px] bg-rose-400/20 text-rose-300 font-semibold px-2 py-0.5 rounded-full border border-rose-400/30">
+                                    Ditolak Admin
+                                </span>
+                            @else
+                                <span class="inline-block mt-0.5 text-[10px] bg-slate-400/20 text-slate-300 font-semibold px-2 py-0.5 rounded-full border border-slate-400/30">
+                                    Draf Isian
+                                </span>
+                            @endif
                         </div>
                     </div>
                 </div>
 
                 <!-- Navigation Menu -->
                 <nav class="space-y-1 text-xs font-medium">
-                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                    <!-- Dashboard Kerja -->
+                    <a href="{{ route('perawat.dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 transition">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <span class="font-bold text-emerald-800">Dashboard &amp; Ketersediaan</span>
+                    </a>
+
+                    <!-- 1. Profil Biodata Nakes -->
+                    <a href="{{ route('profile') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                         </svg>
                         <span>1. Profil Biodata Nakes</span>
                     </a>
 
-                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold border border-emerald-200 transition">
+                    <!-- 2. Verifikasi STR / SIP (Aktif) -->
+                    <a href="{{ route('perawat.verifikasi') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold border border-emerald-200 transition">
                         <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                         </svg>
                         <span>2. Verifikasi STR / SIP</span>
                     </a>
 
-                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-50 cursor-not-allowed">
+                    <!-- 3. Rekening Pencairan Saldo -->
+                    <a href="{{ route('perawat.dashboard') }}#rekening-saldo" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-emerald-50 hover:text-emerald-900 transition">
                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                         </svg>
                         <span>3. Rekening Pencairan Saldo</span>
                     </a>
 
-                    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-50 cursor-not-allowed">
+                    <!-- 4. Pengaturan Akun -->
+                    <a href="{{ route('profile') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-emerald-50 hover:text-emerald-900 transition">
                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -316,6 +390,27 @@
                 </div>
             </div>
 
+            <!-- Banner Khusus Jika Akun Nakes Sudah Verified -->
+            @if(($nurseProfile->verification_status ?? '') === 'verified')
+                <div class="p-6 rounded-3xl bg-gradient-to-r from-emerald-800 to-teal-800 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border-2 border-emerald-500/80">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shrink-0 border border-white/20">
+                            🎉
+                        </div>
+                        <div class="space-y-1">
+                            <h3 class="text-lg font-black tracking-tight text-white">Selamat! STR &amp; SIP Anda Telah Diverifikasi &amp; Disetujui Admin</h3>
+                            <p class="text-xs text-emerald-100 leading-relaxed max-w-2xl">
+                                Akun Anda kini resmi aktif untuk melayani pasien. Buka Dashboard Mitra Perawat untuk mengaktifkan status "Sedang Bekerja (Online)" dan mulai menerima order homecare.
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ route('perawat.dashboard') }}" class="px-6 py-3.5 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 font-black text-xs shadow-md transition transform hover:-translate-y-0.5 whitespace-nowrap flex items-center gap-2 shrink-0">
+                        <span>Buka Dashboard &amp; Mulai Bekerja</span>
+                        <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
+                </div>
+            @endif
+
             <!-- Page Header Card -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -331,10 +426,27 @@
                         </p>
                     </div>
 
-                    <div class="shrink-0 flex items-center gap-2 bg-amber-50 text-amber-800 border border-amber-200 px-4 py-2 rounded-xl text-xs font-bold">
-                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
-                        Status: Menunggu Audit Admin
-                    </div>
+                    @if(($nurseProfile->verification_status ?? '') === 'verified')
+                        <div class="shrink-0 flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-2 rounded-xl text-xs font-bold">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            Status: Terverifikasi (Siap Bekerja)
+                        </div>
+                    @elseif(($nurseProfile->verification_status ?? '') === 'rejected')
+                        <div class="shrink-0 flex items-center gap-2 bg-rose-50 text-rose-800 border border-rose-200 px-4 py-2 rounded-xl text-xs font-bold">
+                            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                            Status: Ditolak (Perlu Perbaikan)
+                        </div>
+                    @elseif(($nurseProfile->verification_status ?? '') === 'pending')
+                        <div class="shrink-0 flex items-center gap-2 bg-amber-50 text-amber-800 border border-amber-200 px-4 py-2 rounded-xl text-xs font-bold">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            Status: Menunggu Audit Admin
+                        </div>
+                    @else
+                        <div class="shrink-0 flex items-center gap-2 bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold">
+                            <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                            Status: Draf (Belum Dikirim)
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Step-by-Step Progress Tracker (Steps 1 to 4) -->
@@ -352,36 +464,50 @@
                             </div>
                         </div>
 
-                        <!-- Step 2 (Active) -->
-                        <div class="p-3 rounded-xl bg-emerald-600 text-white border-2 border-emerald-500 shadow-md shadow-emerald-600/20 flex items-center gap-3 ring-2 ring-emerald-400/30">
-                            <div class="w-7 h-7 rounded-full bg-white text-emerald-800 flex items-center justify-center text-xs font-bold shrink-0">
-                                2
+                        <!-- Step 2 -->
+                        @if(($nurseProfile->verification_status ?? '') === 'verified')
+                            <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center gap-3">
+                                <div class="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                    ✓
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-bold uppercase text-emerald-700">Langkah 2</p>
+                                    <p class="text-xs font-bold text-slate-800">STR &amp; SIP Nakes</p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-[10px] font-bold uppercase text-emerald-100">Langkah 2 (Aktif)</p>
-                                <p class="text-xs font-extrabold">STR & SIP Nakes</p>
+                        @else
+                            <div class="p-3 rounded-xl bg-emerald-600 text-white border-2 border-emerald-500 shadow-md shadow-emerald-600/20 flex items-center gap-3 ring-2 ring-emerald-400/30">
+                                <div class="w-7 h-7 rounded-full bg-white text-emerald-800 flex items-center justify-center text-xs font-bold shrink-0">
+                                    2
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-bold uppercase text-emerald-100">Langkah 2 (Aktif)</p>
+                                    <p class="text-xs font-extrabold">STR &amp; SIP Nakes</p>
+                                </div>
                             </div>
-                        </div>
+                        @endif
 
                         <!-- Step 3 -->
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3 opacity-60">
-                            <div class="w-7 h-7 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">
-                                3
+                        <div class="p-3 rounded-xl {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'bg-emerald-50/70 border border-emerald-200' : 'bg-slate-50 border border-slate-200 opacity-60' }} flex items-center gap-3">
+                            <div class="w-7 h-7 rounded-full {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700' }} flex items-center justify-center text-xs font-bold shrink-0">
+                                {{ ($nurseProfile->verification_status ?? '') === 'verified' ? '✓' : '3' }}
                             </div>
                             <div>
-                                <p class="text-[10px] font-bold uppercase text-slate-500">Langkah 3</p>
+                                <p class="text-[10px] font-bold uppercase {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'text-emerald-700' : 'text-slate-500' }}">Langkah 3</p>
                                 <p class="text-xs font-semibold text-slate-700">Plafon Tarif</p>
                             </div>
                         </div>
 
                         <!-- Step 4 -->
-                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3 opacity-60">
-                            <div class="w-7 h-7 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">
-                                4
+                        <div class="p-3 rounded-xl {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'bg-emerald-600 text-white shadow-md' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'bg-amber-50 border border-amber-300' : 'bg-slate-50 border border-slate-200 opacity-60') }} flex items-center gap-3">
+                            <div class="w-7 h-7 rounded-full {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'bg-white text-emerald-800' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'bg-amber-500 text-white animate-pulse' : 'bg-slate-300 text-slate-700') }} flex items-center justify-center text-xs font-bold shrink-0">
+                                {{ ($nurseProfile->verification_status ?? '') === 'verified' ? '✓' : '4' }}
                             </div>
                             <div>
-                                <p class="text-[10px] font-bold uppercase text-slate-500">Langkah 4</p>
-                                <p class="text-xs font-semibold text-slate-700">Audit Admin</p>
+                                <p class="text-[10px] font-bold uppercase {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'text-emerald-100' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'text-amber-800' : 'text-slate-500') }}">Langkah 4</p>
+                                <p class="text-xs font-semibold {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'text-white font-extrabold' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'text-amber-900 font-bold' : 'text-slate-700') }}">
+                                    {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'Terverifikasi' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'Audit Admin' : 'Audit Admin') }}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -398,10 +524,16 @@
                 @csrf
 
                 <!-- Hidden inputs bound to Alpine.js to ensure latest values submitted -->
-                <input type="hidden" name="nik" :value="nik">
-                <input type="hidden" name="str_number" :value="str_number">
-                <input type="hidden" name="str_expiry" :value="str_expiry">
-                <input type="hidden" name="sip_number" :value="sip_number">
+                <input type="hidden" id="hidden_nik" name="nik" :value="nik">
+                <input type="hidden" id="hidden_str_number" name="str_number" :value="str_number">
+                <input type="hidden" id="hidden_str_expiry" name="str_expiry" :value="str_expiry">
+                <input type="hidden" id="hidden_sip_number" name="sip_number" :value="sip_number">
+
+                <!-- Hidden inputs for sample files -->
+                <input type="hidden" id="sample_ktp" name="sample_ktp" value="">
+                <input type="hidden" id="sample_str" name="sample_str" value="">
+                <input type="hidden" id="sample_sip" name="sample_sip" value="">
+                <input type="hidden" id="sample_ijazah" name="sample_ijazah" value="">
 
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
                     <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
@@ -500,7 +632,7 @@
                                 <div class="mt-4 flex items-center gap-2">
                                     <label class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm cursor-pointer transition">
                                         Pilih Berkas KTP
-                                        <input type="file" class="hidden" accept="image/*,.pdf" @change="handleFileUpload($event, 'ktp')" />
+                                        <input type="file" id="file_ktp" name="ktp" class="hidden" accept="image/*,.pdf" @change="handleFileUpload($event, 'ktp')" />
                                     </label>
                                     <button type="button" @click="loadSampleDoc('ktp', 'image')" class="px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-semibold shadow-sm transition">
                                         + Contoh File
@@ -515,9 +647,14 @@
                                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                                         1. Pratinjau Swafoto KTP
                                     </span>
-                                    <button type="button" @click="removeDoc('ktp')" class="text-xs font-bold text-rose-600 hover:text-rose-800 underline">
-                                        Hapus
-                                    </button>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" @click="changeDoc('ktp')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
+                                            Ganti Berkas
+                                        </button>
+                                        <button type="button" @click="removeDoc('ktp')" class="text-xs font-bold text-rose-600 hover:text-rose-800 underline">
+                                            Hapus
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <!-- Image Preview Card -->
@@ -555,7 +692,7 @@
                                 <div class="mt-4 flex items-center gap-2">
                                     <label class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm cursor-pointer transition">
                                         Pilih Berkas STR (PDF)
-                                        <input type="file" class="hidden" accept=".pdf,image/*" @change="handleFileUpload($event, 'str')" />
+                                        <input type="file" id="file_str" name="str" class="hidden" accept=".pdf,image/*" @change="handleFileUpload($event, 'str')" />
                                     </label>
                                     <button type="button" @click="loadSampleDoc('str', 'pdf')" class="px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-semibold shadow-sm transition">
                                         + Contoh PDF
@@ -570,9 +707,14 @@
                                         <span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold">PDF</span>
                                         2. Pratinjau Halaman 1 Dokumen STR
                                     </span>
-                                    <button type="button" @click="removeDoc('str')" class="text-xs font-bold text-rose-600 hover:text-rose-800 underline">
-                                        Ganti Berkas
-                                    </button>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" @click="changeDoc('str')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
+                                            Ganti Berkas
+                                        </button>
+                                        <button type="button" @click="removeDoc('str')" class="text-xs font-bold text-rose-600 hover:text-rose-800 underline">
+                                            Hapus
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <!-- Simulated Official Document 1st-Page Preview -->
@@ -620,7 +762,7 @@
                                 <div class="mt-4 flex items-center gap-2">
                                     <label class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm cursor-pointer transition">
                                         Pilih Berkas SIP (PDF)
-                                        <input type="file" class="hidden" accept=".pdf,image/*" @change="handleFileUpload($event, 'sip')" />
+                                        <input type="file" id="file_sip" name="sip" class="hidden" accept=".pdf,image/*" @change="handleFileUpload($event, 'sip')" />
                                     </label>
                                     <button type="button" @click="loadSampleDoc('sip', 'pdf')" class="px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-semibold shadow-sm transition">
                                         + Contoh PDF
@@ -635,9 +777,14 @@
                                         <span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold">PDF</span>
                                         3. Pratinjau Halaman 1 Dokumen SIP
                                     </span>
-                                    <button type="button" @click="removeDoc('sip')" class="text-xs font-bold text-rose-600 hover:text-rose-800 underline">
-                                        Ganti Berkas
-                                    </button>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" @click="changeDoc('sip')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
+                                            Ganti Berkas
+                                        </button>
+                                        <button type="button" @click="removeDoc('sip')" class="text-xs font-bold text-rose-600 hover:text-rose-800 underline">
+                                            Hapus
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2.5">
@@ -684,7 +831,7 @@
                                 <div class="mt-4 flex items-center gap-2">
                                     <label class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm cursor-pointer transition">
                                         Pilih Berkas Ijazah
-                                        <input type="file" class="hidden" accept=".pdf,image/*" @change="handleFileUpload($event, 'ijazah')" />
+                                        <input type="file" id="file_ijazah" name="ijazah" class="hidden" accept=".pdf,image/*" @change="handleFileUpload($event, 'ijazah')" />
                                     </label>
                                     <button type="button" @click="loadSampleDoc('ijazah', 'pdf')" class="px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-semibold shadow-sm transition">
                                         + Contoh PDF
@@ -699,9 +846,14 @@
                                         <span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold">PDF</span>
                                         4. Pratinjau Ijazah Pendidikan
                                     </span>
-                                    <button type="button" @click="removeDoc('ijazah')" class="text-xs font-bold text-rose-600 hover:text-rose-800 underline">
-                                        Ganti Berkas
-                                    </button>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" @click="changeDoc('ijazah')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
+                                            Ganti Berkas
+                                        </button>
+                                        <button type="button" @click="removeDoc('ijazah')" class="text-xs font-bold text-rose-600 hover:text-rose-800 underline">
+                                            Hapus
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2.5">

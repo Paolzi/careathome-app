@@ -1,6 +1,6 @@
 <x-admin-layout>
     <x-slot name="header">
-        Financial &amp; GMV Dashboard (SCRUM-56)
+        Financial &amp; GMV Dashboard
     </x-slot>
 
     <!-- 1. KARTU RINGKASAN FINANSIAL & OPERASIONAL -->
