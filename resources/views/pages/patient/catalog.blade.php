@@ -160,6 +160,110 @@
             </div>
         </div>
 
+        <!-- 2.5 SECTION PERAWAT TERDEKAT RADIUS 10 KM (BAGIAN 3) -->
+        <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-sm space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div class="space-y-1">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                        <span>📍</span>
+                        <span>Radius Layanan Maksimal 10 KM</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-900 tracking-tight">Mitra Perawat Aktif Terdekat</h2>
+                    <p class="text-xs text-slate-500">
+                        Menampilkan perawat yang berstatus <strong>Online (Sedang Bekerja)</strong>, terverifikasi STR/SIP, dan berjarak maksimal 10 km dari lokasi Anda.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="requestBrowserLocation()"
+                        :disabled="loadingNurses"
+                        class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow transition flex items-center gap-2">
+                        <span x-show="loadingNurses" class="animate-spin text-sm">⏳</span>
+                        <span x-show="!loadingNurses">🎯 Deteksi Lokasi GPS Saya</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div x-show="loadingNurses" class="py-8 text-center text-xs text-slate-500 space-y-2">
+                <span class="animate-spin text-2xl inline-block">⏳</span>
+                <p>Mencari perawat aktif di sekitar lokasi Anda...</p>
+            </div>
+
+            <!-- Empty State: No Nurse in 10 km Radius -->
+            <div x-show="!loadingNurses && nearbyNurses.length === 0" x-cloak
+                class="py-8 px-4 text-center rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mx-auto border border-amber-200">
+                    🛵
+                </div>
+                <div class="space-y-1 max-w-md mx-auto">
+                    <h4 class="text-sm font-bold text-slate-800">Tidak Ada Perawat Aktif Dalam Radius 10 KM</h4>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Saat ini belum ada perawat aktif yang berstatus online dalam jarak 10 km dari titik koordinat Anda. Anda tetap dapat memilih tindakan medis dari katalog di bawah.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Nurse Cards Grid -->
+            <div x-show="!loadingNurses && nearbyNurses.length > 0" x-cloak
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <template x-for="nurse in nearbyNurses" :key="nurse.id">
+                    <div class="bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md transition p-5 flex flex-col justify-between space-y-4">
+                        
+                        <!-- Header Nurse Card -->
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center shadow-sm">
+                                    <span x-text="nurse.name ? nurse.name.substring(0, 2).toUpperCase() : 'NS'"></span>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <h4 class="text-xs font-bold text-slate-900" x-text="nurse.name"></h4>
+                                        <span class="text-emerald-600 text-xs" title="Terverifikasi Kemenkes">✓</span>
+                                    </div>
+                                    <span class="text-[10px] text-slate-500 block" x-text="nurse.specialization || 'Perawat Homecare'"></span>
+                                    <div class="flex items-center gap-1 mt-0.5 text-[11px] text-amber-500 font-bold">
+                                        <span>⭐</span>
+                                        <span x-text="nurse.rating_avg.toFixed(1)"></span>
+                                        <span class="text-slate-400 font-normal" x-text="'(' + nurse.total_reviews + ' ulasan)'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Jarak Pill -->
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                <span>📍</span>
+                                <span x-text="nurse.formatted_distance"></span>
+                            </span>
+                        </div>
+
+                        <!-- Layanan yang Disediakan -->
+                        <div class="space-y-1.5 text-xs">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Layanan Disediakan:</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <template x-for="s in nurse.services" :key="s.id">
+                                    <span class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-medium border border-slate-200/60"
+                                        x-text="s.image_emoji + ' ' + s.name"></span>
+                                </template>
+                                <template x-if="!nurse.services || nurse.services.length === 0">
+                                    <span class="text-[10px] text-slate-400 italic">Semua layanan standar</span>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Tombol Pilih Perawat -->
+                        <div class="pt-2 border-t border-slate-100">
+                            <button type="button" @click="selectNurseForBooking(nurse)"
+                                class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition flex items-center justify-center gap-1.5">
+                                <span>Pilih Perawat Ini</span>
+                                <span>&rarr;</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </template>
+            </div>
+        </div>
+
         <!-- 3. FILTER, SEARCH & CONTROLS TOOLBAR -->
         <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
             
@@ -982,7 +1086,15 @@
                 detectingLocation: false,
                 uploadedPhotoFile: null,
 
+                // Nearby Nurses State (BAGIAN 3)
+                patientLat: -6.2088,
+                patientLng: 106.8456,
+                nearbyNurses: [],
+                loadingNurses: false,
+                selectedNurse: null,
+
                 bookingForm: {
+                    nurse_id: null,
                     scheduled_date: today,
                     scheduled_time: '08:00 - 10:00',
                     patient_name: @json(auth()->user()?->name ?? 'Pasien CareAtHome'),
@@ -1013,6 +1125,60 @@
 
                 initData() {
                     this.filterServices();
+                    this.fetchNearbyNurses();
+                },
+
+                async fetchNearbyNurses() {
+                    this.loadingNurses = true;
+                    try {
+                        const url = `/api/v1/perawat/terdekat?latitude=${this.patientLat}&longitude=${this.patientLng}`;
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        if (res.ok && data.status === 'success') {
+                            this.nearbyNurses = data.data || [];
+                        }
+                    } catch (e) {
+                        console.warn('Gagal memuat perawat terdekat:', e);
+                    } finally {
+                        this.loadingNurses = false;
+                    }
+                },
+
+                requestBrowserLocation() {
+                    if (!navigator.geolocation) {
+                        alert('Browser Anda tidak mendukung Geolocation.');
+                        return;
+                    }
+                    this.loadingNurses = true;
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            this.patientLat = pos.coords.latitude;
+                            this.patientLng = pos.coords.longitude;
+                            this.bookingForm.latitude = this.patientLat;
+                            this.bookingForm.longitude = this.patientLng;
+                            this.fetchNearbyNurses();
+                        },
+                        (err) => {
+                            this.loadingNurses = false;
+                            alert('Gagal mendeteksi lokasi GPS: ' + err.message);
+                        },
+                        { enableHighAccuracy: true, timeout: 8000 }
+                    );
+                },
+
+                selectNurseForBooking(nurse) {
+                    this.selectedNurse = nurse;
+                    this.bookingForm.nurse_id = nurse.nurse_id;
+                    if (nurse.distance_km) {
+                        this.bookingForm.distance_km = nurse.distance_km;
+                    }
+
+                    if (nurse.services && nurse.services.length > 0) {
+                        const serviceMatch = this.rawServices.find(s => s.id === nurse.services[0].id) || this.rawServices[0];
+                        this.openBookingModal(serviceMatch);
+                    } else if (this.rawServices.length > 0) {
+                        this.openBookingModal(this.rawServices[0]);
+                    }
                 },
 
                 setCategory(cat) {
@@ -1321,6 +1487,9 @@
                     formData.append('longitude', this.bookingForm.longitude);
                     formData.append('distance_km', this.bookingForm.distance_km);
 
+                    if (this.bookingForm.nurse_id) {
+                        formData.append('nurse_id', this.bookingForm.nurse_id);
+                    }
                     if (this.bookingForm.clinical_notes) {
                         formData.append('clinical_notes', this.bookingForm.clinical_notes);
                     }

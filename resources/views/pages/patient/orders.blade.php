@@ -18,8 +18,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-    <!-- Midtrans Snap JS (Sandbox) -->
-    <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ config('services.midtrans.client_key') }}"></script>
+    <!-- Direct Instant Payment Escrow -->
 
     <style>
         [x-cloak] { display: none !important; }
@@ -906,19 +905,11 @@
                 </button>
 
                 <div class="flex items-center gap-2 ml-auto">
-                    <!-- Tombol Midtrans Snap Popup (jika Snap aktif) -->
-                    <template x-if="paymentData?.snap_token && window.snap">
-                        <button type="button" @click="openSnapPopup()"
-                            class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-                            <span>Buka Snap Window</span>
-                        </button>
-                    </template>
-
-                    <!-- Tombol Konfirmasi Bayar Escrow (Sandbox / Instant Pay) -->
+                    <!-- Tombol Konfirmasi Bayar Langsung -->
                     <button type="button" @click="submitPayment()" :disabled="processingPayment"
                         class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition flex items-center gap-2">
                         <span x-show="processingPayment" class="animate-spin text-sm">⏳</span>
-                        <span x-text="processingPayment ? 'Memproses Escrow...' : 'Konfirmasi Bayar (Simulasi Escrow)'"></span>
+                        <span x-text="processingPayment ? 'Memproses Pembayaran...' : 'Bayar Sekarang'"></span>
                     </button>
                 </div>
             </div>

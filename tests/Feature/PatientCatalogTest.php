@@ -14,6 +14,7 @@ class PatientCatalogTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(\Database\Seeders\ServiceCatalogSeeder::class);
 
         $this->patient = User::firstOrCreate(
             ['email' => 'pasien_test@careathome.com'],

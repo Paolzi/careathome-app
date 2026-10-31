@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::get('/katalog', [ServiceCatalogApiController::class, 'index'])->name('api.katalog.index');
     Route::get('/katalog/{slugOrId}', [ServiceCatalogApiController::class, 'show'])->name('api.katalog.show');
+    Route::get('/perawat/terdekat', [\App\Http\Controllers\Api\NurseApiController::class, 'nearby'])->name('api.nurses.nearby');
 
     // API Pemesanan & Kalkulasi Biaya (Order Booking & Price Engine)
     Route::post('/orders/calculate-price', [\App\Http\Controllers\Api\OrderApiController::class, 'calculatePrice'])->name('api.orders.calculate-price');

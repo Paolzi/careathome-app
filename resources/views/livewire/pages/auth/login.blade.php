@@ -25,12 +25,17 @@ new #[Layout('layouts.guest')] class extends Component
         $user = Auth::user();
 
         // Redirect sesuai role
-        if ($user && $user->hasRole('perawat')) {
-            $this->redirect(route('perawat.verifikasi'), navigate: true);
+        if ($user && $user->hasRole('admin')) {
+            $this->redirect(route('admin.dashboard'), navigate: true);
             return;
         }
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        if ($user && $user->hasRole('perawat')) {
+            $this->redirect(route('perawat.dashboard'), navigate: true);
+            return;
+        }
+
+        $this->redirectIntended(default: route('pasien.katalog', absolute: false), navigate: true);
     }
 
     /**

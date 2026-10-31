@@ -5,22 +5,22 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
-use App\Services\MidtransPaymentService;
+use App\Services\OrderPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class PaymentApiController extends Controller
 {
-    protected MidtransPaymentService $paymentService;
+    protected OrderPaymentService $paymentService;
 
-    public function __construct(MidtransPaymentService $paymentService)
+    public function __construct(OrderPaymentService $paymentService)
     {
         $this->paymentService = $paymentService;
     }
 
     /**
-     * Membuat Snap Token dan parameter pembayaran Virtual Account / QRIS.
+     * Membuat ringkasan pembayaran dan pembagian finansial (15% platform, 85% perawat).
      * Endpoint: POST /api/v1/payments/create-token
      */
     public function createPaymentToken(Request $request): JsonResponse
@@ -28,7 +28,6 @@ class PaymentApiController extends Controller
         $validator = Validator::make($request->all(), [
             'order_id' => ['required_without:order_number'],
             'order_number' => ['required_without:order_id'],
-            'payment_method' => ['nullable', 'string', 'in:bca_va,mandiri_va,bni_va,bri_va,qris'],
         ]);
 
         if ($validator->fails()) {
@@ -56,22 +55,28 @@ class PaymentApiController extends Controller
         if ($order->payment_status === 'paid') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pesanan ini sudah dibayar dan dana telah tersimpan di rekening penampung (escrow).',
+                'message' => 'Pesanan ini sudah lunas.',
             ], 422);
         }
 
-        $paymentMethod = $request->input('payment_method', 'bca_va');
-        $paymentData = $this->paymentService->createPayment($order, $paymentMethod);
+        $breakdown = $this->paymentService->calculateBreakdown($order->total_amount);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Sesi pembayaran escrow berhasil dibuat.',
-            'data' => $paymentData,
+            'message' => 'Detail rincian tagihan siap.',
+            'data' => [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'gross_amount' => $breakdown['total_amount'],
+                'admin_fee' => $breakdown['admin_fee'],
+                'nurse_earning' => $breakdown['nurse_earning'],
+                'fee_percent' => $breakdown['fee_percent'],
+            ],
         ]);
     }
 
     /**
-     * Simulasi Pembayaran Instan ke Rekening Penampung (Escrow).
+     * Eksekusi Pembayaran Langsung "Bayar Sekarang".
      * Endpoint: POST /api/v1/payments/simulate
      */
     public function simulatePayment(Request $request): JsonResponse
@@ -79,7 +84,6 @@ class PaymentApiController extends Controller
         $validator = Validator::make($request->all(), [
             'order_number' => ['required_without:order_id'],
             'order_id' => ['required_without:order_number'],
-            'payment_method' => ['nullable', 'string', 'in:bca_va,mandiri_va,bni_va,bri_va,qris'],
         ]);
 
         if ($validator->fails()) {
@@ -104,27 +108,42 @@ class PaymentApiController extends Controller
             ], 404);
         }
 
-        if ($order->payment_status === 'paid') {
+        try {
+            $result = $this->paymentService->payOrder($order);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Pembayaran berhasil dicatat.',
+                'data' => [
+                    'order_number' => $result['order']->order_number,
+                    'gross_amount' => $result['total_amount'],
+                    'admin_fee' => $result['admin_fee'],
+                    'nurse_earning' => $result['nurse_earning'],
+                    'fee_percent' => $result['fee_percent'],
+                    'payment_status' => 'paid',
+                    'order_status' => $result['order']->status,
+                ],
+            ]);
+        } catch (\DomainException $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pesanan sudah berstatus Paid.',
+                'message' => $e->getMessage(),
             ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage(),
+            ], 500);
         }
-
-        $paymentMethod = $request->input('payment_method', 'bca_va');
-        $result = $this->paymentService->simulateInstantPayment($order, $paymentMethod);
-
-        return response()->json($result);
     }
 
     /**
-     * Ambil Status Terkini Pembayaran & Escrow.
+     * Lihat status pembayaran pesanan.
      * Endpoint: GET /api/v1/payments/{orderNumberOrId}
      */
     public function show(string $orderNumberOrId): JsonResponse
     {
-        $order = Order::with('latestPayment')
-            ->where('order_number', $orderNumberOrId)
+        $order = Order::where('order_number', $orderNumberOrId)
             ->orWhere('id', $orderNumberOrId)
             ->first();
 
@@ -135,28 +154,21 @@ class PaymentApiController extends Controller
             ], 404);
         }
 
-        $payment = $order->latestPayment;
+        $payment = Payment::where('order_id', $order->id)->latest()->first();
+
+        $breakdown = $this->paymentService->calculateBreakdown($order->total_amount);
 
         return response()->json([
             'status' => 'success',
             'data' => [
                 'order_number' => $order->order_number,
-                'order_status' => $order->status,
-                'order_status_label' => $order->status_label,
+                'total_amount' => $breakdown['total_amount'],
+                'admin_fee' => $payment?->admin_fee ?? $breakdown['admin_fee'],
+                'nurse_earning' => $payment?->nurse_earning ?? $breakdown['nurse_earning'],
+                'fee_percent' => $payment?->fee_percent ?? $breakdown['fee_percent'],
                 'payment_status' => $order->payment_status,
-                'total_amount' => $order->total_amount,
-                'formatted_total_amount' => 'Rp ' . number_format($order->total_amount, 0, ',', '.'),
-                'escrow' => [
-                    'status' => $payment?->escrow_status ?? ($order->payment_status === 'paid' ? 'held' : 'unpaid'),
-                    'status_label' => $payment?->escrow_status_label ?? 'Belum Ada Dana Escrow',
-                    'transaction_id' => $payment?->transaction_id,
-                    'paid_at' => $payment?->paid_at?->toIso8601String(),
-                ],
-                'refund' => [
-                    'status' => $order->refund_status,
-                    'amount' => $order->refund_amount,
-                    'refunded_at' => $order->refunded_at?->toIso8601String(),
-                ],
+                'paid_at' => $payment?->paid_at?->toIso8601String(),
+                'status' => $order->status,
             ],
         ]);
     }
