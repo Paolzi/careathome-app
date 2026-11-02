@@ -4,34 +4,52 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+Route::get('dashboard', function () {
+    $user = auth()->user();
+    if (!$user) {
+        return redirect()->route('login');
+    }
+    if ($user->hasRole('admin')) {
+        return redirect()->route('admin.dashboard');
+    }
+    if ($user->hasRole('perawat')) {
+        $nurseProfile = \App\Models\NurseProfile::where('user_id', $user->id)->first();
+        if ($nurseProfile && $nurseProfile->verification_status === 'verified') {
+            return redirect()->route('perawat.dashboard');
+        }
+        return redirect()->route('perawat.verifikasi');
+    }
+    return view('dashboard');
+})->middleware(['auth'])->name('dashboard');
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
 Route::middleware(['auth'])->group(function () {
-    // Portal Perawat
-    Route::get('perawat/dashboard', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'index'])->name('perawat.dashboard');
-    Route::post('perawat/toggle-online', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'toggleOnline'])->name('perawat.toggle-online');
-    Route::post('perawat/lokasi', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'updateLocation'])->name('perawat.lokasi');
-    Route::post('perawat/layanan', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'updateServices'])->name('perawat.layanan.update');
-    Route::post('perawat/payout', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'requestPayout'])->name('perawat.payout.request');
-    Route::get('perawat/verifikasi', [\App\Http\Controllers\NurseVerificationController::class, 'index'])->name('perawat.verifikasi');
-    Route::post('perawat/verifikasi/draft', [\App\Http\Controllers\NurseVerificationController::class, 'saveDraft'])->name('perawat.verifikasi.draft');
-    Route::post('perawat/verifikasi/submit', [\App\Http\Controllers\NurseVerificationController::class, 'submit'])->name('perawat.verifikasi.submit');
-    Route::delete('perawat/verifikasi/document/{type}', [\App\Http\Controllers\NurseVerificationController::class, 'deleteDocument'])->name('perawat.verifikasi.delete-doc');
+    // Portal Perawat (Role: perawat atau admin)
+    Route::middleware(['role:perawat|admin'])->group(function () {
+        Route::get('perawat/dashboard', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'index'])->name('perawat.dashboard');
+        Route::post('perawat/toggle-online', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'toggleOnline'])->name('perawat.toggle-online');
+        Route::post('perawat/lokasi', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'updateLocation'])->name('perawat.lokasi');
+        Route::post('perawat/layanan', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'updateServices'])->name('perawat.layanan.update');
+        Route::post('perawat/payout', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'requestPayout'])->name('perawat.payout.request');
+        Route::get('perawat/verifikasi', [\App\Http\Controllers\NurseVerificationController::class, 'index'])->name('perawat.verifikasi');
+        Route::post('perawat/verifikasi/draft', [\App\Http\Controllers\NurseVerificationController::class, 'saveDraft'])->name('perawat.verifikasi.draft');
+        Route::post('perawat/verifikasi/submit', [\App\Http\Controllers\NurseVerificationController::class, 'submit'])->name('perawat.verifikasi.submit');
+        Route::delete('perawat/verifikasi/document/{type}', [\App\Http\Controllers\NurseVerificationController::class, 'deleteDocument'])->name('perawat.verifikasi.delete-doc');
+    });
 
-    // Portal Pasien (Katalog Layanan & Pemesanan)
-    Route::get('pasien/katalog', [\App\Http\Controllers\Patient\CatalogController::class, 'index'])->name('pasien.katalog');
-    Route::get('pasien/pesanan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'index'])->name('pasien.pesanan');
-    Route::get('pasien/pembayaran', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'paymentView'])->name('pasien.pembayaran');
-    Route::get('pasien/pembatalan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancellationView'])->name('pasien.pembatalan');
-    Route::post('pasien/pesanan/{order}/bayar/token', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'getPaymentToken'])->name('pasien.pesanan.payment-token');
-    Route::post('pasien/pesanan/{order}/bayar', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'pay'])->name('pasien.pesanan.pay');
-    Route::post('pasien/pesanan/{order}/batal', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancel'])->name('pasien.pesanan.cancel');
+    // Portal Pasien (Role: pasien atau admin)
+    Route::middleware(['role:pasien|admin'])->group(function () {
+        Route::get('pasien/katalog', [\App\Http\Controllers\Patient\CatalogController::class, 'index'])->name('pasien.katalog');
+        Route::get('pasien/pesanan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'index'])->name('pasien.pesanan');
+        Route::get('pasien/pembayaran', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'paymentView'])->name('pasien.pembayaran');
+        Route::get('pasien/pembatalan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancellationView'])->name('pasien.pembatalan');
+        Route::post('pasien/pesanan/{order}/bayar/token', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'getPaymentToken'])->name('pasien.pesanan.payment-token');
+        Route::post('pasien/pesanan/{order}/bayar', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'pay'])->name('pasien.pesanan.pay');
+        Route::post('pasien/pesanan/{order}/batal', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancel'])->name('pasien.pesanan.cancel');
+    });
 
     // Portal Admin (Role Admin)
     Route::prefix('admin')->middleware(['role:admin'])->name('admin.')->group(function () {

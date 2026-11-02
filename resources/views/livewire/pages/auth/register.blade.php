@@ -63,20 +63,30 @@ new #[Layout('layouts.guest')] class extends Component
             'password' => Hash::make($this->password),
         ]);
 
-        // Tetapkan Spatie Role (pastikan role ada di database)
+        // Tetapkan Spatie Role secara ketat
         Role::firstOrCreate(['name' => $this->role, 'guard_name' => 'web']);
         $user->assignRole($this->role);
 
         event(new Registered($user));
         Auth::login($user);
 
-        // Jika perawat, arahkan ke tahap unggah berkas legalitas STR/SIP (SCRUM-37)
+        // Pisahkan hak akses & redirect awal sejak registrasi
         if ($this->role === 'perawat') {
-            session()->flash('status', 'Pendaftaran awal berhasil! Silakan lengkapi berkas legalitas STR & SIP Anda.');
+            \App\Models\NurseProfile::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'str_number' => $this->str_number,
+                    'specialization' => $this->specialization,
+                    'verification_status' => 'draft',
+                    'is_available' => false,
+                    'is_online' => false,
+                ]
+            );
+            session()->flash('status', 'Pendaftaran akun Mitra Perawat berhasil! Silakan lengkapi berkas legalitas STR & SIP Anda.');
             $this->redirect(route('perawat.verifikasi'), navigate: true);
         } else {
             session()->flash('status', 'Pendaftaran akun Pasien berhasil. Selamat datang di CareAtHome!');
-            $this->redirect(route('dashboard'), navigate: true);
+            $this->redirect(route('pasien.katalog'), navigate: true);
         }
     }
 }; ?>

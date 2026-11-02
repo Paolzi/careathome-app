@@ -77,7 +77,7 @@ new #[Layout('layouts.guest')] class extends Component
                 return;
             }
 
-            $this->redirect(route('dashboard'), navigate: true);
+            $this->redirect(route('pasien.katalog'), navigate: true);
         } else {
             $this->addError('form.email', 'Akun seeder belum tersedia. Jalankan php artisan db:seed terlebih dahulu.');
         }

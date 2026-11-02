@@ -237,12 +237,21 @@
                         </div>
 
                         <!-- Layanan yang Disediakan -->
+                        <!-- Layanan yang Disediakan (Klik langsung untuk memilih) -->
                         <div class="space-y-1.5 text-xs">
-                            <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Layanan Disediakan:</span>
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Layanan Disediakan:</span>
+                                <span class="text-[10px] text-emerald-600 font-semibold" x-text="nurse.services ? nurse.services.length + ' pilihan' : ''"></span>
+                            </div>
                             <div class="flex flex-wrap gap-1.5">
                                 <template x-for="s in nurse.services" :key="s.id">
-                                    <span class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-medium border border-slate-200/60"
-                                        x-text="s.image_emoji + ' ' + s.name"></span>
+                                    <button type="button" 
+                                        @click.stop="selectNurseWithSpecificService(nurse, s)"
+                                        class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 font-medium border border-slate-200/80 hover:border-emerald-300 transition-all flex items-center gap-1 group/btn cursor-pointer hover:scale-102"
+                                        :title="'Klik untuk memesan layanan ' + s.name + ' bersama ' + nurse.name">
+                                        <span x-text="s.image_emoji"></span>
+                                        <span class="group-hover/btn:underline" x-text="s.name"></span>
+                                    </button>
                                 </template>
                                 <template x-if="!nurse.services || nurse.services.length === 0">
                                     <span class="text-[10px] text-slate-400 italic">Semua layanan standar</span>
@@ -252,9 +261,9 @@
 
                         <!-- Tombol Pilih Perawat -->
                         <div class="pt-2 border-t border-slate-100">
-                            <button type="button" @click="selectNurseForBooking(nurse)"
-                                class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition flex items-center justify-center gap-1.5">
-                                <span>Pilih Perawat Ini</span>
+                            <button type="button" @click="openNurseServicePicker(nurse)"
+                                class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 hover:-translate-y-0.5">
+                                <span>Pilih Layanan &amp; Pesan Perawat</span>
                                 <span>&rarr;</span>
                             </button>
                         </div>
@@ -367,15 +376,27 @@
         <!-- 4. SERVICES CATALOG GRID -->
         <div x-show="filteredServices.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <template x-for="item in filteredServices" :key="item.id">
-                <div class="bg-white rounded-2xl border border-slate-200 hover:border-emerald-400 hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden group">
+                <div class="bg-white rounded-2xl border hover:shadow-lg transition-all duration-300 flex flex-col justify-between overflow-hidden group"
+                    :class="isInCompare(item.id) ? 'border-indigo-400 ring-2 ring-indigo-400/20 shadow-md' : 'border-slate-200 hover:border-emerald-400'">
                     
                     <!-- Card Top Content -->
                     <div class="p-6 space-y-4">
                         
                         <!-- Header: Emoji Icon, Category Badge & Duration -->
                         <div class="flex items-start justify-between gap-3">
-                            <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                                <span x-text="item.image_emoji"></span>
+                            <div class="flex items-center gap-3">
+                                <!-- Compare Checkbox -->
+                                <button type="button" @click.stop="toggleCompare(item)"
+                                    :title="isInCompare(item.id) ? 'Hapus dari perbandingan' : 'Tambah ke perbandingan'"
+                                    class="w-7 h-7 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-all shrink-0"
+                                    :class="isInCompare(item.id) ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm scale-110' : 'border-slate-300 text-transparent hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-400'">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </button>
+                                <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                    <span x-text="item.image_emoji"></span>
+                                </div>
                             </div>
                             <div class="flex flex-col items-end gap-1.5">
                                 <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border"
@@ -615,6 +636,99 @@
         </div>
     </div>
 
+    <!-- 7.5. MODAL: PILIH LAYANAN DARI MITRA PERAWAT (MULTI-SERVICE SELECTION) -->
+    <div x-show="nurseServicePickerOpen" x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+        x-transition:enter="ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0">
+
+        <div @click.away="nurseServicePickerOpen = false"
+            class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 flex flex-col max-h-[90vh]"
+            x-transition:enter="ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100">
+
+            <!-- Modal Header -->
+            <div class="px-6 py-5 bg-gradient-to-r from-emerald-600 via-teal-700 to-slate-900 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white font-extrabold text-base shadow-inner">
+                        <span x-text="pickerNurse?.name ? pickerNurse.name.substring(0, 2).toUpperCase() : 'NS'"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-400/30 text-emerald-100">
+                                Pilih Layanan Medis
+                            </span>
+                            <span class="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white font-bold flex items-center gap-1">
+                                <span>📍</span>
+                                <span x-text="pickerNurse?.formatted_distance"></span>
+                            </span>
+                        </div>
+                        <h3 class="text-lg sm:text-xl font-bold tracking-tight mt-0.5" x-text="pickerNurse?.name"></h3>
+                        <p class="text-xs text-emerald-100" x-text="pickerNurse?.specialization || 'Perawat Homecare'"></p>
+                    </div>
+                </div>
+                <button type="button" @click="nurseServicePickerOpen = false" class="text-emerald-200 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Subheader & Helper -->
+            <div class="px-6 py-3 bg-emerald-50/80 border-b border-emerald-100 text-xs text-emerald-900 flex items-center justify-between">
+                <span>Perawat ini menyediakan <strong x-text="pickerNurse?.services ? pickerNurse.services.length : 0"></strong> jenis tindakan asuhan keperawatan rumah. Silakan pilih tindakan yang Anda butuhkan:</span>
+            </div>
+
+            <!-- Modal Body (Grid of Services) -->
+            <div class="p-6 overflow-y-auto space-y-3 max-h-[60vh]">
+                <template x-for="s in pickerNurse?.services" :key="s.id">
+                    <div class="p-4 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 group cursor-pointer"
+                        @click="selectNurseWithSpecificService(pickerNurse, s)">
+                        <div class="flex items-start gap-3.5">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-2xl flex items-center justify-center shrink-0 border border-emerald-200/60 group-hover:scale-105 transition-transform"
+                                x-text="s.image_emoji || '🩺'"></div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors" x-text="s.name"></h4>
+                                <div class="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                                    <span class="inline-flex items-center gap-1">
+                                        <span>⏱️</span>
+                                        <span x-text="getServiceDuration(s.id)"></span>
+                                    </span>
+                                    <span>•</span>
+                                    <span class="text-emerald-600 font-semibold">Tersedia untuk Homecare</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center sm:flex-col sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
+                            <div>
+                                <span class="text-[10px] text-slate-400 block font-bold uppercase sm:text-right">Tarif Tindakan</span>
+                                <span class="text-sm font-black text-emerald-700" x-text="s.formatted_price"></span>
+                            </div>
+                            <button type="button" 
+                                class="mt-1 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition group-hover:bg-emerald-700">
+                                Pilih Tindakan &rarr;
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <button type="button" @click="nurseServicePickerOpen = false" class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition">
+                    Kembali
+                </button>
+                <span class="text-[11px] text-slate-400">Ongkos transport terhitung transparan sesuai titik GPS nakes.</span>
+            </div>
+        </div>
+    </div>
+
     <!-- 8. MODAL: MULTI-STEP PEMESANAN & PENJADWALAN KUNJUNGAN PASIEN -->
     <div x-show="bookingModalOpen" x-cloak
         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
@@ -706,6 +820,39 @@
                         <h4 class="text-sm font-bold text-slate-900">Penentuan Jadwal &amp; Data Penerima Layanan</h4>
                         <p class="text-xs text-slate-500 mt-0.5">Pilih tanggal dan sesi jam kunjungan perawat ke lokasi Anda.</p>
                     </div>
+
+                    <!-- Banner Mitra Perawat & Switcher Layanan -->
+                    <template x-if="selectedNurse">
+                        <div class="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm"
+                                    x-text="selectedNurse?.name ? selectedNurse.name.substring(0, 2).toUpperCase() : 'NS'">
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-[10px] uppercase font-bold text-emerald-800 tracking-wider">Mitra Perawat:</span>
+                                        <span class="font-extrabold text-slate-900" x-text="selectedNurse?.name"></span>
+                                        <span class="text-emerald-600 text-xs font-bold" title="Terverifikasi STR/SIP">✓</span>
+                                    </div>
+                                    <span class="text-slate-500 text-[11px] block"
+                                        x-text="(selectedNurse?.specialization || 'Perawat Homecare') + ' • Jarak: ' + (bookingForm.distance_km === 0 ? '0 km (Sangat Dekat)' : bookingForm.distance_km + ' km')"></span>
+                                </div>
+                            </div>
+
+                            <!-- Pilihan Layanan Dropdown jika Perawat Memiliki Banyak Layanan -->
+                            <template x-if="selectedNurse?.services && selectedNurse.services.length > 1">
+                                <div class="shrink-0 flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-emerald-200 shadow-2xs">
+                                    <label class="text-[10px] font-bold uppercase text-slate-500 whitespace-nowrap">Ubah Tindakan:</label>
+                                    <select @change="changeSelectedServiceFromNurse($event.target.value)"
+                                        class="text-xs font-bold text-emerald-800 bg-transparent border-0 focus:ring-0 p-0 cursor-pointer">
+                                        <template x-for="s in selectedNurse.services" :key="s.id">
+                                            <option :value="s.id" :selected="s.id === activeService?.id" x-text="s.name + ' (' + s.formatted_price + ')'"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <!-- Tanggal Kunjungan -->
@@ -841,7 +988,8 @@
                             </div>
                             <div>
                                 <div class="text-xs font-bold">
-                                    Estimasi Jarak dari Pusat Nakes: <span class="text-sm font-black" x-text="bookingForm.distance_km + ' km'"></span>
+                                    <span x-text="selectedNurse ? ('Estimasi Jarak dari Ns. ' + selectedNurse.name + ':') : 'Estimasi Jarak dari Pusat Nakes:'"></span>
+                                    <span class="text-sm font-black text-emerald-800" x-text="(bookingForm.distance_km === 0 ? '0 km (Sangat Dekat)' : bookingForm.distance_km + ' km')"></span>
                                 </div>
                                 <div class="text-[11px]"
                                     x-text="bookingForm.distance_km <= 10.0 ? '✓ Lokasi berada di dalam radius operasional layanan homecare (Maks. 10 km)' : 'Lokasi melebihi radius operasional maksimal (10 km).'"></div>
@@ -1052,6 +1200,251 @@
         </div>
     </div>
 
+    <!-- 9A. FLOATING COMPARISON BAR -->
+    <div x-show="compareList.length > 0" x-cloak
+        x-transition:enter="ease-out duration-300"
+        x-transition:enter-start="opacity-0 translate-y-8"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 translate-y-8"
+        class="fixed bottom-0 inset-x-0 z-40 pb-4 px-4">
+        <div class="max-w-4xl mx-auto bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 rounded-2xl shadow-2xl shadow-indigo-600/30 border border-indigo-500/30 p-4 flex items-center justify-between gap-4">
+            
+            <!-- Left: Selected Items Preview -->
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="text-white font-bold text-sm">Bandingkan Layanan</span>
+                        <span class="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black border border-white/20" x-text="compareList.length + '/3'"></span>
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                        <template x-for="cItem in compareList" :key="cItem.id">
+                            <div class="flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-lg px-2 py-0.5 border border-white/10">
+                                <span class="text-xs" x-text="cItem.image_emoji"></span>
+                                <span class="text-[10px] text-white/90 font-medium truncate max-w-[80px]" x-text="cItem.name"></span>
+                                <button type="button" @click="removeFromCompare(cItem.id)" class="text-white/50 hover:text-white ml-0.5">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="button" @click="clearCompare()"
+                    class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs font-bold border border-white/10 transition">
+                    Hapus
+                </button>
+                <button type="button" @click="openCompareModal()"
+                    :disabled="compareList.length < 2"
+                    class="px-4 py-2 rounded-xl bg-white hover:bg-indigo-50 text-indigo-700 text-xs font-extrabold shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span>Bandingkan Sekarang</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9B. MODAL: PERBANDINGAN LAYANAN SIDE-BY-SIDE -->
+    <div x-show="compareModalOpen" x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+        x-transition:enter="ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0">
+
+        <div @click.away="compareModalOpen = false"
+            class="bg-white rounded-3xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 flex flex-col"
+            :class="compareList.length === 3 ? 'max-w-5xl' : 'max-w-3xl'"
+            style="max-height: 92vh;"
+            x-transition:enter="ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100">
+
+            <!-- Modal Header -->
+            <div class="px-6 py-5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/40 border border-white/20 text-indigo-100">
+                            Perbandingan Layanan
+                        </span>
+                        <h3 class="text-lg font-bold tracking-tight mt-0.5">Bandingkan <span x-text="compareList.length"></span> Layanan Medis</h3>
+                    </div>
+                </div>
+                <button type="button" @click="compareModalOpen = false" class="text-indigo-200 hover:text-white p-1 rounded-xl hover:bg-white/10 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Comparison Table Body -->
+            <div class="overflow-y-auto overflow-x-auto grow">
+                <table class="w-full text-xs">
+                    <!-- Row: Service Name & Emoji -->
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 w-36 sticky left-0 bg-slate-50 z-10">Atribut</th>
+                            <template x-for="cItem in compareList" :key="cItem.id">
+                                <th class="text-center px-4 py-3 min-w-[180px]">
+                                    <div class="flex flex-col items-center gap-1.5">
+                                        <div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-2xl">
+                                            <span x-text="cItem.image_emoji"></span>
+                                        </div>
+                                        <span class="font-bold text-sm text-slate-900 leading-tight" x-text="cItem.name"></span>
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200" x-text="cItem.category"></span>
+                                    </div>
+                                </th>
+                            </template>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <!-- Row: Plafon Tarif -->
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="px-4 py-3 font-bold text-slate-600 sticky left-0 bg-white z-10">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-emerald-600">💰</span> Plafon Tarif
+                                </div>
+                            </td>
+                            <template x-for="cItem in compareList" :key="'price-'+cItem.id">
+                                <td class="px-4 py-3 text-center">
+                                    <span class="text-base font-extrabold" x-text="cItem.formatted_price"
+                                        :class="cItem.price == getLowestComparePrice() ? 'text-emerald-700' : 'text-slate-800'"></span>
+                                    <template x-if="cItem.price == getLowestComparePrice() && compareList.length > 1">
+                                        <span class="block text-[10px] font-bold text-emerald-600 mt-0.5">✨ Termurah</span>
+                                    </template>
+                                </td>
+                            </template>
+                        </tr>
+
+                        <!-- Row: Estimasi Durasi -->
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="px-4 py-3 font-bold text-slate-600 sticky left-0 bg-white z-10">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-blue-500">⏱️</span> Durasi
+                                </div>
+                            </td>
+                            <template x-for="cItem in compareList" :key="'dur-'+cItem.id">
+                                <td class="px-4 py-3 text-center">
+                                    <span class="font-semibold text-slate-800" x-text="cItem.estimated_duration"></span>
+                                    <template x-if="cItem.estimated_duration_minutes == getShortestCompareDuration() && compareList.length > 1">
+                                        <span class="block text-[10px] font-bold text-blue-600 mt-0.5">⚡ Tercepat</span>
+                                    </template>
+                                </td>
+                            </template>
+                        </tr>
+
+                        <!-- Row: Deskripsi -->
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="px-4 py-3 font-bold text-slate-600 sticky left-0 bg-white z-10">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-slate-400">📋</span> Deskripsi
+                                </div>
+                            </td>
+                            <template x-for="cItem in compareList" :key="'desc-'+cItem.id">
+                                <td class="px-4 py-3 text-left">
+                                    <p class="text-slate-600 leading-relaxed line-clamp-4" x-text="cItem.description"></p>
+                                </td>
+                            </template>
+                        </tr>
+
+                        <!-- Row: Indikasi Medis -->
+                        <tr class="hover:bg-emerald-50/30">
+                            <td class="px-4 py-3 font-bold text-slate-600 sticky left-0 bg-white z-10">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-emerald-600">✅</span> Indikasi
+                                </div>
+                            </td>
+                            <template x-for="cItem in compareList" :key="'ind-'+cItem.id">
+                                <td class="px-4 py-3 text-left">
+                                    <p class="text-emerald-800 leading-relaxed text-[11px]" x-text="cItem.indications || 'Sesuai asesmen perawat'"></p>
+                                </td>
+                            </template>
+                        </tr>
+
+                        <!-- Row: Kontraindikasi -->
+                        <tr class="hover:bg-rose-50/30">
+                            <td class="px-4 py-3 font-bold text-slate-600 sticky left-0 bg-white z-10">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-rose-500">⚠️</span> Kontra&shy;indikasi
+                                </div>
+                            </td>
+                            <template x-for="cItem in compareList" :key="'contra-'+cItem.id">
+                                <td class="px-4 py-3 text-left">
+                                    <p class="text-rose-700 leading-relaxed text-[11px]" x-text="cItem.contraindications || 'Tidak untuk emergency ICU/UGD'"></p>
+                                </td>
+                            </template>
+                        </tr>
+
+                        <!-- Row: Termasuk Dalam Layanan -->
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="px-4 py-3 font-bold text-slate-600 align-top sticky left-0 bg-white z-10">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-teal-600">📦</span> Inklusi
+                                </div>
+                            </td>
+                            <template x-for="cItem in compareList" :key="'inc-'+cItem.id">
+                                <td class="px-4 py-3 align-top">
+                                    <div class="space-y-1">
+                                        <template x-for="(inc, idx) in (cItem.inclusions || []).slice(0, 5)" :key="idx">
+                                            <div class="flex items-start gap-1 text-[11px] text-slate-700">
+                                                <span class="text-emerald-600 font-bold shrink-0">✓</span>
+                                                <span x-text="inc"></span>
+                                            </div>
+                                        </template>
+                                        <template x-if="(cItem.inclusions || []).length > 5">
+                                            <span class="text-[10px] text-indigo-600 font-semibold">+<span x-text="cItem.inclusions.length - 5"></span> lainnya</span>
+                                        </template>
+                                        <template x-if="!cItem.inclusions || cItem.inclusions.length === 0">
+                                            <span class="text-[11px] text-slate-400 italic">Tidak tersedia</span>
+                                        </template>
+                                    </div>
+                                </td>
+                            </template>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+                <button type="button" @click="compareModalOpen = false" class="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition">
+                    Tutup Perbandingan
+                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="clearCompare(); compareModalOpen = false" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-500 transition">
+                        Hapus Semua
+                    </button>
+                    <button type="button" @click="bookCheapestFromCompare()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
+                        <span>Pesan yang Termurah</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 9. FOOTER -->
     <footer class="mt-auto border-t border-slate-200 bg-white py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
@@ -1074,6 +1467,10 @@
                 priceBracket: @json($currentPriceBracket ?? 'all'),
                 detailModalOpen: false,
                 bookingModalOpen: false,
+                compareModalOpen: false,
+                nurseServicePickerOpen: false,
+                pickerNurse: null,
+                compareList: [],
                 activeService: null,
 
                 // State Booking & Penjadwalan
@@ -1102,13 +1499,13 @@
                     address: '',
                     latitude: -6.2088,
                     longitude: 106.8456,
-                    distance_km: 2.5,
+                    distance_km: 0.5,
                     clinical_notes: '',
                 },
 
                 breakdown: {
                     base_price: 0,
-                    distance_km: 2.5,
+                    distance_km: 0.5,
                     transport_fee: 10000,
                     platform_fee: 5000,
                     total_amount: 15000,
@@ -1125,7 +1522,23 @@
 
                 initData() {
                     this.filterServices();
-                    this.fetchNearbyNurses();
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                                this.patientLat = parseFloat(pos.coords.latitude.toFixed(6));
+                                this.patientLng = parseFloat(pos.coords.longitude.toFixed(6));
+                                this.bookingForm.latitude = this.patientLat;
+                                this.bookingForm.longitude = this.patientLng;
+                                this.fetchNearbyNurses();
+                            },
+                            () => {
+                                this.fetchNearbyNurses();
+                            },
+                            { enableHighAccuracy: true, timeout: 6000 }
+                        );
+                    } else {
+                        this.fetchNearbyNurses();
+                    }
                 },
 
                 async fetchNearbyNurses() {
@@ -1152,8 +1565,8 @@
                     this.loadingNurses = true;
                     navigator.geolocation.getCurrentPosition(
                         (pos) => {
-                            this.patientLat = pos.coords.latitude;
-                            this.patientLng = pos.coords.longitude;
+                            this.patientLat = parseFloat(pos.coords.latitude.toFixed(6));
+                            this.patientLng = parseFloat(pos.coords.longitude.toFixed(6));
                             this.bookingForm.latitude = this.patientLat;
                             this.bookingForm.longitude = this.patientLng;
                             this.fetchNearbyNurses();
@@ -1166,19 +1579,61 @@
                     );
                 },
 
-                selectNurseForBooking(nurse) {
+                openNurseServicePicker(nurse) {
                     this.selectedNurse = nurse;
                     this.bookingForm.nurse_id = nurse.nurse_id;
-                    if (nurse.distance_km) {
-                        this.bookingForm.distance_km = nurse.distance_km;
+                    if (nurse.distance_km !== undefined && nurse.distance_km !== null) {
+                        this.bookingForm.distance_km = parseFloat(nurse.distance_km);
+                    }
+                    if (nurse.latitude && (this.bookingForm.latitude === -6.2088 || this.patientLat === -6.2088)) {
+                        this.bookingForm.latitude = parseFloat(nurse.latitude);
+                        this.bookingForm.longitude = parseFloat(nurse.longitude);
                     }
 
-                    if (nurse.services && nurse.services.length > 0) {
-                        const serviceMatch = this.rawServices.find(s => s.id === nurse.services[0].id) || this.rawServices[0];
-                        this.openBookingModal(serviceMatch);
+                    if (nurse.services && nurse.services.length > 1) {
+                        this.pickerNurse = nurse;
+                        this.nurseServicePickerOpen = true;
+                    } else if (nurse.services && nurse.services.length === 1) {
+                        const match = this.rawServices.find(s => s.id === nurse.services[0].id) || this.rawServices[0];
+                        this.openBookingModal(match);
                     } else if (this.rawServices.length > 0) {
                         this.openBookingModal(this.rawServices[0]);
                     }
+                },
+
+                selectNurseWithSpecificService(nurse, service) {
+                    this.selectedNurse = nurse;
+                    this.bookingForm.nurse_id = nurse.nurse_id;
+                    if (nurse.distance_km !== undefined && nurse.distance_km !== null) {
+                        this.bookingForm.distance_km = parseFloat(nurse.distance_km);
+                    }
+                    if (nurse.latitude && (this.bookingForm.latitude === -6.2088 || this.patientLat === -6.2088)) {
+                        this.bookingForm.latitude = parseFloat(nurse.latitude);
+                        this.bookingForm.longitude = parseFloat(nurse.longitude);
+                    }
+                    this.nurseServicePickerOpen = false;
+
+                    const match = this.rawServices.find(s => s.id === service.id) || service;
+                    this.openBookingModal(match);
+                },
+
+                selectNurseForBooking(nurse) {
+                    this.openNurseServicePicker(nurse);
+                },
+
+                changeSelectedServiceFromNurse(serviceId) {
+                    const id = parseInt(serviceId);
+                    const match = this.rawServices.find(s => s.id === id) || 
+                                 (this.selectedNurse?.services?.find(s => s.id === id));
+                    if (match) {
+                        this.activeService = match;
+                        this.fetchPriceBreakdown();
+                    }
+                },
+
+                getServiceDuration(serviceId) {
+                    const match = this.rawServices.find(s => s.id === serviceId);
+                    return match?.estimated_duration || '60 Menit';
                 },
 
                 setCategory(cat) {
@@ -1254,6 +1709,25 @@
                     this.uploadedPhotoFile = null;
                     this.bookingModalOpen = true;
 
+                    // Sinkronisasi jarak awal dan koordinat
+                    if (this.selectedNurse) {
+                        if (this.selectedNurse.distance_km !== undefined && this.selectedNurse.distance_km !== null) {
+                            this.bookingForm.distance_km = parseFloat(this.selectedNurse.distance_km);
+                        }
+                        if (this.bookingForm.latitude === -6.2088) {
+                            if (this.patientLat !== -6.2088) {
+                                this.bookingForm.latitude = this.patientLat;
+                                this.bookingForm.longitude = this.patientLng;
+                            } else if (this.selectedNurse.latitude) {
+                                this.bookingForm.latitude = parseFloat(this.selectedNurse.latitude);
+                                this.bookingForm.longitude = parseFloat(this.selectedNurse.longitude);
+                            }
+                        }
+                    } else if (this.bookingForm.latitude === -6.2088 && this.patientLat !== -6.2088) {
+                        this.bookingForm.latitude = this.patientLat;
+                        this.bookingForm.longitude = this.patientLng;
+                    }
+
                     this.fetchPriceBreakdown();
                 },
 
@@ -1323,11 +1797,24 @@
                         const container = document.getElementById('bookingLeafletMap');
                         if (!container) return;
 
-                        if (!this.map) {
-                            const lat = this.bookingForm.latitude;
-                            const lng = this.bookingForm.longitude;
+                        let lat = this.bookingForm.latitude;
+                        let lng = this.bookingForm.longitude;
 
-                            this.map = L.map('bookingLeafletMap').setView([lat, lng], 14);
+                        // Gunakan koordinat GPS pasien atau perawat jika form masih default Jakarta
+                        if (lat === -6.2088) {
+                            if (this.patientLat !== -6.2088) {
+                                lat = this.patientLat;
+                                lng = this.patientLng;
+                            } else if (this.selectedNurse && this.selectedNurse.latitude) {
+                                lat = parseFloat(this.selectedNurse.latitude);
+                                lng = parseFloat(this.selectedNurse.longitude);
+                            }
+                            this.bookingForm.latitude = lat;
+                            this.bookingForm.longitude = lng;
+                        }
+
+                        if (!this.map) {
+                            this.map = L.map('bookingLeafletMap').setView([lat, lng], 15);
 
                             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                 maxZoom: 19,
@@ -1346,10 +1833,17 @@
                                 this.updateLocation(e.latlng.lat, e.latlng.lng);
                             });
                         } else {
+                            this.map.setView([lat, lng], 15);
+                            if (this.marker) {
+                                this.marker.setLatLng([lat, lng]);
+                            }
                             setTimeout(() => {
                                 this.map.invalidateSize();
                             }, 100);
                         }
+
+                        // Sinkronkan jarak aktual saat map diinisialisasi
+                        this.updateLocation(lat, lng);
                     });
                 },
 
@@ -1384,15 +1878,44 @@
                 },
 
                 updateLocation(lat, lng) {
-                    this.bookingForm.latitude = parseFloat(lat.toFixed(6));
-                    this.bookingForm.longitude = parseFloat(lng.toFixed(6));
+                    this.bookingForm.latitude = parseFloat(Number(lat).toFixed(6));
+                    this.bookingForm.longitude = parseFloat(Number(lng).toFixed(6));
 
-                    // Titik koordinat acuan pos layanan/nakes
-                    const baseLat = -6.1754;
-                    const baseLng = 106.8272;
-                    const dist = this.haversineDistance(baseLat, baseLng, lat, lng);
+                    // Titik koordinat acuan pos perawat/nakes yang dipilih
+                    let baseLat = null;
+                    let baseLng = null;
 
-                    this.bookingForm.distance_km = Math.min(Math.max(parseFloat(dist.toFixed(1)), 0.5), 15.0);
+                    if (this.selectedNurse && this.selectedNurse.latitude && this.selectedNurse.longitude) {
+                        baseLat = parseFloat(this.selectedNurse.latitude);
+                        baseLng = parseFloat(this.selectedNurse.longitude);
+                    } else if (this.nearbyNurses && this.nearbyNurses.length > 0) {
+                        const matchedNurse = this.nearbyNurses.find(n => 
+                            !this.activeService || (n.services && n.services.some(s => s.id === this.activeService.id))
+                        ) || this.nearbyNurses[0];
+
+                        if (matchedNurse && matchedNurse.latitude && matchedNurse.longitude) {
+                            baseLat = parseFloat(matchedNurse.latitude);
+                            baseLng = parseFloat(matchedNurse.longitude);
+                        }
+                    }
+
+                    let dist = 0.5;
+                    if (baseLat !== null && baseLng !== null) {
+                        dist = this.haversineDistance(baseLat, baseLng, this.bookingForm.latitude, this.bookingForm.longitude);
+                    } else {
+                        // Jika belum ada perawat spesifik, beri jarak default aman 0.5 km
+                        dist = 0.5;
+                    }
+
+                    // Format jarak 1 desimal. Jika kurang dari 0.1 km (sama persis), tetapkan 0 km
+                    const rounded = Math.round(dist * 10) / 10;
+                    this.bookingForm.distance_km = rounded < 0.1 ? 0 : rounded;
+
+                    // Hilangkan pesan error radius jika sekarang sudah berada dalam radius aman
+                    if (this.bookingForm.distance_km <= 10.0 && this.errorMessage.includes('radius')) {
+                        this.errorMessage = '';
+                    }
+
                     this.fetchPriceBreakdown();
                 },
 
@@ -1411,9 +1934,9 @@
                     if (!this.activeService) return;
 
                     const servicePrice = parseFloat(this.activeService.price);
-                    const distance = this.bookingForm.distance_km || 2.5;
+                    const distance = typeof this.bookingForm.distance_km === 'number' ? this.bookingForm.distance_km : 0;
 
-                    // Hitung lokal instan
+                    // Hitung lokal instan: 3 km pertama Rp 10.000, berikutnya +Rp 2.500/km
                     let transport = 10000;
                     if (distance > 3.0) {
                         transport = 10000 + (Math.ceil(distance - 3.0) * 2500);
@@ -1456,7 +1979,6 @@
                     })
                     .catch(() => {
                         // Fallback ke hitungan lokal jika offline
-                    });
                 },
 
                 handlePhotoUpload(event) {
@@ -1531,6 +2053,59 @@
                         return parts[2] + ' ' + months[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
                     }
                     return dateStr;
+                },
+
+                // ===== COMPARE SERVICES FEATURE =====
+                toggleCompare(service) {
+                    const idx = this.compareList.findIndex(s => s.id === service.id);
+                    if (idx !== -1) {
+                        this.compareList.splice(idx, 1);
+                    } else {
+                        if (this.compareList.length >= 3) {
+                            alert('Maksimal 3 layanan dapat dibandingkan secara bersamaan. Hapus salah satu layanan terlebih dahulu.');
+                            return;
+                        }
+                        this.compareList.push(service);
+                    }
+                },
+
+                isInCompare(serviceId) {
+                    return this.compareList.some(s => s.id === serviceId);
+                },
+
+                removeFromCompare(serviceId) {
+                    this.compareList = this.compareList.filter(s => s.id !== serviceId);
+                },
+
+                clearCompare() {
+                    this.compareList = [];
+                },
+
+                openCompareModal() {
+                    if (this.compareList.length < 2) {
+                        alert('Pilih minimal 2 layanan untuk membandingkan.');
+                        return;
+                    }
+                    this.compareModalOpen = true;
+                },
+
+                getLowestComparePrice() {
+                    if (this.compareList.length === 0) return 0;
+                    return Math.min(...this.compareList.map(s => parseFloat(s.price)));
+                },
+
+                getShortestCompareDuration() {
+                    if (this.compareList.length === 0) return 0;
+                    return Math.min(...this.compareList.map(s => s.estimated_duration_minutes || 60));
+                },
+
+                bookCheapestFromCompare() {
+                    if (this.compareList.length === 0) return;
+                    const cheapest = this.compareList.reduce((min, s) =>
+                        parseFloat(s.price) < parseFloat(min.price) ? s : min
+                    , this.compareList[0]);
+                    this.compareModalOpen = false;
+                    this.openBookingModal(cheapest);
                 }
             };
         }

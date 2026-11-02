@@ -26,6 +26,10 @@ class NurseDashboardController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+        if (!$user->hasRole('perawat')) {
+            abort(403, 'Akses terbatas untuk akun Mitra Perawat.');
+        }
+
         $profile = NurseProfile::firstOrCreate(
             ['user_id' => $user->id],
             [
