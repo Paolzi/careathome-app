@@ -12,8 +12,13 @@ class WalletTransaction extends Model
 
     protected $fillable = [
         'wallet_id',
+        'nurse_wallet_id',
+        'order_id',
         'type',
         'amount',
+        'platform_fee',
+        'net_amount',
+        'status',
         'balance_after',
         'payment_id',
         'payout_request_id',
@@ -22,6 +27,8 @@ class WalletTransaction extends Model
 
     protected $casts = [
         'amount' => 'integer',
+        'platform_fee' => 'integer',
+        'net_amount' => 'integer',
         'balance_after' => 'integer',
     ];
 
@@ -42,6 +49,16 @@ class WalletTransaction extends Model
     public function wallet(): BelongsTo
     {
         return $this->belongsTo(Wallet::class);
+    }
+
+    public function nurseWallet(): BelongsTo
+    {
+        return $this->belongsTo(NurseWallet::class, 'nurse_wallet_id');
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'order_id');
     }
 
     public function payment(): BelongsTo

@@ -83,6 +83,11 @@ class NurseProfile extends Model
             ->withTimestamps();
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'nurse_id', 'user_id');
+    }
+
     /**
      * Scope untuk perawat yang benar-benar aktif:
      * 1. verification_status == 'verified'

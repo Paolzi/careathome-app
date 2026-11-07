@@ -39,16 +39,16 @@ class OrderScheduleController extends Controller
             $currentUser = $defaultPatient;
         }
 
-        $activeOrders = Order::with(['serviceCatalog', 'nurse', 'latestPayment'])
+        $activeOrders = Order::with(['serviceCatalog', 'nurse', 'latestPayment', 'eReport'])
             ->where('patient_id', $userId)
             ->whereIn('status', ['menunggu_konfirmasi', 'diterima', 'dalam_perjalanan', 'tiba', 'tindakan_berlangsung'])
             ->orderBy('scheduled_date', 'asc')
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $pastOrders = Order::with(['serviceCatalog', 'nurse', 'latestPayment'])
+        $pastOrders = Order::with(['serviceCatalog', 'nurse', 'latestPayment', 'eReport.photos', 'review'])
             ->where('patient_id', $userId)
-            ->whereIn('status', ['selesai', 'dibatalkan'])
+            ->whereIn('status', ['selesai', 'completed', 'dibatalkan'])
             ->orderBy('scheduled_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();

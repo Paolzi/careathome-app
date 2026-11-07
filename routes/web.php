@@ -50,6 +50,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('perawat/documents/{document}/preview', [\App\Http\Controllers\NurseDocumentController::class, 'preview'])->name('perawat.documents.preview');
         Route::post('perawat/notifications/{id}/read', [\App\Http\Controllers\NurseDocumentController::class, 'markNotificationAsRead'])->name('perawat.notifications.read');
         Route::post('perawat/notifications/read-all', [\App\Http\Controllers\NurseDocumentController::class, 'markAllNotificationsAsRead'])->name('perawat.notifications.read-all');
+        // Pengisian E-Report Klinis & Penyelesaian Pesanan (KF-10)
+        Route::get('perawat/orders/{order}/ereport', [\App\Http\Controllers\Nurse\NurseEReportController::class, 'show'])->name('perawat.ereport.show');
+        Route::post('perawat/orders/{order}/ereport', [\App\Http\Controllers\Nurse\NurseEReportController::class, 'store'])->name('perawat.ereport.store');
     });
 
     // Portal Pasien (Role: pasien atau admin)
@@ -61,6 +64,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('pasien/pesanan/{order}/bayar/token', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'getPaymentToken'])->name('pasien.pesanan.payment-token');
         Route::post('pasien/pesanan/{order}/bayar', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'pay'])->name('pasien.pesanan.pay');
         Route::post('pasien/pesanan/{order}/batal', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancel'])->name('pasien.pesanan.cancel');
+
+        // Lembar E-Report Klinis & Ulasan/Rating Pasien (KF-11 & KF-12)
+        Route::get('pasien/orders/{order}/ereport', [\App\Http\Controllers\Patient\PatientReviewReportController::class, 'showReport'])->name('pasien.ereport.show');
+        Route::post('pasien/orders/{order}/review', [\App\Http\Controllers\Patient\PatientReviewReportController::class, 'storeReview'])->name('pasien.review.store');
     });
 
     // Portal Admin (Role Admin)
