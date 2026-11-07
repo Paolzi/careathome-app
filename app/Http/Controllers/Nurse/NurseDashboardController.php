@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Nurse;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\NurseProfile;
+use App\Models\NurseWallet;
+use App\Models\Order;
 use App\Models\PayoutRequest;
 use App\Models\ServiceCatalog;
 use App\Models\User;
@@ -40,27 +42,77 @@ class NurseDashboardController extends Controller
         );
 
         $wallet = Wallet::getOrCreateForUser($user->id);
+        $nurseWallet = NurseWallet::getOrCreateForNurse($user->id);
+
+        // Pastikan saldo tersinkronisasi jika salah satu ada selisih
+        if ($nurseWallet->balance === 0 && $wallet->balance > 0) {
+            $nurseWallet->balance = $wallet->balance;
+            $nurseWallet->save();
+        } elseif ($wallet->balance === 0 && $nurseWallet->balance > 0) {
+            $wallet->balance = $nurseWallet->balance;
+            $wallet->save();
+        }
 
         $services = ServiceCatalog::active()->get();
         $selectedServiceIds = $profile->services()->pluck('service_catalogs.id')->toArray();
 
-        $recentTransactions = WalletTransaction::where('wallet_id', $wallet->id)
+        $recentTransactions = WalletTransaction::where(function ($q) use ($wallet, $nurseWallet) {
+                $q->where('wallet_id', $wallet->id)
+                  ->orWhere('nurse_wallet_id', $nurseWallet->id);
+            })
             ->latest()
-            ->take(10)
+            ->take(15)
             ->get();
 
         $payoutRequests = PayoutRequest::where('nurse_user_id', $user->id)
             ->latest()
             ->get();
 
+        // Finansial Metrics Eksekutif
+        $totalBalance = (int) $nurseWallet->balance;
+        $pendingPayout = (int) PayoutRequest::where('nurse_user_id', $user->id)->where('status', 'pending')->sum('amount');
+        $totalWithdrawn = (int) PayoutRequest::where('nurse_user_id', $user->id)->whereIn('status', ['transferred', 'approved'])->sum('amount');
+        $totalEarnings = (int) WalletTransaction::where(function ($q) use ($wallet, $nurseWallet) {
+                $q->where('wallet_id', $wallet->id)
+                  ->orWhere('nurse_wallet_id', $nurseWallet->id);
+            })
+            ->whereIn('type', ['income', 'order_income'])
+            ->sum('net_amount');
+
+        if ($totalEarnings === 0 && $totalBalance > 0) {
+            $totalEarnings = $totalBalance + $totalWithdrawn;
+        }
+
+        // Pesanan Penugasan Perawat (Aktif & Selesai)
+        $assignedOrders = Order::with(['patient', 'serviceCatalog', 'eReport.photos', 'review'])
+            ->where('nurse_id', $user->id)
+            ->latest()
+            ->get();
+
+        $ordersNeedingReport = $assignedOrders->filter(function ($ord) {
+            return !$ord->eReport && in_array($ord->status, ['diterima', 'dalam_perjalanan', 'tiba', 'tindakan_berlangsung', 'selesai']);
+        });
+
+        $completedOrdersWithReport = $assignedOrders->filter(function ($ord) {
+            return (bool) $ord->eReport;
+        });
+
         return view('pages.nurse.dashboard', [
             'user' => $user,
             'profile' => $profile,
             'wallet' => $wallet,
+            'nurseWallet' => $nurseWallet,
             'services' => $services,
             'selectedServiceIds' => $selectedServiceIds,
             'recentTransactions' => $recentTransactions,
             'payoutRequests' => $payoutRequests,
+            'totalBalance' => $totalBalance,
+            'pendingPayout' => $pendingPayout,
+            'totalWithdrawn' => $totalWithdrawn,
+            'totalEarnings' => $totalEarnings,
+            'assignedOrders' => $assignedOrders,
+            'ordersNeedingReport' => $ordersNeedingReport,
+            'completedOrdersWithReport' => $completedOrdersWithReport,
         ]);
     }
 
@@ -226,14 +278,25 @@ class NurseDashboardController extends Controller
             DB::transaction(function () use ($user, $validated, $amount) {
                 /** @var Wallet $wallet */
                 $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->firstOrFail();
+                $nurseWallet = NurseWallet::getOrCreateForNurse($user->id);
 
-                if ($wallet->balance < $amount) {
+                if ($wallet->balance < $amount && $nurseWallet->balance < $amount) {
                     throw new \DomainException('Saldo tersedia Anda (Rp ' . number_format($wallet->balance, 0, ',', '.') . ') tidak mencukupi untuk penarikan sebesar Rp ' . number_format($amount, 0, ',', '.') . '.');
                 }
 
-                // Kurangi saldo (ditahan)
-                $wallet->balance -= $amount;
+                // Kurangi saldo pada dompet
+                $wallet->balance = max(0, $wallet->balance - $amount);
                 $wallet->save();
+
+                $nurseWallet->balance = max(0, $nurseWallet->balance - $amount);
+                $nurseWallet->pending_balance += $amount;
+                $nurseWallet->save();
+
+                $profile = NurseProfile::where('user_id', $user->id)->first();
+                if ($profile) {
+                    $profile->balance = $nurseWallet->balance;
+                    $profile->save();
+                }
 
                 // Buat record payout_request
                 $payout = PayoutRequest::create([
@@ -245,11 +308,14 @@ class NurseDashboardController extends Controller
                     'status' => 'pending',
                 ]);
 
-                // Catat transaksi wallet_transactions dengan tipe payout_hold
+                // Catat transaksi wallet_transactions dengan tipe withdrawal (hold)
                 WalletTransaction::create([
                     'wallet_id' => $wallet->id,
-                    'type' => 'payout_hold',
+                    'nurse_wallet_id' => $nurseWallet->id,
+                    'type' => 'withdrawal',
                     'amount' => -$amount,
+                    'net_amount' => $amount,
+                    'status' => 'pending',
                     'balance_after' => $wallet->balance,
                     'payout_request_id' => $payout->id,
                     'description' => "Penarikan saldo (Hold) ke rekening {$payout->bank_name} {$payout->account_number} a.n {$payout->account_holder}",

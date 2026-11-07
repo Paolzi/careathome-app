@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
@@ -102,6 +103,22 @@ class Order extends Model
     }
 
     /**
+     * Relasi ke Lembar E-Report Klinis.
+     */
+    public function eReport(): HasOne
+    {
+        return $this->hasOne(EReport::class, 'order_id');
+    }
+
+    /**
+     * Relasi ke Ulasan & Rating Pasien.
+     */
+    public function review(): HasOne
+    {
+        return $this->hasOne(Review::class, 'order_id');
+    }
+
+    /**
      * Engine Perhitungan Price Breakdown.
      * Aturan:
      * - Base Price: Tarif tindakan katalog
@@ -181,6 +198,7 @@ class Order extends Model
             'tiba' => 'Perawat Tiba di Lokasi',
             'tindakan_berlangsung' => 'Tindakan Berlangsung',
             'selesai' => 'Selesai',
+            'completed' => 'Selesai',
             'dibatalkan' => 'Dibatalkan',
             default => ucfirst($this->status),
         };

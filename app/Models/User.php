@@ -85,4 +85,29 @@ class User extends Authenticatable
     {
         return $this->hasMany(Order::class, 'nurse_id');
     }
+
+    public function nurseWallet(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(NurseWallet::class, 'nurse_id');
+    }
+
+    public function nurseEReports(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(EReport::class, 'nurse_id');
+    }
+
+    public function patientEReports(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(EReport::class, 'patient_id');
+    }
+
+    public function reviewsReceived(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Review::class, 'nurse_id');
+    }
+
+    public function reviewsGiven(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Review::class, 'patient_id');
+    }
 }

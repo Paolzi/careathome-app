@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%" fill="none">
+    <rect width="400" height="300" fill="#F0FDF4" rx="16"/>
+    <rect x="2" y="2" width="396" height="296" stroke="#BBF7D0" stroke-width="2" stroke-dasharray="6 6" rx="14"/>
+
+    <!-- Medical Cross Badge -->
+    <g transform="translate(160, 75)">
+        <circle cx="40" cy="40" r="40" fill="#DCFCE7"/>
+        <circle cx="40" cy="40" r="32" fill="#10B981"/>
+        <!-- White Cross -->
+        <path d="M40 26 V54 M26 40 H54" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+    </g>
+
+    <!-- Badge Container -->
+    <rect x="120" y="175" width="160" height="48" rx="8" fill="#FFFFFF" fill-opacity="0.85" stroke="#D1FAE5" stroke-width="1"/>
+
+    <!-- Text Labels -->
+    <text x="200" y="196" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#065F46" text-anchor="middle">Dokumentasi Tindakan</text>
+    <text x="200" y="213" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" fill="#059669" text-anchor="middle">CareAtHome Clinical Photo</text>
+</svg>
+

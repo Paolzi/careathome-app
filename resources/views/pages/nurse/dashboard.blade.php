@@ -231,114 +231,214 @@
                 </div>
             </div>
 
-            <!-- 2. GRID UTAMA: DOMPET SALDO & LAYANAN MEDIS -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                <!-- KOLOM KIRI: DOMPET, SALDO & PENARIKAN DANA (TARIK SALDO) -->
-                <div id="rekening-saldo" class="lg:col-span-1 space-y-6">
-
-                    <!-- Kartu Saldo Dompet -->
-                    <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-5">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Dompet Pendapatan</span>
-                            <span class="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">Mitra Nakes</span>
-                        </div>
-
-                        <div class="space-y-1">
-                            <span class="text-xs text-slate-500">Saldo Tersedia:</span>
-                            <h3 class="text-2xl font-black text-slate-900">
-                                Rp {{ number_format($wallet->balance, 0, ',', '.') }}
-                            </h3>
-                            <p class="text-[10px] text-slate-400">
-                                Bagian 85% dari setiap pesanan yang Anda selesaikan langsung masuk ke saldo ini.
-                            </p>
-                        </div>
-
-                        <!-- Form Tarik Saldo -->
-                        <div class="pt-4 border-t border-slate-100 space-y-3" x-data="{ openForm: window.location.hash === '#rekening-saldo' }">
-                            <button type="button" @click="openForm = !openForm"
-                                class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow transition flex items-center justify-center gap-1.5">
-                                <span>💸 Tarik Saldo (Payout)</span>
-                            </button>
-
-                            <div x-show="openForm" x-cloak class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                                <h4 class="text-xs font-bold text-slate-800">Form Pengajuan Penarikan</h4>
-                                <form action="{{ route('perawat.payout.request') }}" method="POST" class="space-y-3">
-                                    @csrf
-                                    <div>
-                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Nominal (Rp)</label>
-                                        <input type="number" name="amount" min="10000" max="{{ $wallet->balance }}" required
-                                            placeholder="Min. 10000"
-                                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Bank Tujuan</label>
-                                        <input type="text" name="bank_name" placeholder="Mis. BCA, Mandiri, BRI" required
-                                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Nomor Rekening</label>
-                                        <input type="text" name="account_number" placeholder="Nomor rekening" required
-                                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Atas Nama Rekening</label>
-                                        <input type="text" name="account_holder" placeholder="Nama pemilik rekening" required
-                                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
-                                    </div>
-
-                                    <button type="submit"
-                                        class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition">
-                                        Kirim Pengajuan Payout
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+            <!-- 1.5 TIGA KARTU RINGKASAN EKSEKUTIF FINANSIAL PERAWAT -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                
+                <!-- Card 1: Total Saldo Utama -->
+                <div class="bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-3xl p-6 shadow-md shadow-emerald-600/20 relative overflow-hidden flex flex-col justify-between space-y-4">
+                    <div class="absolute -right-4 -bottom-4 w-32 h-32 rounded-full bg-white/10 blur-xl pointer-events-none"></div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-emerald-100 uppercase tracking-wider flex items-center gap-1.5">
+                            <span class="p-1.5 rounded-xl bg-white/20 text-sm">💳</span>
+                            <span>Total Saldo Utama</span>
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-white/20 text-white border border-white/20">
+                            Siap Dicairkan
+                        </span>
                     </div>
 
-                    <!-- Riwayat Permintaan Payout -->
-                    <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-3">
-                        <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider">Riwayat Payout</h4>
-                        
-                        @if ($payoutRequests->isEmpty())
-                            <p class="text-xs text-slate-400 italic">Belum ada riwayat penarikan dana.</p>
-                        @else
-                            <div class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                                @foreach ($payoutRequests as $pr)
-                                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-1">
-                                        <div class="flex items-center justify-between">
-                                            <span class="font-bold text-slate-900">Rp {{ number_format($pr->amount, 0, ',', '.') }}</span>
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
-                                                {{ $pr->status === 'transferred' ? 'bg-emerald-100 text-emerald-800' : ($pr->status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800') }}">
-                                                {{ ucfirst($pr->status) }}
-                                            </span>
-                                        </div>
-                                        <p class="text-[11px] text-slate-500">{{ $pr->bank_name }} - {{ $pr->account_number }} ({{ $pr->account_holder }})</p>
-                                        @if ($pr->proof_path)
-                                            <a href="{{ asset('storage/' . $pr->proof_path) }}" target="_blank" class="text-[10px] text-emerald-600 font-bold hover:underline block">
-                                                Lihat Bukti Transfer Admin &rarr;
-                                            </a>
-                                        @endif
-                                        @if ($pr->rejection_reason)
-                                            <p class="text-[10px] text-rose-600 italic">Alasan penolakan: {{ $pr->rejection_reason }}</p>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
+                    <div class="space-y-1">
+                        <span class="text-3xl font-black tracking-tight block">
+                            Rp {{ number_format($totalBalance, 0, ',', '.') }}
+                        </span>
+                        <p class="text-xs text-emerald-100">
+                            Pendapatan bersih 85% tindakan + 100% ongkos transport pasien.
+                        </p>
                     </div>
 
+                    <div class="pt-2">
+                        <button type="button" @click="openPayoutModal()"
+                            class="w-full py-2.5 px-4 rounded-xl bg-white text-emerald-900 hover:bg-emerald-50 font-extrabold text-xs shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer">
+                            <span>💸 Tarik Saldo (Payout)</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- KOLOM KANAN: PILIHAN LAYANAN YANG DISEDIAKAN & RIWAYAT MUTASI -->
-                <div class="lg:col-span-2 space-y-6">
+                <!-- Card 2: Saldo Pending / Hold -->
+                <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <span class="p-1.5 rounded-xl bg-amber-50 text-amber-600 text-sm border border-amber-200">⏳</span>
+                            <span>Saldo Pending / Payout Hold</span>
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+                            Menunggu Otorisasi
+                        </span>
+                    </div>
 
+                    <div class="space-y-1">
+                        <span class="text-3xl font-black text-slate-900 tracking-tight block">
+                            Rp {{ number_format($pendingPayout, 0, ',', '.') }}
+                        </span>
+                        <p class="text-xs text-slate-500">
+                            Permintaan penarikan yang sedang diverifikasi dan diproses oleh admin.
+                        </p>
+                    </div>
+
+                    <div class="pt-2 text-xs font-semibold text-amber-700 flex items-center gap-1">
+                        <span>🛡️</span>
+                        <span>Estimasi transfer 1x24 jam kerja</span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Total Penarikan / Akumulasi Pendapatan -->
+                <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <span class="p-1.5 rounded-xl bg-sky-50 text-sky-600 text-sm border border-sky-200">🏦</span>
+                            <span>Total Penarikan Dana</span>
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700">
+                            Riwayat Transfer
+                        </span>
+                    </div>
+
+                    <div class="space-y-1">
+                        <span class="text-3xl font-black text-slate-900 tracking-tight block">
+                            Rp {{ number_format($totalWithdrawn, 0, ',', '.') }}
+                        </span>
+                        <p class="text-xs text-slate-500">
+                            Dana yang berhasil dicairkan ke rekening bank perawat.
+                        </p>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100 text-xs font-bold text-slate-600 flex items-center justify-between">
+                        <span>Total Akumulasi Pendapatan:</span>
+                        <span class="text-emerald-700 font-extrabold">Rp {{ number_format($totalEarnings, 0, ',', '.') }}</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 1.8 SECTION PENUGASAN MEDIS & E-REPORT KLINIS (KF-10) -->
+            <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-sm space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div class="space-y-1">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                            <span>🩺</span>
+                            <span>Asuhan Keperawatan Digital (E-Report)</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 tracking-tight">Penugasan Medis &amp; E-Report Klinis Pasien</h3>
+                        <p class="text-xs text-slate-500">
+                            Sebagai syarat resmi penyelesaian pesanan, perawat wajib menginput hasil pemeriksaan fisik (TTV) dan dokumentasi asuhan.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1.5">
+                            <span>📋</span>
+                            <span>{{ $ordersNeedingReport->count() }} Menunggu E-Report</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- List Pesanan Menunggu E-Report -->
+                @if ($ordersNeedingReport->isNotEmpty())
+                    <div class="space-y-3">
+                        <h4 class="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Tugas Kunjungan yang Perlu Diselesaikan:</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach ($ordersNeedingReport as $ord)
+                                <div class="p-5 rounded-2xl border-2 border-amber-200/90 bg-amber-50/30 space-y-4 hover:border-emerald-500 transition shadow-2xs">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div>
+                                            <span class="text-[10px] font-mono font-bold text-slate-400 block">{{ $ord->order_number }}</span>
+                                            <h5 class="font-extrabold text-sm text-slate-900 mt-0.5">{{ $ord->serviceCatalog?->name }}</h5>
+                                            <p class="text-xs text-slate-600 mt-0.5">Pasien: <strong>{{ $ord->patient_name }}</strong> ({{ $ord->patient_phone }})</p>
+                                        </div>
+                                        <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                                            {{ $ord->status_label }}
+                                        </span>
+                                    </div>
+
+                                    <div class="text-xs text-slate-600 space-y-1 bg-white p-3 rounded-xl border border-amber-100">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-slate-400">Jadwal:</span>
+                                            <span class="font-bold text-slate-800">{{ $ord->scheduled_date?->format('d M Y') }} • {{ $ord->scheduled_time }}</span>
+                                        </div>
+                                        <div class="flex items-start justify-between gap-2">
+                                            <span class="text-slate-400 shrink-0">Lokasi:</span>
+                                            <span class="text-right text-slate-700 truncate max-w-[200px]" title="{{ $ord->address }}">{{ $ord->address }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-emerald-800 font-extrabold">
+                                            <span>Estimasi Pendapatan Nakes:</span>
+                                            <span>Rp {{ number_format($ord->nurse_earnings, 0, ',', '.') }}</span>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" @click="openEReportModal(@js($ord))"
+                                        class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+                                        <span>📝</span>
+                                        <span>Isi E-Report Klinis &amp; Selesaikan</span>
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @else
+                    <div class="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                        <span class="text-3xl block">🩺</span>
+                        <h4 class="text-xs font-bold text-slate-700">Tidak Ada Tugas Kunjungan Tertunda</h4>
+                        <p class="text-[11px] text-slate-400 max-w-md mx-auto">
+                            Semua tugas kunjungan medis Anda telah dilengkapi E-Report. Aktifkan toggle "Sedang Bekerja" di atas agar pasien dapat memesan layanan Anda kembali.
+                        </p>
+                    </div>
+                @endif
+
+                <!-- Riwayat Pesanan yang Telah Selesai dengan E-Report & Review Pasien -->
+                @if ($completedOrdersWithReport->isNotEmpty())
+                    <div class="pt-4 border-t border-slate-100 space-y-3">
+                        <h4 class="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Riwayat E-Report yang Telah Diterbitkan:</h4>
+                        <div class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                            @foreach ($completedOrdersWithReport as $cord)
+                                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold text-slate-900">{{ $cord->serviceCatalog?->name }}</span>
+                                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">✓ Selesai</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-500">Pasien: {{ $cord->patient_name }} • Tanggal: {{ $cord->scheduled_date?->format('d M Y') }}</p>
+                                        
+                                        @if ($cord->review)
+                                            <div class="flex items-center gap-1.5 pt-1 text-amber-500 font-bold text-[11px]">
+                                                <span>⭐ {{ $cord->review->rating }}/5:</span>
+                                                <span class="text-slate-600 font-normal italic">"{{ $cord->review->comment ?: 'Pelayanan sangat memuaskan!' }}"</span>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="font-extrabold text-emerald-700">
+                                            +Rp {{ number_format($cord->nurse_earnings, 0, ',', '.') }}
+                                        </span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            <!-- 2. GRID UTAMA: LAYANAN MEDIS & RIWAYAT MUTASI DOMPET -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- KOLOM KIRI: PILIHAN LAYANAN MEDIS -->
+                <div class="lg:col-span-1 space-y-6">
                     <!-- Pilihan Layanan Medis yang Disediakan -->
                     <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
                         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                             <div>
-                                <h3 class="text-sm font-bold text-slate-900">Layanan Keperawatan yang Anda Sediakan</h3>
-                                <p class="text-xs text-slate-500">Centang tindakan yang Anda kuasai. Anda hanya akan menerima pesanan untuk tindakan yang dipilih.</p>
+                                <h3 class="text-sm font-bold text-slate-900">Layanan yang Anda Sediakan</h3>
+                                <p class="text-[11px] text-slate-500">Pilih tindakan medis keahlian Anda.</p>
                             </div>
                             <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800">
                                 {{ count($selectedServiceIds) }} Terpilih
@@ -347,7 +447,7 @@
 
                         <form action="{{ route('perawat.layanan.update') }}" method="POST" class="space-y-4">
                             @csrf
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-1">
+                            <div class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
                                 @foreach ($services as $service)
                                     <label class="p-3 rounded-2xl border transition flex items-start gap-3 cursor-pointer hover:bg-slate-50"
                                         :class="checked ? 'border-emerald-500 bg-emerald-50/40' : 'border-slate-200'">
@@ -366,39 +466,98 @@
                                 @endforeach
                             </div>
 
-                            <div class="flex justify-end pt-2">
-                                <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition">
-                                    Simpan Pilihan Layanan
-                                </button>
-                            </div>
+                            <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition">
+                                Simpan Pilihan Layanan
+                            </button>
                         </form>
                     </div>
 
-                    <!-- Riwayat Transaksi Dompet (10 Terakhir) -->
+                    <!-- Riwayat Permintaan Payout Mini -->
+                    <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <h4 class="text-xs uppercase font-bold text-slate-400 tracking-wider">Status Pencairan</h4>
+                            <button type="button" @click="openPayoutModal()" class="text-[11px] font-bold text-emerald-700 hover:underline">
+                                + Tarik Saldo
+                            </button>
+                        </div>
+                        
+                        @if ($payoutRequests->isEmpty())
+                            <p class="text-xs text-slate-400 italic">Belum ada riwayat penarikan dana.</p>
+                        @else
+                            <div class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                                @foreach ($payoutRequests as $pr)
+                                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-1">
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-bold text-slate-900">Rp {{ number_format($pr->amount, 0, ',', '.') }}</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
+                                                {{ $pr->status === 'transferred' ? 'bg-emerald-100 text-emerald-800' : ($pr->status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800') }}">
+                                                {{ ucfirst($pr->status) }}
+                                            </span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-500">{{ $pr->bank_name }} - {{ $pr->account_number }}</p>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- KOLOM KANAN: TABEL MUTASI FINANSIAL & DOMPET -->
+                <div class="lg:col-span-2 space-y-6">
+
+                    <!-- Riwayat Mutasi Finansial Dompet -->
                     <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h3 class="text-sm font-bold text-slate-900">Riwayat Mutasi Saldo Dompet</h3>
-                            <span class="text-xs text-slate-400">10 Transaksi Terakhir</span>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900">Tabel Mutasi Finansial &amp; Riwayat Bagi Hasil</h3>
+                                <p class="text-xs text-slate-500">Transparansi potongan platform fee 15% dan pendapatan bersih nakes 85% + transport.</p>
+                            </div>
+                            <span class="text-xs text-slate-400">15 Transaksi Terakhir</span>
                         </div>
 
                         @if ($recentTransactions->isEmpty())
-                            <p class="text-xs text-slate-400 italic py-4 text-center">Belum ada transaksi pendapatan atau penarikan saldo.</p>
+                            <p class="text-xs text-slate-400 italic py-8 text-center">Belum ada transaksi pendapatan atau penarikan saldo tercatat.</p>
                         @else
-                            <div class="space-y-2">
-                                @foreach ($recentTransactions as $tx)
-                                    <div class="p-3 rounded-2xl border border-slate-100 flex items-center justify-between text-xs">
-                                        <div class="space-y-0.5">
-                                            <span class="font-bold text-slate-800 block">{{ $tx->description }}</span>
-                                            <span class="text-[10px] text-slate-400">{{ $tx->created_at->format('d M Y H:i') }} • Tipe: {{ $tx->type }}</span>
-                                        </div>
-                                        <div class="text-right">
-                                            <span class="font-extrabold block {{ $tx->amount > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
-                                                {{ $tx->amount > 0 ? '+' : '' }}Rp {{ number_format($tx->amount, 0, ',', '.') }}
-                                            </span>
-                                            <span class="text-[10px] text-slate-400">Saldo: Rp {{ number_format($tx->balance_after, 0, ',', '.') }}</span>
-                                        </div>
-                                    </div>
-                                @endforeach
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs text-slate-700">
+                                    <thead class="text-[10px] uppercase font-bold text-slate-400 bg-slate-50 border-b border-slate-100">
+                                        <tr>
+                                            <th class="py-2.5 px-3">Waktu</th>
+                                            <th class="py-2.5 px-3">Keterangan</th>
+                                            <th class="py-2.5 px-3">Platform Fee (15%)</th>
+                                            <th class="py-2.5 px-3">Net Nakes</th>
+                                            <th class="py-2.5 px-3 text-right">Perubahan Saldo</th>
+                                            <th class="py-2.5 px-3 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 font-medium">
+                                        @foreach ($recentTransactions as $tx)
+                                            <tr class="hover:bg-slate-50/80 transition">
+                                                <td class="py-3 px-3 whitespace-nowrap text-[11px] text-slate-500">
+                                                    {{ $tx->created_at->format('d M Y, H:i') }}
+                                                </td>
+                                                <td class="py-3 px-3">
+                                                    <span class="font-bold text-slate-800 block">{{ $tx->description }}</span>
+                                                    <span class="text-[10px] text-slate-400 font-mono">Tipe: {{ $tx->type }}</span>
+                                                </td>
+                                                <td class="py-3 px-3 text-amber-700 font-semibold whitespace-nowrap">
+                                                    {{ $tx->platform_fee > 0 ? 'Rp ' . number_format($tx->platform_fee, 0, ',', '.') : '-' }}
+                                                </td>
+                                                <td class="py-3 px-3 text-emerald-800 font-semibold whitespace-nowrap">
+                                                    {{ $tx->net_amount > 0 ? 'Rp ' . number_format($tx->net_amount, 0, ',', '.') : '-' }}
+                                                </td>
+                                                <td class="py-3 px-3 text-right font-extrabold whitespace-nowrap {{ $tx->amount > 0 ? 'text-emerald-600' : 'text-rose-600' }}">
+                                                    {{ $tx->amount > 0 ? '+' : '' }}Rp {{ number_format($tx->amount, 0, ',', '.') }}
+                                                </td>
+                                                <td class="py-3 px-3 text-center">
+                                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $tx->status === 'completed' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200' }}">
+                                                        {{ ucfirst($tx->status ?: 'Selesai') }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
                             </div>
                         @endif
                     </div>
@@ -407,6 +566,344 @@
 
             </div>
 
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- MODAL FORMULIR E-REPORT KLINIS PERAWAT (KF-10)                -->
+        <!-- ============================================================= -->
+        <div x-show="ereportModalOpen" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+            x-transition:enter="ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0">
+
+            <div @click.away="ereportModalOpen = false"
+                class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 max-h-[92vh] flex flex-col"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100">
+
+                <!-- Header Modal -->
+                <div class="px-6 py-5 bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white flex items-center justify-between shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-xl">
+                            🩺
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-emerald-300 block">Formulir Rekam Medis Digital</span>
+                            <h3 class="text-base font-extrabold leading-tight">Input E-Report Asuhan Keperawatan</h3>
+                        </div>
+                    </div>
+                    <button type="button" @click="ereportModalOpen = false"
+                        class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition text-xs">
+                        ✕
+                    </button>
+                </div>
+
+                <!-- Form Content (Scrollable) -->
+                <form :action="ereportFormAction" method="POST" enctype="multipart/form-data" class="overflow-y-auto grow p-6 space-y-6">
+                    @csrf
+
+                    <!-- CARD 1: RINGKASAN PASIEN & PESANAN -->
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Target Tindakan Medis</span>
+                            <span class="text-xs font-mono font-bold text-emerald-800" x-text="activeOrderForReport?.order_number"></span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                            <div>
+                                <span class="text-slate-400 block text-[11px]">Pasien:</span>
+                                <strong class="text-slate-900 text-sm" x-text="activeOrderForReport?.patient_name"></strong>
+                                <span class="text-slate-500 block text-[11px]" x-text="'Telp: ' + (activeOrderForReport?.patient_phone || '-')"></span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block text-[11px]">Layanan:</span>
+                                <strong class="text-emerald-700" x-text="activeOrderForReport?.service_catalog?.name"></strong>
+                                <span class="text-slate-500 block text-[11px]" x-text="activeOrderForReport?.scheduled_date + ' • ' + (activeOrderForReport?.scheduled_time || '')"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 2: TANDA-TANDA VITAL (TTV) -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-emerald-600 font-bold">①</span>
+                                <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Pengukuran Tanda-Tanda Vital (TTV) Pasien</h4>
+                            </div>
+                            <span class="text-[10px] text-rose-500 font-semibold">*Wajib Diisi</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Tekanan Darah Sistolik -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Tekanan Darah Sistolik</label>
+                                <div class="relative rounded-xl shadow-xs">
+                                    <input type="number" name="systolic" min="50" max="300" required placeholder="Mis. 120"
+                                        class="w-full text-xs rounded-xl border-slate-200 pr-16 focus:border-emerald-500 focus:ring-emerald-500">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
+                                        mmHg
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Tekanan Darah Diastolik -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Tekanan Darah Diastolik</label>
+                                <div class="relative rounded-xl shadow-xs">
+                                    <input type="number" name="diastolic" min="30" max="200" required placeholder="Mis. 80"
+                                        class="w-full text-xs rounded-xl border-slate-200 pr-16 focus:border-emerald-500 focus:ring-emerald-500">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
+                                        mmHg
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Suhu Tubuh -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Suhu Tubuh</label>
+                                <div class="relative rounded-xl shadow-xs">
+                                    <input type="number" step="0.1" name="body_temp" min="30" max="45" required placeholder="Mis. 36.5"
+                                        class="w-full text-xs rounded-xl border-slate-200 pr-12 focus:border-emerald-500 focus:ring-emerald-500">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
+                                        °C
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Denyut Nadi -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Denyut Nadi</label>
+                                <div class="relative rounded-xl shadow-xs">
+                                    <input type="number" name="pulse_rate" min="30" max="250" required placeholder="Mis. 80"
+                                        class="w-full text-xs rounded-xl border-slate-200 pr-14 focus:border-emerald-500 focus:ring-emerald-500">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
+                                        bpm
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Saturasi Oksigen SpO2 -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Saturasi Oksigen (SpO2)</label>
+                                <div class="relative rounded-xl shadow-xs">
+                                    <input type="number" name="spo2" min="50" max="100" required placeholder="Mis. 98"
+                                        class="w-full text-xs rounded-xl border-slate-200 pr-12 focus:border-emerald-500 focus:ring-emerald-500">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
+                                        %
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Gula Darah Sewaktu (GDS) -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">
+                                    Gula Darah Sewaktu (GDS) <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
+                                </label>
+                                <div class="relative rounded-xl shadow-xs">
+                                    <input type="number" name="gds" min="20" max="800" placeholder="Mis. 110"
+                                        class="w-full text-xs rounded-xl border-slate-200 pr-16 focus:border-emerald-500 focus:ring-emerald-500">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
+                                        mg/dL
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 3: CATATAN ASUHAN & EDUKASI KELUARGA -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <span class="text-emerald-600 font-bold">②</span>
+                            <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Catatan Asuhan Keperawatan &amp; Edukasi Pasien</h4>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                Ringkasan Catatan Klinis / Asuhan Keperawatan (SOAP) <span class="text-rose-500">*</span>
+                            </label>
+                            <textarea name="clinical_notes" rows="3" required
+                                placeholder="Tuliskan keluhan pasien, tindakan medis yang telah diberikan, respons pasien, serta kondisi terkini..."
+                                class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">
+                                Instruksi &amp; Edukasi Keluarga Pasien <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
+                            </label>
+                            <textarea name="family_education" rows="2"
+                                placeholder="Edukasi mengenai jadwal konsumsi obat, perawatan luka mandiri, pantangan makanan, atau jadwal kontrol lanjutan..."
+                                class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- CARD 4: UPLOAD DOKUMENTASI FOTO TINDAKAN -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-emerald-600 font-bold">③</span>
+                                <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Dokumentasi Foto Tindakan / Kondisi Luka</h4>
+                            </div>
+                            <span class="text-[10px] text-slate-400">Maks. 5 Foto (JPEG/PNG)</span>
+                        </div>
+
+                        <div class="p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-emerald-500 bg-slate-50/60 transition text-center space-y-2">
+                            <input type="file" id="ereportPhotoInput" name="photos[]" multiple accept="image/*" @change="handlePhotoUpload($event)"
+                                class="hidden">
+                            <label for="ereportPhotoInput" class="cursor-pointer inline-flex flex-col items-center gap-1.5 text-xs text-slate-600 hover:text-emerald-700 font-semibold">
+                                <span class="text-2xl">📷</span>
+                                <span>Klik di sini untuk memilih foto dokumentasi tindakan</span>
+                                <span class="text-[10px] text-slate-400 font-normal">Ukuran maks. 5MB per file</span>
+                            </label>
+                        </div>
+
+                        <!-- Preview Foto yang Dipilih -->
+                        <div x-show="photoPreviews.length > 0" class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                            <template x-for="(preview, idx) in photoPreviews" :key="idx">
+                                <div class="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-100 p-1 space-y-1">
+                                    <img :src="preview.url" class="w-full h-24 object-cover rounded-lg">
+                                    <input type="text" :name="'captions[' + idx + ']'" placeholder="Keterangan foto"
+                                        class="w-full text-[10px] py-1 px-1.5 rounded border border-slate-200">
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- CARD 5: INFORMASI SETTLEMENT DANA OTOMATIS -->
+                    <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 text-xs text-emerald-950 space-y-2">
+                        <div class="flex items-center gap-1.5 font-bold">
+                            <span>🛡️</span>
+                            <span>Automated Settlement CareAtHome</span>
+                        </div>
+                        <p class="text-[11px] text-emerald-800 leading-relaxed">
+                            Setelah tombol di bawah ditekan, pesanan akan secara otomatis dinyatakan <strong>Selesai</strong> dan dana bagi hasil (85% biaya tindakan + 100% ongkos transport) akan langsung ditransfer ke Dompet Anda secara otomatis.
+                        </p>
+                    </div>
+
+                    <!-- Tombol Aksi -->
+                    <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                        <button type="button" @click="ereportModalOpen = false"
+                            class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition">
+                            Batal
+                        </button>
+                        <button type="submit"
+                            class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/30 transition flex items-center gap-2 cursor-pointer">
+                            <span>✓</span>
+                            <span>Simpan E-Report &amp; Selesaikan Layanan</span>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- MODAL FORMULIR TARIK SALDO / PAYOUT (WITHDRAWAL)             -->
+        <!-- ============================================================= -->
+        <div x-show="payoutModalOpen" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+            x-transition:enter="ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0">
+
+            <div @click.away="payoutModalOpen = false"
+                class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100">
+
+                <div class="px-6 py-5 bg-gradient-to-r from-slate-900 to-emerald-950 text-white flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider font-extrabold text-emerald-300 block">Pencairan Dana Nakes</span>
+                        <h3 class="text-base font-extrabold leading-tight">Pengajuan Penarikan Saldo</h3>
+                    </div>
+                    <button type="button" @click="payoutModalOpen = false" class="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs">
+                        ✕
+                    </button>
+                </div>
+
+                <form action="{{ route('perawat.payout.request') }}" method="POST" class="p-6 space-y-4">
+                    @csrf
+
+                    <!-- Info Saldo Tersedia -->
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                        <span class="text-xs text-slate-500">Saldo Dompet Tersedia:</span>
+                        <strong class="text-base font-black text-slate-900">Rp {{ number_format($totalBalance, 0, ',', '.') }}</strong>
+                    </div>
+
+                    <!-- Pilihan Nominal Cepat (Quick Chips) -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilihan Nominal Penarikan</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" @click="setPayoutAmount(100000)"
+                                :class="payoutAmount === 100000 ? 'bg-emerald-600 text-white border-emerald-600 font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
+                                class="py-2 px-2 rounded-xl text-xs border text-center transition">
+                                Rp 100.000
+                            </button>
+                            <button type="button" @click="setPayoutAmount(250000)"
+                                :class="payoutAmount === 250000 ? 'bg-emerald-600 text-white border-emerald-600 font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
+                                class="py-2 px-2 rounded-xl text-xs border text-center transition">
+                                Rp 250.000
+                            </button>
+                            <button type="button" @click="setPayoutAmount(500000)"
+                                :class="payoutAmount === 500000 ? 'bg-emerald-600 text-white border-emerald-600 font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
+                                class="py-2 px-2 rounded-xl text-xs border text-center transition">
+                                Rp 500.000
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nominal Custom (Rp) <span class="text-rose-500">*</span></label>
+                        <input type="number" name="amount" x-model="payoutAmount" min="10000" max="{{ $totalBalance }}" required
+                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">Minimal penarikan Rp 10.000</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Bank Tujuan <span class="text-rose-500">*</span></label>
+                        <select name="bank_name" required class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
+                            <option value="">-- Pilih Bank Rekening Anda --</option>
+                            <option value="BCA">BCA (Bank Central Asia)</option>
+                            <option value="Mandiri">Bank Mandiri</option>
+                            <option value="BRI">BRI (Bank Rakyat Indonesia)</option>
+                            <option value="BNI">BNI (Bank Negara Indonesia)</option>
+                            <option value="BSI">BSI (Bank Syariah Indonesia)</option>
+                            <option value="CIMB Niaga">CIMB Niaga</option>
+                            <option value="Permata">Bank Permata</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Rekening <span class="text-rose-500">*</span></label>
+                        <input type="text" name="account_number" placeholder="Nomor rekening tujuan" required
+                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Pemilik Rekening <span class="text-rose-500">*</span></label>
+                        <input type="text" name="account_holder" placeholder="Nama lengkap sesuai buku rekening" required
+                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-end gap-2">
+                        <button type="button" @click="payoutModalOpen = false"
+                            class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                            Batal
+                        </button>
+                        <button type="submit"
+                            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition cursor-pointer">
+                            Konfirmasi Penarikan
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -424,6 +921,47 @@
                 lastLocationSentAt: 0,
                 toastMessage: '',
                 toastType: 'success',
+
+                // E-Report & Payout State
+                ereportModalOpen: false,
+                activeOrderForReport: null,
+                ereportFormAction: '',
+                photoPreviews: [],
+                payoutModalOpen: false,
+                payoutAmount: 100000,
+
+                openEReportModal(order) {
+                    this.activeOrderForReport = order;
+                    this.ereportFormAction = '/perawat/orders/' + order.id + '/ereport';
+                    this.photoPreviews = [];
+                    this.ereportModalOpen = true;
+                },
+
+                handlePhotoUpload(event) {
+                    const files = event.target.files;
+                    this.photoPreviews = [];
+                    if (files && files.length > 0) {
+                        for (let i = 0; i < Math.min(files.length, 5); i++) {
+                            const file = files[i];
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                this.photoPreviews.push({
+                                    url: e.target.result,
+                                    name: file.name
+                                });
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    }
+                },
+
+                openPayoutModal() {
+                    this.payoutModalOpen = true;
+                },
+
+                setPayoutAmount(amount) {
+                    this.payoutAmount = amount;
+                },
 
                 init() {
                     if (this.isOnline) {

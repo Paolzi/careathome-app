@@ -421,6 +421,52 @@
                                 <span class="text-slate-500">Total Transaksi:</span>
                                 <span class="text-base font-extrabold text-slate-900">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
                             </div>
+
+                            <!-- Bagian E-Report Klinis & Ulasan Pasien (KF-11 & KF-12) -->
+                            @if (in_array($order->status, ['selesai', 'completed']))
+                                <div class="pt-3 border-t border-slate-100 space-y-2.5">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <!-- Tombol Buka E-Report -->
+                                        @if ($order->eReport)
+                                            <button type="button" @click="fetchAndOpenEReport({{ $order->id }})"
+                                                class="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                                                <span>📄</span>
+                                                <span>Lihat Lembar E-Report Medis</span>
+                                            </button>
+                                        @else
+                                            <span class="text-[11px] text-slate-400 italic flex items-center gap-1">
+                                                <span>⏳</span>
+                                                <span>E-Report sedang diproses nakes</span>
+                                            </span>
+                                        @endif
+
+                                        <!-- Tombol / Tampilan Rating & Ulasan -->
+                                        @if (!$order->review)
+                                            <button type="button" @click="openReviewModal(@js($order))"
+                                                class="px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition flex items-center gap-1.5 ml-auto cursor-pointer">
+                                                <span>⭐</span>
+                                                <span>Beri Rating &amp; Ulasan</span>
+                                            </button>
+                                        @endif
+                                    </div>
+
+                                    <!-- Tampilan Ulasan yang Sudah Diberikan -->
+                                    @if ($order->review)
+                                        <div class="p-3 rounded-2xl bg-amber-50/60 border border-amber-200/70 text-xs space-y-1">
+                                            <div class="flex items-center justify-between text-amber-600 font-extrabold text-xs">
+                                                <div class="flex items-center gap-1">
+                                                    @for ($i = 1; $i <= 5; $i++)
+                                                        <span>{{ $i <= $order->review->rating ? '★' : '☆' }}</span>
+                                                    @endfor
+                                                    <span class="text-slate-800 ml-1">({{ $order->review->rating }}/5)</span>
+                                                </div>
+                                                <span class="text-[10px] text-slate-400 font-normal">{{ $order->review->created_at->format('d M Y') }}</span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-700 italic">"{{ $order->review->comment ?: 'Pelayanan sangat memuaskan!' }}"</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -917,6 +963,297 @@
         </div>
     </div>
 
+    <!-- ============================================================= -->
+    <!-- 8.5 MODAL LEMBAR E-REPORT DIGITAL REKAM MEDIS PASIEN (KF-11)   -->
+    <!-- ============================================================= -->
+    <div x-show="ereportModalOpen" x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+        x-transition:enter="ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0">
+
+        <div @click.away="ereportModalOpen = false"
+            class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 max-h-[92vh] flex flex-col"
+            x-transition:enter="ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100">
+
+            <!-- Header E-Report Bergaya Health Card Medis -->
+            <div class="px-6 py-5 bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-2xl border border-white/20">
+                        📋
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-emerald-300">Rekam Medis Asuhan Keperawatan</span>
+                            <span class="px-2 py-0.2 rounded-full text-[9px] font-bold bg-white/20 text-white border border-white/20">Terverifikasi</span>
+                        </div>
+                        <h3 class="text-base font-extrabold tracking-tight">Lembar E-Report Klinis Pasien</h3>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="window.print()" title="Cetak Lembar Medis"
+                        class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition text-xs flex items-center gap-1 cursor-pointer">
+                        <span>🖨️</span>
+                        <span class="hidden sm:inline text-[11px] font-bold">Cetak</span>
+                    </button>
+                    <button type="button" @click="ereportModalOpen = false"
+                        class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition text-xs">
+                        ✕
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div x-show="loadingEReport" class="p-12 text-center text-xs text-slate-500 space-y-3">
+                <span class="animate-spin text-3xl inline-block">⏳</span>
+                <p class="font-bold">Memuat data rekam medis digital...</p>
+            </div>
+
+            <!-- Content Rekam Medis (Scrollable) -->
+            <div x-show="!loadingEReport && reportData" class="overflow-y-auto grow p-6 space-y-6 text-xs">
+
+                <!-- KOP IDENTITAS REKAM MEDIS -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="space-y-1">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Layanan Medis:</span>
+                        <h4 class="text-sm font-black text-slate-900" x-text="reportData?.service_name"></h4>
+                        <p class="text-[11px] text-slate-600">Pasien: <strong x-text="reportData?.patient_name"></strong></p>
+                    </div>
+                    <div class="space-y-1 sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Perawat Pengampu:</span>
+                        <h5 class="text-xs font-extrabold text-emerald-800" x-text="reportData?.nurse_name"></h5>
+                        <p class="text-[10px] text-slate-400" x-text="'Diterbitkan: ' + reportData?.created_at"></p>
+                    </div>
+                </div>
+
+                <!-- 5 METRIC STAT CARDS TANDA-TANDA VITAL (TTV) -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🩺</span>
+                            <span>Pemeriksaan Tanda-Tanda Vital (TTV)</span>
+                        </span>
+                        <span class="text-[10px] text-slate-400">Pemeriksaan Fisik Terstandar</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        
+                        <!-- Tekanan Darah -->
+                        <div class="p-3.5 rounded-2xl border bg-white shadow-2xs space-y-1.5">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tekanan Darah</span>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-xl font-black text-slate-900" x-text="reportData?.vital_signs?.blood_pressure?.value"></span>
+                                <span class="text-[10px] font-bold text-slate-400" x-text="reportData?.vital_signs?.blood_pressure?.unit"></span>
+                            </div>
+                            <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                                :class="reportData?.vital_signs?.blood_pressure?.category?.bg"
+                                x-text="reportData?.vital_signs?.blood_pressure?.category?.label"></span>
+                        </div>
+
+                        <!-- Suhu Tubuh -->
+                        <div class="p-3.5 rounded-2xl border bg-white shadow-2xs space-y-1.5">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Suhu Tubuh</span>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-xl font-black text-slate-900" x-text="reportData?.vital_signs?.body_temp?.value"></span>
+                                <span class="text-[10px] font-bold text-slate-400" x-text="reportData?.vital_signs?.body_temp?.unit"></span>
+                            </div>
+                            <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                                :class="reportData?.vital_signs?.body_temp?.category?.bg"
+                                x-text="reportData?.vital_signs?.body_temp?.category?.label"></span>
+                        </div>
+
+                        <!-- Denyut Nadi -->
+                        <div class="p-3.5 rounded-2xl border bg-white shadow-2xs space-y-1.5">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Denyut Nadi</span>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-xl font-black text-slate-900" x-text="reportData?.vital_signs?.pulse_rate?.value"></span>
+                                <span class="text-[10px] font-bold text-slate-400" x-text="reportData?.vital_signs?.pulse_rate?.unit"></span>
+                            </div>
+                            <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                                :class="reportData?.vital_signs?.pulse_rate?.category?.bg"
+                                x-text="reportData?.vital_signs?.pulse_rate?.category?.label"></span>
+                        </div>
+
+                        <!-- Saturasi Oksigen SpO2 -->
+                        <div class="p-3.5 rounded-2xl border bg-white shadow-2xs space-y-1.5">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Saturasi Oksigen (SpO2)</span>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-xl font-black text-slate-900" x-text="reportData?.vital_signs?.spo2?.value"></span>
+                                <span class="text-[10px] font-bold text-slate-400" x-text="reportData?.vital_signs?.spo2?.unit"></span>
+                            </div>
+                            <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                                :class="reportData?.vital_signs?.spo2?.category?.bg"
+                                x-text="reportData?.vital_signs?.spo2?.category?.label"></span>
+                        </div>
+
+                        <!-- Gula Darah Sewaktu (GDS) -->
+                        <div class="p-3.5 rounded-2xl border bg-white shadow-2xs space-y-1.5 col-span-2 sm:col-span-1">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Gula Darah (GDS)</span>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-xl font-black text-slate-900" x-text="reportData?.vital_signs?.gds?.value"></span>
+                                <span class="text-[10px] font-bold text-slate-400" x-text="reportData?.vital_signs?.gds?.unit"></span>
+                            </div>
+                            <template x-if="reportData?.vital_signs?.gds?.category">
+                                <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                                    :class="reportData?.vital_signs?.gds?.category?.bg"
+                                    x-text="reportData?.vital_signs?.gds?.category?.label"></span>
+                            </template>
+                            <template x-if="!reportData?.vital_signs?.gds?.category">
+                                <span class="text-[10px] text-slate-400 italic">Tidak dilakukan tes</span>
+                            </template>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- CATATAN ASUHAN KEPERAWATAN SOAP -->
+                <div class="p-4 rounded-2xl bg-white border border-slate-200 space-y-1.5">
+                    <span class="text-[11px] font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>📝</span>
+                        <span>Ringkasan Asuhan Keperawatan (SOAP)</span>
+                    </span>
+                    <p class="text-xs text-slate-700 leading-relaxed whitespace-pre-line" x-text="reportData?.clinical_notes"></p>
+                </div>
+
+                <!-- EDUKASI & SARAN KELUARGA -->
+                <div class="p-4 rounded-2xl bg-teal-50/70 border border-teal-200/80 space-y-1.5">
+                    <span class="text-[11px] font-extrabold text-teal-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>💡</span>
+                        <span>Instruksi &amp; Edukasi Keluarga Pasien</span>
+                    </span>
+                    <p class="text-xs text-teal-900 leading-relaxed whitespace-pre-line" x-text="reportData?.family_education"></p>
+                </div>
+
+                <!-- FOTO DOKUMENTASI TINDAKAN MEDIS -->
+                <template x-if="reportData?.photos && reportData.photos.length > 0">
+                    <div class="space-y-2">
+                        <span class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>📷</span>
+                            <span>Dokumentasi Foto Tindakan Medis</span>
+                        </span>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <template x-for="p in reportData.photos" :key="p.id">
+                                <div class="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 space-y-1 p-1">
+                                    <a :href="p.url" target="_blank" title="Klik untuk memperbesar">
+                                        <img :src="p.url" class="w-full h-28 object-cover rounded-lg hover:opacity-90 transition">
+                                    </a>
+                                    <p class="text-[10px] text-slate-500 truncate px-1" x-text="p.caption || 'Foto Tindakan'"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+            </div>
+
+            <!-- Footer E-Report -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <span class="text-[10px] text-slate-400">Tercatat resmi dalam sistem rekam medis elektronik CareAtHome</span>
+                <button type="button" @click="ereportModalOpen = false"
+                    class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition">
+                    Tutup Lembar Medis
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- 8.8 MODAL ULASAN & RATING INTERAKTIF PASIEN (KF-12)          -->
+    <!-- ============================================================= -->
+    <div x-show="reviewModalOpen" x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+        x-transition:enter="ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0">
+
+        <div @click.away="reviewModalOpen = false"
+            class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800"
+            x-transition:enter="ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100">
+
+            <div class="px-6 py-5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">⭐</span>
+                    <div>
+                        <span class="text-[10px] uppercase font-extrabold tracking-wider text-amber-100 block">Evaluasi Pelayanan</span>
+                        <h3 class="text-base font-extrabold leading-tight">Beri Penilaian &amp; Ulasan</h3>
+                    </div>
+                </div>
+                <button type="button" @click="reviewModalOpen = false" class="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs">
+                    ✕
+                </button>
+            </div>
+
+            <form :action="'/pasien/orders/' + selectedOrderForReview?.id + '/review'" method="POST" class="p-6 space-y-4 text-xs">
+                @csrf
+
+                <!-- Info Perawat -->
+                <div class="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/70 text-center space-y-1">
+                    <span class="text-slate-500 text-[11px] block">Mitra Perawat:</span>
+                    <strong class="text-sm text-slate-900 font-extrabold" x-text="selectedOrderForReview?.nurse?.name || 'Ns. CareAtHome'"></strong>
+                    <span class="text-[11px] text-slate-500 block" x-text="selectedOrderForReview?.service_catalog?.name"></span>
+                </div>
+
+                <!-- Star Rating Interaktif (Hover & Click) -->
+                <div class="text-center space-y-2 pt-2">
+                    <label class="block text-xs font-extrabold text-slate-800">Bagaimana kualitas pelayanan perawat?</label>
+                    <input type="hidden" name="rating" :value="userRating">
+
+                    <div class="flex items-center justify-center gap-2">
+                        <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
+                            <button type="button"
+                                @click="userRating = star"
+                                @mouseenter="hoverRating = star"
+                                @mouseleave="hoverRating = 0"
+                                class="text-3xl transition-transform hover:scale-125 cursor-pointer focus:outline-none"
+                                :class="(hoverRating || userRating) >= star ? 'text-amber-400' : 'text-slate-200'">
+                                ★
+                            </button>
+                        </template>
+                    </div>
+
+                    <!-- Label Kepuasan Dinamis -->
+                    <span class="text-xs font-bold block"
+                        :class="userRating >= 4 ? 'text-emerald-700' : (userRating === 3 ? 'text-amber-700' : 'text-rose-600')"
+                        x-text="getRatingLabel(hoverRating || userRating)">
+                    </span>
+                </div>
+
+                <!-- Kolom Komentar Ulasan -->
+                <div class="pt-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                        Komentar / Pengalaman Pelayanan <span class="text-slate-400 font-normal">(Opsional)</span>
+                    </label>
+                    <textarea name="comment" rows="3"
+                        placeholder="Ceritakan pengalaman Anda mengenai keramahan, ketelitian, dan kebersihan perawat saat bertugas..."
+                        class="w-full text-xs rounded-xl border-slate-200 focus:border-amber-500 focus:ring-amber-500"></textarea>
+                </div>
+
+                <!-- Tombol Aksi -->
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" @click="reviewModalOpen = false"
+                        class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                        Batal
+                    </button>
+                    <button type="submit"
+                        class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md shadow-orange-500/20 transition cursor-pointer">
+                        Kirim Ulasan &amp; Rating
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- 9. FOOTER -->
     <footer class="mt-auto border-t border-slate-200 bg-white py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
@@ -955,6 +1292,57 @@
                 nurseMarker: null,
                 routeLine: null,
                 radiusCircle: null,
+
+                // E-Report & Review State
+                ereportModalOpen: false,
+                loadingEReport: false,
+                reportData: null,
+                reviewModalOpen: false,
+                selectedOrderForReview: null,
+                userRating: 5,
+                hoverRating: 0,
+
+                async fetchAndOpenEReport(orderId) {
+                    this.loadingEReport = true;
+                    this.reportData = null;
+                    this.ereportModalOpen = true;
+
+                    try {
+                        const res = await fetch('/pasien/orders/' + orderId + '/ereport', {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.status === 'success') {
+                            this.reportData = data.data;
+                        } else {
+                            alert(data.message || 'Gagal memuat lembar E-Report klinis.');
+                            this.ereportModalOpen = false;
+                        }
+                    } catch (e) {
+                        alert('Terjadi kesalahan jaringan saat memuat E-Report.');
+                        this.ereportModalOpen = false;
+                    } finally {
+                        this.loadingEReport = false;
+                    }
+                },
+
+                openReviewModal(order) {
+                    this.selectedOrderForReview = order;
+                    this.userRating = 5;
+                    this.hoverRating = 0;
+                    this.reviewModalOpen = true;
+                },
+
+                getRatingLabel(r) {
+                    switch (parseInt(r)) {
+                        case 1: return '⭐ Sangat Kecewa / Buruk';
+                        case 2: return '⭐⭐ Kurang Puas';
+                        case 3: return '⭐⭐⭐ Cukup Baik';
+                        case 4: return '⭐⭐⭐⭐ Puas & Ramah';
+                        case 5: return '⭐⭐⭐⭐⭐ Sangat Memuaskan & Profesional!';
+                        default: return 'Pilih Bintang Penilaian';
+                    }
+                },
 
                 init() {
                     const params = new URLSearchParams(window.location.search);
