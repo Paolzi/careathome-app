@@ -16,10 +16,31 @@ class OrderPaymentService
     /**
      * Hitung porsi finansial pesanan berdasarkan persentase fee dinamis di Settings.
      */
-    public function calculateBreakdown(float|int $totalAmount): array
+    public function calculateBreakdown(float|int|Order $orderInput): array
     {
         $feePercent = Setting::getFloat('platform_fee_percent', 15.0);
-        $total = (int) round($totalAmount);
+
+        if ($orderInput instanceof Order) {
+            $basePrice = (float) ($orderInput->base_price ?: ($orderInput->total_amount * 0.8));
+            $transportFee = (float) ($orderInput->transport_fee ?: 10000.0);
+            $platformFee = (float) ($orderInput->platform_fee ?: 5000.0);
+            $total = (int) round($orderInput->total_amount ?: ($basePrice + $transportFee + $platformFee));
+
+            $adminFee = (int) round(($basePrice * ($feePercent / 100.0)) + $platformFee);
+            $nurseEarning = (int) ($total - $adminFee);
+
+            return [
+                'total_amount' => $total,
+                'fee_percent' => $feePercent,
+                'admin_fee' => $adminFee,
+                'nurse_earning' => $nurseEarning,
+                'base_price' => (int) round($basePrice),
+                'transport_fee' => (int) round($transportFee),
+                'platform_fee' => (int) round($platformFee),
+            ];
+        }
+
+        $total = (int) round((float) $orderInput);
         $adminFee = (int) round($total * ($feePercent / 100.0));
         $nurseEarning = (int) ($total - $adminFee);
 
@@ -28,6 +49,9 @@ class OrderPaymentService
             'fee_percent' => $feePercent,
             'admin_fee' => $adminFee,
             'nurse_earning' => $nurseEarning,
+            'base_price' => (int) round($total * 0.85),
+            'transport_fee' => 10000,
+            'platform_fee' => 5000,
         ];
     }
 
@@ -54,7 +78,7 @@ class OrderPaymentService
             }
 
             // 2. Hitung pembagian (15% platform, 85% nakes atau sesuai setting)
-            $breakdown = $this->calculateBreakdown($order->total_amount);
+            $breakdown = $this->calculateBreakdown($order);
             $totalAmount = $breakdown['total_amount'];
             $adminFee = $breakdown['admin_fee'];
             $nurseEarning = $breakdown['nurse_earning'];
@@ -100,13 +124,23 @@ class OrderPaymentService
                 $nurseWallet->balance += $nurseEarning;
                 $nurseWallet->save();
 
+                // Sinkronkan juga model NurseWallet
+                $nw = \App\Models\NurseWallet::getOrCreateForNurse($order->nurse_id);
+                $nw->balance = $nurseWallet->balance;
+                $nw->save();
+
                 WalletTransaction::create([
                     'wallet_id' => $nurseWallet->id,
+                    'nurse_wallet_id' => $nw->id,
+                    'order_id' => $order->id,
                     'type' => 'order_income',
                     'amount' => $nurseEarning,
+                    'platform_fee' => $adminFee,
+                    'net_amount' => $nurseEarning,
+                    'status' => 'completed',
                     'balance_after' => $nurseWallet->balance,
                     'payment_id' => $payment->id,
-                    'description' => "Pendapatan perawat (" . (100 - $feePercent) . "%) pesanan #{$order->order_number}",
+                    'description' => "Pendapatan perawat (" . (100 - $feePercent) . "% + transport) pesanan #{$order->order_number}",
                 ]);
             }
 
@@ -124,8 +158,12 @@ class OrderPaymentService
 
                 WalletTransaction::create([
                     'wallet_id' => $adminWallet->id,
+                    'order_id' => $order->id,
                     'type' => 'order_income',
                     'amount' => $adminFee,
+                    'platform_fee' => $adminFee,
+                    'net_amount' => $adminFee,
+                    'status' => 'completed',
                     'balance_after' => $adminWallet->balance,
                     'payment_id' => $payment->id,
                     'description' => "Komisi platform ({$feePercent}%) pesanan #{$order->order_number}",

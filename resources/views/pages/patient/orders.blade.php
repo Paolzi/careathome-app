@@ -64,12 +64,12 @@
                         </a>
                         <a href="{{ route('pasien.pesanan') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 transition">
-                            Jadwal &amp; Detail Booking
+                            Riwayat Layanan
                         </a>
                         <a href="{{ route('pasien.pembayaran') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
-                            <span>Pembayaran Escrow</span>
-                            <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Escrow</span>
+                            <span>Tagihan &amp; Pembayaran</span>
+                            <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Direct Pay</span>
                         </a>
                         <a href="{{ route('pasien.pembatalan') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">

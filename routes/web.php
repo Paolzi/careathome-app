@@ -53,6 +53,12 @@ Route::middleware(['auth'])->group(function () {
         // Pengisian E-Report Klinis & Penyelesaian Pesanan (KF-10)
         Route::get('perawat/orders/{order}/ereport', [\App\Http\Controllers\Nurse\NurseEReportController::class, 'show'])->name('perawat.ereport.show');
         Route::post('perawat/orders/{order}/ereport', [\App\Http\Controllers\Nurse\NurseEReportController::class, 'store'])->name('perawat.ereport.store');
+
+        // Feed Order Kunjungan Masuk & Riwayat Finansial (Marketplace Job Board)
+        Route::get('perawat/feed', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'index'])->name('perawat.feed');
+        Route::post('perawat/orders/{order}/accept', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'accept'])->name('perawat.orders.accept');
+        Route::post('perawat/orders/{order}/decline', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'decline'])->name('perawat.orders.decline');
+        Route::get('perawat/finansial', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'financialHistory'])->name('perawat.finansial');
     });
 
     // Portal Pasien (Role: pasien atau admin)
@@ -72,9 +78,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Portal Admin (Role Admin)
     Route::prefix('admin')->middleware(['role:admin'])->name('admin.')->group(function () {
-        Route::get('dashboard', function () {
-            return redirect()->route('admin.nurses.index');
-        })->name('dashboard');
+        Route::get('dashboard', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('dashboard');
 
         // Audit Legalitas Nakes
         Route::get('nurses', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'index'])->name('nurses.index');

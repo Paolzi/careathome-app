@@ -197,6 +197,15 @@
                             <span>•</span>
                             <span>⏱️ Terakhir Update: <strong x-text="lastUpdatedText || '{{ $profile->location_updated_at ? $profile->location_updated_at->diffForHumans() : 'Belum ada' }}'"></strong></span>
                         </div>
+
+                        <div class="pt-2 flex items-center gap-2">
+                            <a href="{{ route('perawat.feed') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 transition transform active:scale-95">
+                                <span>📡 Buka Feed Order Masuk (Job Board) &rarr;</span>
+                            </a>
+                            <a href="{{ route('perawat.finansial') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition">
+                                <span>💳 Riwayat Finansial</span>
+                            </a>
+                        </div>
                     </div>
 
                     <!-- TOGGLE SWITCH INTERAKTIF -->

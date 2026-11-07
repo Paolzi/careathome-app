@@ -37,8 +37,15 @@ class AdminDashboardController extends Controller
 
         $completedOrdersCount = Order::where('status', 'selesai')->count();
         $totalOrdersCount = Order::count();
+        $successfulTransactionsCount = Payment::whereIn('payment_status', ['paid', 'settlement'])->count();
         $activeNursesCount = NurseProfile::active()->count();
         $totalNursesCount = NurseProfile::count();
+
+        // Mutasi Transaksi Log Real-time
+        $recentMutations = \App\Models\WalletTransaction::with(['wallet.user', 'payment.order.serviceCatalog'])
+            ->latest()
+            ->take(10)
+            ->get();
 
         // Data Grafik GMV Harian untuk Chart.js
         $chartDataRaw = Payment::whereIn('payment_status', ['paid', 'settlement'])
@@ -89,6 +96,7 @@ class AdminDashboardController extends Controller
             'totalGmv' => $totalGmv,
             'totalPlatformFee' => $totalPlatformFee,
             'totalNurseEarnings' => $totalNurseEarnings,
+            'successfulTransactionsCount' => $successfulTransactionsCount,
             'completedOrdersCount' => $completedOrdersCount,
             'totalOrdersCount' => $totalOrdersCount,
             'activeNursesCount' => $activeNursesCount,
@@ -97,6 +105,7 @@ class AdminDashboardController extends Controller
             'chartGmv' => $chartGmv,
             'chartPlatformFee' => $chartPlatformFee,
             'recentPayments' => $recentPayments,
+            'recentMutations' => $recentMutations,
             'topNurses' => $topNurses,
         ]);
     }
