@@ -8,11 +8,36 @@
         modalOpen: false,
         rejectionOpen: false,
         rejectionReason: '',
+        ktkiChecking: false,
+        ktkiResult: null,
         openModal(nurse) {
             this.selectedNurse = nurse;
             this.rejectionOpen = false;
             this.rejectionReason = '';
+            this.ktkiResult = null;
             this.modalOpen = true;
+        },
+        async checkKtki() {
+            if (!this.selectedNurse) return;
+            this.ktkiChecking = true;
+            try {
+                const res = await fetch('/admin/nurses/' + this.selectedNurse.id + '/verify-ktki', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                        'Accept': 'application/json'
+                    }
+                });
+                const json = await res.json();
+                if (json.status === 'success') {
+                    this.ktkiResult = json.data;
+                }
+            } catch (err) {
+                console.error('Gagal cek KTKI:', err);
+                alert('Gagal menjalankan simulasi pengecekan KTKI.');
+            } finally {
+                this.ktkiChecking = false;
+            }
         }
     }">
 
@@ -199,6 +224,53 @@
                         </div>
                     </div>
 
+                    <!-- CARD SIMULASI VALIDASI KTKI / KEMENKES RI -->
+                    <div class="p-4 rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                                    🏛️
+                                </span>
+                                <div>
+                                    <h4 class="font-extrabold text-teal-950 text-xs">Simulasi Validasi KTKI &amp; Kemenkes RI</h4>
+                                    <p class="text-[10px] text-teal-700">Validasi otomatis format 16 digit STR, masa aktif lisensi, dan keabsahan nakes</p>
+                                </div>
+                            </div>
+
+                            <button type="button" @click="checkKtki()" :disabled="ktkiChecking"
+                                class="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-[11px] shadow-xs transition flex items-center gap-1.5 self-start sm:self-auto disabled:opacity-50">
+                                <span x-show="!ktkiChecking">🔍 Jalankan Cek KTKI</span>
+                                <span x-show="ktkiChecking" x-cloak class="flex items-center gap-1">
+                                    <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                    Memvalidasi...
+                                </span>
+                            </button>
+                        </div>
+
+                        <!-- Hasil Cek KTKI -->
+                        <div x-show="ktkiResult" x-cloak class="mt-2 p-3.5 rounded-xl border transition"
+                             :class="ktkiResult?.is_valid ? 'bg-emerald-100/70 border-emerald-300 text-emerald-950' : 'bg-rose-100/70 border-rose-300 text-rose-950'">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                                              :class="ktkiResult?.is_valid ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'"
+                                              x-text="'STATUS: ' + (ktkiResult?.status || 'INVALID')"></span>
+                                        <span class="text-[10px] font-semibold text-slate-600" x-text="ktkiResult?.verified_at"></span>
+                                    </div>
+                                    <p class="font-bold text-xs" x-text="ktkiResult?.message"></p>
+                                    <div class="text-[11px] text-slate-700 pt-1 space-y-0.5">
+                                        <p>• <strong>Nama Terdaftar:</strong> <span x-text="ktkiResult?.registered_name"></span></p>
+                                        <p>• <strong>Profesi:</strong> <span x-text="ktkiResult?.profession"></span></p>
+                                        <p>• <strong>Nomor STR:</strong> <span class="font-mono" x-text="ktkiResult?.str_number"></span> (<span x-text="ktkiResult?.digit_count + ' digit'"></span>)</p>
+                                        <p>• <strong>Masa Berlaku:</strong> <span x-text="ktkiResult?.expiry_date || '-'"></span></p>
+                                    </div>
+                                </div>
+                                <span class="text-2xl" x-text="ktkiResult?.is_valid ? '✅' : '❌'"></span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Dokumen Legalitas (Preview / Unduh) -->
                     <div class="space-y-2">
                         <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
@@ -215,18 +287,31 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="selectedNurse?.documents?.length > 0">
                             <template x-for="doc in selectedNurse?.documents" :key="doc.id">
-                                <div class="p-3 rounded-2xl border border-slate-200 flex items-center justify-between hover:bg-emerald-50/30 transition">
-                                    <div class="flex items-center gap-2.5">
-                                        <span class="text-lg">📄</span>
-                                        <div>
-                                            <span class="font-bold text-slate-800 uppercase text-[11px] block" x-text="doc.document_type"></span>
-                                            <span class="text-[10px] text-slate-400 truncate max-w-[140px] block" x-text="doc.original_name || 'Berkas Dokumen'"></span>
+                                <div class="p-3 rounded-2xl border border-slate-200 flex flex-col justify-between gap-2 hover:bg-emerald-50/30 transition">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-lg">📄</span>
+                                            <div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="font-bold text-slate-800 uppercase text-[11px]" x-text="doc.document_type"></span>
+                                                    <span class="text-[9px] px-1.5 py-0.2 rounded font-mono uppercase"
+                                                          :class="doc.storage_driver === 's3' ? 'bg-indigo-100 text-indigo-800 font-bold' : 'bg-slate-100 text-slate-600'"
+                                                          x-text="(doc.storage_driver || 'public')"></span>
+                                                </div>
+                                                <span class="text-[10px] text-slate-400 truncate max-w-[140px] block" x-text="doc.original_name || 'Berkas Dokumen'"></span>
+                                            </div>
                                         </div>
+                                        <a :href="'/admin/documents/' + doc.id + '/preview'" target="_blank"
+                                            class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[10px] hover:bg-emerald-100 transition whitespace-nowrap">
+                                            Buka Berkas &rarr;
+                                        </a>
                                     </div>
-                                    <a :href="'/storage/' + doc.file_path" target="_blank"
-                                        class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[10px] hover:bg-emerald-100 transition">
-                                        Preview Dokumen &rarr;
-                                    </a>
+
+                                    <template x-if="doc.ktki_verified_at">
+                                        <span class="inline-flex items-center gap-1 text-[9px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                                            ✓ Tervalidasi KTKI
+                                        </span>
+                                    </template>
                                 </div>
                             </template>
                         </div>

@@ -4,11 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\NurseDocument;
 use App\Models\NurseProfile;
 use App\Models\NurseVerification;
+use App\Notifications\NurseDocumentApprovedNotification;
+use App\Notifications\NurseDocumentRejectedNotification;
+use App\Services\KtkiValidationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class AdminNurseVerificationController extends Controller
@@ -81,8 +87,12 @@ class AdminNurseVerificationController extends Controller
                 'verified_at' => now(),
             ]);
 
-            // Update status dokumen menjadi verified
-            $nurseProfile->documents()->update(['status' => 'verified']);
+            // Update status dokumen menjadi verified dan set ktki_verified_at jika belum ada
+            $nurseProfile->documents()->update([
+                'status' => 'verified',
+                'rejection_reason' => null,
+                'ktki_verified_at' => now(),
+            ]);
 
             // Catat audit_log
             AuditLog::log(
@@ -93,7 +103,15 @@ class AdminNurseVerificationController extends Controller
             );
         });
 
-        return back()->with('status', "Legalitas perawat {$nurseProfile->user?->name} berhasil diverifikasi & disetujui.");
+        // Trigger Notifikasi Otomatis (Email & In-App Database Notification)
+        try {
+            $nurseProfile->user?->notify(new NurseDocumentApprovedNotification($nurseProfile, $admin));
+        } catch (\Throwable $e) {
+            // Log jika terjadi kegagalan mailer lokal, sistem tetap berjalan lancar
+            report($e);
+        }
+
+        return back()->with('status', "Legalitas perawat {$nurseProfile->user?->name} berhasil diverifikasi & disetujui. Notifikasi telah dikirimkan ke perawat.");
     }
 
     /**
@@ -129,10 +147,11 @@ class AdminNurseVerificationController extends Controller
                 'verified_at' => now(),
             ]);
 
-            // Update status dokumen
+            // Update status dokumen dan alasan penolakan
             $nurseProfile->documents()->update([
                 'status' => 'rejected',
                 'notes' => $reason,
+                'rejection_reason' => $reason,
             ]);
 
             // Catat audit_log
@@ -144,6 +163,80 @@ class AdminNurseVerificationController extends Controller
             );
         });
 
-        return back()->with('status', "Berkas legalitas perawat {$nurseProfile->user?->name} telah ditolak dengan alasan yang tercatat.");
+        // Trigger Notifikasi Otomatis (Email & In-App Database Notification)
+        try {
+            $nurseProfile->user?->notify(new NurseDocumentRejectedNotification($nurseProfile, $reason, $admin));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return back()->with('status', "Berkas legalitas perawat {$nurseProfile->user?->name} telah ditolak dengan alasan tercatat dan dikirimkan via notifikasi.");
+    }
+
+    /**
+     * Simulasi Pengecekan Keabsahan STR/SIP ke Portal Kemenkes/KTKI.
+     */
+    public function verifyKtki(Request $request, NurseProfile $nurseProfile, KtkiValidationService $ktkiService): JsonResponse
+    {
+        $result = $ktkiService->validateNurseProfile($nurseProfile);
+
+        // Jika valid, catat waktu verifikasi KTKI ke berkas dokumen STR
+        if ($result['is_valid']) {
+            NurseDocument::where('nurse_profile_id', $nurseProfile->id)
+                ->where('document_type', 'str')
+                ->update([
+                    'ktki_verified_at' => now(),
+                    'str_number' => $result['str_number'],
+                ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $result,
+        ]);
+    }
+
+    /**
+     * Preview dokumen aman khusus Admin.
+     */
+    public function previewDocument(NurseDocument $document)
+    {
+        // Jika file sample
+        if (str_starts_with($document->file_path, 'samples/')) {
+            $samplePath = public_path($document->file_path);
+            if (file_exists($samplePath)) {
+                return response()->file($samplePath, [
+                    'Content-Type' => $document->mime_type ?: 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="' . ($document->original_name ?: 'dokumen_nakes.pdf') . '"',
+                ]);
+            }
+        }
+
+        $driver = $document->storage_driver ?: 'public';
+
+        // Jika tersimpan di S3
+        if ($driver === 's3') {
+            $disk = Storage::disk('s3');
+            if (method_exists($disk, 'temporaryUrl')) {
+                return redirect()->away($disk->temporaryUrl($document->file_path, now()->addMinutes(15)));
+            }
+            return redirect()->away($disk->url($document->file_path));
+        }
+
+        // Jika local / public
+        $disk = Storage::disk($driver);
+        if (!$disk->exists($document->file_path)) {
+            if (Storage::disk('public')->exists($document->file_path)) {
+                $disk = Storage::disk('public');
+            } else {
+                abort(404, 'Berkas dokumen tidak ditemukan di server.');
+            }
+        }
+
+        $filePath = $disk->path($document->file_path);
+        return response()->file($filePath, [
+            'Content-Type' => $document->mime_type ?: mime_content_type($filePath),
+            'Content-Disposition' => 'inline; filename="' . ($document->original_name ?: basename($filePath)) . '"',
+        ]);
     }
 }

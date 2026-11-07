@@ -67,11 +67,12 @@ class NurseVerificationController extends Controller
         ]);
 
         // Simpan lampiran file fisik jika ada yang diunggah
+        $disk = config('filesystems.nurse_documents_disk', env('NURSE_DOCUMENT_DISK', 'public'));
         $docTypes = ['ktp', 'str', 'sip', 'ijazah'];
         foreach ($docTypes as $type) {
             if ($request->hasFile($type)) {
                 $file = $request->file($type);
-                $path = $file->store('nurse_documents/' . $user->id, 'public');
+                $path = $file->store("documents/nurses/{$user->id}", $disk);
 
                 NurseDocument::updateOrCreate(
                     [
@@ -80,6 +81,9 @@ class NurseVerificationController extends Controller
                     ],
                     [
                         'file_path' => $path,
+                        'storage_driver' => $disk,
+                        'str_number' => $type === 'str' ? $request->input('str_number') : null,
+                        'sip_number' => $type === 'sip' ? $request->input('sip_number') : null,
                         'original_name' => $file->getClientOriginalName(),
                         'file_size' => round($file->getSize() / (1024 * 1024), 2) . ' MB',
                         'mime_type' => $file->getClientMimeType(),
@@ -96,6 +100,9 @@ class NurseVerificationController extends Controller
                     ],
                     [
                         'file_path' => 'samples/' . $type . ($isPdf ? '.pdf' : '.jpg'),
+                        'storage_driver' => 'public',
+                        'str_number' => $type === 'str' ? $request->input('str_number') : null,
+                        'sip_number' => $type === 'sip' ? $request->input('sip_number') : null,
                         'original_name' => strtoupper($type) . '_Resmi_Tervalidasi' . ($isPdf ? '.pdf' : '.jpg'),
                         'file_size' => '1.2 MB',
                         'mime_type' => $isPdf ? 'application/pdf' : 'image/jpeg',
@@ -143,14 +150,17 @@ class NurseVerificationController extends Controller
             'sip_expiry' => $request->input('sip_expiry') ?: null,
             'sip_expired_at' => $request->input('sip_expiry') ?: null,
             'verification_status' => 'pending',
+            'rejection_reason' => null,
         ]);
+
+        $disk = config('filesystems.nurse_documents_disk', env('NURSE_DOCUMENT_DISK', 'public'));
 
         // Simpan berkas jika ada file baru diunggah pada saat submit
         $docTypes = ['ktp', 'str', 'sip', 'ijazah'];
         foreach ($docTypes as $type) {
             if ($request->hasFile($type)) {
                 $file = $request->file($type);
-                $path = $file->store('nurse_documents/' . $user->id, 'public');
+                $path = $file->store("documents/nurses/{$user->id}", $disk);
 
                 NurseDocument::updateOrCreate(
                     [
@@ -159,10 +169,14 @@ class NurseVerificationController extends Controller
                     ],
                     [
                         'file_path' => $path,
+                        'storage_driver' => $disk,
+                        'str_number' => $type === 'str' ? $request->input('str_number') : null,
+                        'sip_number' => $type === 'sip' ? $request->input('sip_number') : null,
                         'original_name' => $file->getClientOriginalName(),
                         'file_size' => round($file->getSize() / (1024 * 1024), 2) . ' MB',
                         'mime_type' => $file->getClientMimeType(),
                         'status' => 'pending',
+                        'rejection_reason' => null,
                     ]
                 );
             } elseif ($request->filled('sample_' . $type)) {
@@ -174,17 +188,26 @@ class NurseVerificationController extends Controller
                     ],
                     [
                         'file_path' => 'samples/' . $type . ($isPdf ? '.pdf' : '.jpg'),
+                        'storage_driver' => 'public',
+                        'str_number' => $type === 'str' ? $request->input('str_number') : null,
+                        'sip_number' => $type === 'sip' ? $request->input('sip_number') : null,
                         'original_name' => strtoupper($type) . '_Resmi_Tervalidasi' . ($isPdf ? '.pdf' : '.jpg'),
                         'file_size' => '1.2 MB',
                         'mime_type' => $isPdf ? 'application/pdf' : 'image/jpeg',
                         'status' => 'pending',
+                        'rejection_reason' => null,
                     ]
                 );
             } else {
                 // Update status dokumen yang sudah ada menjadi pending
                 NurseDocument::where('nurse_profile_id', $nurseProfile->id)
                     ->where('document_type', $type)
-                    ->update(['status' => 'pending']);
+                    ->update([
+                        'status' => 'pending',
+                        'str_number' => $type === 'str' ? $request->input('str_number') : null,
+                        'sip_number' => $type === 'sip' ? $request->input('sip_number') : null,
+                        'rejection_reason' => null,
+                    ]);
             }
         }
 
