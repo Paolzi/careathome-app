@@ -1,24 +1,32 @@
 <?php
 
+use App\Models\NurseProfile;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
 
 Route::get('dashboard', function () {
-    $user = auth()->user();
+    /** @var User|null $user */
+    $user = Auth::user();
+
     if (!$user) {
         return redirect()->route('login');
     }
+
     if ($user->hasRole('admin')) {
         return redirect()->route('admin.dashboard');
     }
+
     if ($user->hasRole('perawat')) {
-        $nurseProfile = \App\Models\NurseProfile::where('user_id', $user->id)->first();
+        $nurseProfile = NurseProfile::where('user_id', $user->id)->first();
         if ($nurseProfile && $nurseProfile->verification_status === 'verified') {
             return redirect()->route('perawat.dashboard');
         }
         return redirect()->route('perawat.verifikasi');
     }
+
     return view('dashboard');
 })->middleware(['auth'])->name('dashboard');
 
@@ -38,6 +46,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('perawat/verifikasi/draft', [\App\Http\Controllers\NurseVerificationController::class, 'saveDraft'])->name('perawat.verifikasi.draft');
         Route::post('perawat/verifikasi/submit', [\App\Http\Controllers\NurseVerificationController::class, 'submit'])->name('perawat.verifikasi.submit');
         Route::delete('perawat/verifikasi/document/{type}', [\App\Http\Controllers\NurseVerificationController::class, 'deleteDocument'])->name('perawat.verifikasi.delete-doc');
+        Route::post('perawat/documents/upload', [\App\Http\Controllers\NurseDocumentController::class, 'upload'])->name('perawat.documents.upload');
+        Route::get('perawat/documents/{document}/preview', [\App\Http\Controllers\NurseDocumentController::class, 'preview'])->name('perawat.documents.preview');
+        Route::post('perawat/notifications/{id}/read', [\App\Http\Controllers\NurseDocumentController::class, 'markNotificationAsRead'])->name('perawat.notifications.read');
+        Route::post('perawat/notifications/read-all', [\App\Http\Controllers\NurseDocumentController::class, 'markAllNotificationsAsRead'])->name('perawat.notifications.read-all');
     });
 
     // Portal Pasien (Role: pasien atau admin)
@@ -63,6 +75,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('nurses/{nurseProfile}/reject', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'reject'])->name('nurses.reject');
         Route::post('verifikasi-nakes/{nurseProfile}/setujui', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'approve'])->name('nurses.setujui');
         Route::post('verifikasi-nakes/{nurseProfile}/tolak', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'reject'])->name('nurses.tolak');
+        Route::post('nurses/{nurseProfile}/verify-ktki', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'verifyKtki'])->name('nurses.verify-ktki');
+        Route::get('documents/{document}/preview', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'previewDocument'])->name('documents.preview');
 
         // SCRUM-57: Master Data Layanan & Tarif
         Route::resource('services', \App\Http\Controllers\Admin\AdminServiceCatalogController::class)->names('services');
@@ -100,15 +114,16 @@ Route::get('demo-login/{role}', function (string $role) {
         default => 'pasien@careathome.com',
     };
 
-    $user = \App\Models\User::where('email', $email)->first();
+    /** @var User|null $user */
+    $user = User::where('email', $email)->first();
 
     if ($user) {
-        \Illuminate\Support\Facades\Auth::login($user);
+        Auth::login($user);
         request()->session()->regenerate();
 
         if ($role === 'perawat') {
             // Jika sudah verified, langsung ke dashboard kerja
-            $nurseProfile = \App\Models\NurseProfile::where('user_id', $user->id)->first();
+            $nurseProfile = NurseProfile::where('user_id', $user->id)->first();
             if ($nurseProfile && $nurseProfile->verification_status === 'verified') {
                 return redirect()->route('perawat.dashboard');
             }

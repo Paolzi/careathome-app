@@ -409,6 +409,21 @@
                         <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </a>
                 </div>
+            @elseif(($nurseProfile->verification_status ?? '') === 'rejected')
+                <div class="p-6 rounded-3xl bg-gradient-to-r from-rose-800 to-red-900 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border-2 border-rose-500/80">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shrink-0 border border-white/20">
+                            ⚠️
+                        </div>
+                        <div class="space-y-1">
+                            <h3 class="text-lg font-black tracking-tight text-white">Dokumen Legalitas Anda Perlu Perbaikan</h3>
+                            <p class="text-xs text-rose-100 leading-relaxed max-w-2xl">
+                                <strong>Catatan dari Administrator:</strong> &ldquo;{{ $nurseProfile->rejection_reason ?? 'Terdapat berkas yang tidak valid atau buram. Silakan periksa kembali berkas STR/SIP Anda.' }}&rdquo;
+                            </p>
+                            <p class="text-[11px] text-rose-200 pt-0.5">Silakan perbaiki data/unggah ulang dokumen di bawah ini, lalu klik &ldquo;Simpan dan Kirim Dokumen&rdquo; untuk diaudit ulang.</p>
+                        </div>
+                    </div>
+                </div>
             @endif
 
             <!-- Page Header Card -->

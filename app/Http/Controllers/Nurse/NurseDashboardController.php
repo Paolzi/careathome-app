@@ -98,12 +98,22 @@ class NurseDashboardController extends Controller
                 ], 422);
             }
 
-            $profile->is_online = true;
+            // Validasi & Update Koordinat GPS Perawat
             if ($request->filled('latitude') && $request->filled('longitude')) {
                 $profile->latitude = (float) $request->input('latitude');
                 $profile->longitude = (float) $request->input('longitude');
                 $profile->location_updated_at = now();
+            } elseif ($profile->latitude !== null && $profile->longitude !== null) {
+                // Perbarui timestamp heartbeat lokasi yang sudah tersimpan
+                $profile->location_updated_at = now();
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Koordinat lokasi GPS belum terdeteksi. Harap izinkan akses lokasi (GPS) pada peramban/perangkat Anda agar dapat mengaktifkan status kerja.',
+                ], 422);
             }
+
+            $profile->is_online = true;
         } else {
             $profile->is_online = false;
         }
@@ -122,6 +132,8 @@ class NurseDashboardController extends Controller
             'data' => [
                 'is_online' => $profile->is_online,
                 'location_updated_at' => $profile->location_updated_at?->toIso8601String(),
+                'latitude' => $profile->latitude ? (float) $profile->latitude : null,
+                'longitude' => $profile->longitude ? (float) $profile->longitude : null,
             ],
         ]);
     }

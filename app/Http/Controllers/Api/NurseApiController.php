@@ -26,8 +26,8 @@ class NurseApiController extends Controller
         }
 
         $validator = Validator::make($data, [
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'service_id' => ['nullable', 'exists:service_catalogs,id'],
             'radius_km' => ['nullable', 'numeric', 'min:1', 'max:50'],
         ]);
@@ -35,18 +35,40 @@ class NurseApiController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Koordinat lokasi tidak valid.',
+                'message' => 'Format koordinat lokasi tidak valid.',
                 'errors' => $validator->errors(),
             ], 422);
         }
 
-        $lat = (float) $data['latitude'];
-        $lng = (float) $data['longitude'];
+        $userLat = filled($data['latitude'] ?? null) ? (float) $data['latitude'] : null;
+        $userLng = filled($data['longitude'] ?? null) ? (float) $data['longitude'] : null;
         $radiusKm = (float) ($request->input('radius_km') ?? Setting::getFloat('max_radius_km', 10.0));
+        $hasPatientCoords = ($userLat !== null && $userLng !== null);
 
         $query = NurseProfile::with(['user', 'services'])
-            ->active()
-            ->nearby($lat, $lng, $radiusKm);
+            ->where('is_online', true)
+            ->where('verification_status', 'verified')
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->whereHas('user', function ($q) {
+                $q->where('status', '!=', 'suspended');
+            });
+
+        if ($hasPatientCoords) {
+            // Rumus Haversine presisi untuk filter radius maksimal 10 km
+            $haversine = "(6371 * acos(least(1.0, greatest(-1.0, cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))))";
+
+            $query->select('nurse_profiles.*')
+                  ->selectRaw("round({$haversine}, 2) AS distance", [$userLat, $userLng, $userLat])
+                  ->selectRaw("round({$haversine}, 2) AS distance_km", [$userLat, $userLng, $userLat])
+                  ->having('distance', '<=', $radiusKm)
+                  ->orderBy('distance', 'asc');
+        } else {
+            // Fallback jika lokasi pasien belum aktif / belum diizinkan
+            $query->select('nurse_profiles.*')
+                  ->orderBy('location_updated_at', 'desc')
+                  ->latest();
+        }
 
         if ($request->filled('service_id')) {
             $serviceId = (int) $request->input('service_id');
@@ -55,7 +77,12 @@ class NurseApiController extends Controller
             });
         }
 
-        $nurses = $query->get()->map(function (NurseProfile $profile) {
+        $nurses = $query->get()->map(function (NurseProfile $profile) use ($hasPatientCoords) {
+            $dist = null;
+            if ($hasPatientCoords && (isset($profile->distance) || isset($profile->distance_km))) {
+                $dist = round((float) ($profile->distance ?? $profile->distance_km), 1);
+            }
+
             return [
                 'id' => $profile->id,
                 'nurse_id' => $profile->user_id,
@@ -65,10 +92,11 @@ class NurseApiController extends Controller
                 'verification_status' => $profile->verification_status,
                 'rating_avg' => (float) $profile->rating_avg,
                 'total_reviews' => (int) $profile->total_reviews,
-                'distance_km' => round((float) $profile->distance_km, 1),
-                'formatted_distance' => round((float) $profile->distance_km, 1) . ' km',
+                'distance_km' => $dist,
+                'formatted_distance' => $dist !== null ? "{$dist} km" : 'Aktif Online',
                 'latitude' => (float) $profile->latitude,
                 'longitude' => (float) $profile->longitude,
+                'location_updated_at' => $profile->location_updated_at?->diffForHumans() ?? 'Baru saja',
                 'services' => $profile->services->map(function ($s) {
                     return [
                         'id' => $s->id,
@@ -83,11 +111,14 @@ class NurseApiController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Daftar perawat aktif dalam radius ' . $radiusKm . ' km.',
+            'message' => $hasPatientCoords
+                ? 'Daftar perawat aktif dalam radius ' . $radiusKm . ' km.'
+                : 'Daftar perawat aktif online (Lokasi GPS pasien belum aktif).',
             'meta' => [
                 'total' => $nurses->count(),
-                'patient_coordinates' => ['latitude' => $lat, 'longitude' => $lng],
-                'radius_km' => $radiusKm,
+                'has_patient_location' => $hasPatientCoords,
+                'patient_coordinates' => $hasPatientCoords ? ['latitude' => $userLat, 'longitude' => $userLng] : null,
+                'radius_km' => $hasPatientCoords ? $radiusKm : null,
             ],
             'data' => $nurses,
         ]);

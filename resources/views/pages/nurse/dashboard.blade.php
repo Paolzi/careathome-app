@@ -1,11 +1,97 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-bold text-xl text-slate-800 leading-tight">
-                {{ __('Dashboard Mitra Perawat') }}
-            </h2>
-            <div class="flex items-center gap-2">
-                <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ $profile->verification_status === 'verified' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200' }}">
+        @php
+            $userNotifications = auth()->user() ? auth()->user()->notifications()->take(10)->get() : collect();
+            $unreadNotifCount = auth()->user() ? auth()->user()->unreadNotifications()->count() : 0;
+        @endphp
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+                <h2 class="font-bold text-xl text-slate-800 leading-tight">
+                    {{ __('Dashboard Mitra Perawat') }}
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">Kelola status kesiapan kerja, pelacakan GPS, dan riwayat pesanan homecare</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Dropdown Notifikasi In-App -->
+                <div class="relative" x-data="{ notifOpen: false }">
+                    <button type="button" @click="notifOpen = !notifOpen"
+                        class="relative p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-emerald-700 hover:border-emerald-300 transition shadow-xs flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        @if ($unreadNotifCount > 0)
+                            <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white font-extrabold text-[10px] flex items-center justify-center shadow-xs animate-pulse">
+                                {{ $unreadNotifCount }}
+                            </span>
+                        @endif
+                    </button>
+
+                    <!-- Panel Dropdown Notifikasi -->
+                    <div x-show="notifOpen" @click.away="notifOpen = false" x-cloak
+                        class="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 text-xs text-slate-800 z-50">
+                        <div class="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                            <span class="font-bold text-slate-900 flex items-center gap-1.5">
+                                <span>🔔</span> Notifikasi Verifikasi &amp; Sistem
+                            </span>
+                            @if ($unreadNotifCount > 0)
+                                <form action="{{ route('perawat.notifications.read-all') }}" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" class="text-[10px] font-bold text-emerald-700 hover:underline">
+                                        Tandai Semua Dibaca
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+
+                        <div class="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                            @forelse ($userNotifications as $n)
+                                @php
+                                    $data = $n->data;
+                                    $isUnread = is_null($n->read_at);
+                                    $isApproved = ($data['type'] ?? '') === 'document_approved';
+                                @endphp
+                                <div class="p-3.5 space-y-1.5 transition {{ $isUnread ? ($isApproved ? 'bg-emerald-50/60' : 'bg-rose-50/60') : 'hover:bg-slate-50' }}">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-sm">{{ $isApproved ? '🎉' : '⚠️' }}</span>
+                                            <span class="font-bold text-[11px] {{ $isApproved ? 'text-emerald-900' : 'text-rose-900' }}">
+                                                {{ $data['title'] ?? 'Notifikasi Sistem' }}
+                                            </span>
+                                        </div>
+                                        @if ($isUnread)
+                                            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1"></span>
+                                        @endif
+                                    </div>
+                                    <p class="text-[11px] text-slate-600 leading-relaxed">{{ $data['message'] ?? '-' }}</p>
+                                    @if (!empty($data['rejection_reason']))
+                                        <div class="p-2 rounded-lg bg-rose-100/70 border border-rose-200 text-[10px] text-rose-900">
+                                            <strong>Alasan Admin:</strong> {{ $data['rejection_reason'] }}
+                                        </div>
+                                    @endif
+                                    <div class="flex items-center justify-between pt-1 text-[10px] text-slate-400">
+                                        <span>{{ $data['formatted_time'] ?? $n->created_at->diffForHumans() }}</span>
+                                        @if ($isUnread)
+                                            <form action="{{ route('perawat.notifications.read', $n->id) }}" method="POST" class="inline">
+                                                @csrf
+                                                <button type="submit" class="text-emerald-700 font-bold hover:underline">
+                                                    Tandai Dibaca
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="p-6 text-center text-slate-400 text-xs">
+                                    Belum ada notifikasi baru.
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Legalitas Badge -->
+                <span class="text-xs font-bold px-3 py-1.5 rounded-full {{ $profile->verification_status === 'verified' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs' : ($profile->verification_status === 'rejected' ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-amber-50 text-amber-800 border border-amber-200') }}">
                     Status Legalitas: {{ ucfirst($profile->verification_status) }}
                 </span>
             </div>
@@ -14,6 +100,53 @@
 
     <div class="py-8" x-data="nurseDashboardApp({{ $profile->is_online ? 'true' : 'false' }}, '{{ $profile->verification_status }}', {{ $profile->latitude ?? 'null' }}, {{ $profile->longitude ?? 'null' }})">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+
+            <!-- Banner Notifikasi Status Verifikasi (Approved / Rejected) -->
+            @php
+                $latestAuditNotif = auth()->user() ? auth()->user()->notifications()->whereIn('data->type', ['document_approved', 'document_rejected'])->first() : null;
+            @endphp
+
+            @if ($latestAuditNotif && is_null($latestAuditNotif->read_at))
+                @php $notifData = $latestAuditNotif->data; @endphp
+                @if (($notifData['type'] ?? '') === 'document_approved')
+                    <div class="p-5 rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-800 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-emerald-500/80">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">🎉</span>
+                            <div class="space-y-0.5">
+                                <h4 class="font-extrabold text-sm text-white">Selamat! Berkas Legalitas STR &amp; SIP Anda Telah Diverifikasi Admin</h4>
+                                <p class="text-xs text-emerald-100">Dokumen Anda telah divalidasi keabsahannya. Anda sekarang dapat mengaktifkan status "Sedang Bekerja" di bawah.</p>
+                            </div>
+                        </div>
+                        <form action="{{ route('perawat.notifications.read', $latestAuditNotif->id) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-white text-emerald-900 font-extrabold text-xs shadow-xs hover:bg-emerald-50 transition whitespace-nowrap">
+                                Mengerti &amp; Tutup
+                            </button>
+                        </form>
+                    </div>
+                @elseif (($notifData['type'] ?? '') === 'document_rejected')
+                    <div class="p-5 rounded-2xl bg-gradient-to-r from-rose-800 to-red-900 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-rose-500/80">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">⚠️</span>
+                            <div class="space-y-0.5">
+                                <h4 class="font-extrabold text-sm text-white">Pemberitahuan: Berkas Dokumen Anda Perlu Perbaikan</h4>
+                                <p class="text-xs text-rose-100">Alasan: <strong>{{ $notifData['rejection_reason'] ?? 'Dokumen belum lengkap' }}</strong></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('perawat.verifikasi') }}" class="px-4 py-2 rounded-xl bg-white text-rose-900 font-extrabold text-xs shadow-xs hover:bg-rose-50 transition whitespace-nowrap">
+                                Perbaiki Dokumen &rarr;
+                            </a>
+                            <form action="{{ route('perawat.notifications.read', $latestAuditNotif->id) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="px-3 py-2 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs transition">
+                                    ✕
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+            @endif
 
             <!-- Flash Status Messages -->
             @if (session('status'))
@@ -319,25 +452,36 @@
                     if (targetState) {
                         // Meminta izin lokasi browser sebelum mengaktifkan ON
                         if (!navigator.geolocation) {
-                            this.showToast('Browser Anda tidak mendukung Geolocation.', 'error');
+                            if (this.lat && this.lng) {
+                                await this.sendToggleRequest(true, this.lat, this.lng);
+                            } else {
+                                this.showToast('Browser Anda tidak mendukung Geolocation dan lokasi belum tersimpan.', 'error');
+                            }
                             this.togglingStatus = false;
                             return;
                         }
 
                         navigator.geolocation.getCurrentPosition(
                             async (pos) => {
-                                this.lat = pos.coords.latitude;
-                                this.lng = pos.coords.longitude;
+                                this.lat = parseFloat(pos.coords.latitude.toFixed(6));
+                                this.lng = parseFloat(pos.coords.longitude.toFixed(6));
 
                                 await this.sendToggleRequest(true, this.lat, this.lng);
                                 this.startLocationWatch();
                                 this.togglingStatus = false;
                             },
-                            (err) => {
-                                console.warn('Izin lokasi ditolak:', err);
-                                this.showToast('Izin lokasi ditolak oleh browser. Status kerja gagal diaktifkan.', 'error');
-                                this.isOnline = false;
-                                this.togglingStatus = false;
+                            async (err) => {
+                                console.warn('Izin lokasi gagal/ditolak:', err);
+                                // Fallback: jika perawat sudah memiliki koordinat tersimpan sebelumnya
+                                if (this.lat && this.lng) {
+                                    this.showToast('Lokasi GPS langsung gagal terdeteksi. Menggunakan koordinat profil tersimpan.', 'warning');
+                                    await this.sendToggleRequest(true, this.lat, this.lng);
+                                    this.togglingStatus = false;
+                                } else {
+                                    this.showToast('Gagal mendeteksi lokasi GPS. Harap izinkan akses lokasi (GPS) pada peramban Anda untuk mengaktifkan status kerja.', 'error');
+                                    this.isOnline = false;
+                                    this.togglingStatus = false;
+                                }
                             },
                             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                         );
@@ -369,6 +513,10 @@
                         const data = await res.json();
                         if (res.ok && data.status === 'success') {
                             this.isOnline = isOnline;
+                            if (data.data?.latitude && data.data?.longitude) {
+                                this.lat = parseFloat(data.data.latitude);
+                                this.lng = parseFloat(data.data.longitude);
+                            }
                             this.showToast(data.message, 'success');
                             this.lastUpdatedText = 'Baru saja';
                         } else {
