@@ -49,6 +49,14 @@ new class extends Component
                     </a>
 
                     @if (auth()->user()?->hasRole('admin'))
+                        <a href="{{ route('admin.dashboard') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('admin.dashboard') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Dashboard Finansial & GMV') }}
+                        </a>
+                        <a href="{{ route('admin.escrow.index') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('admin.escrow*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Monitoring Mutasi Transaksi') }}
+                        </a>
                         <a href="{{ route('admin.nurses.index') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('admin.nurses*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                             {{ __('Verifikasi Nakes') }}
@@ -62,9 +70,18 @@ new class extends Component
                             {{ __('Pengelolaan Akun') }}
                         </a>
                     @elseif (auth()->user()?->hasRole('perawat'))
+                        <a href="{{ route('perawat.feed') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 {{ request()->routeIs('perawat.feed') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            <span>📡</span>
+                            <span>{{ __('Feed Order Masuk') }}</span>
+                        </a>
                         <a href="{{ route('perawat.dashboard') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('perawat.dashboard') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
                             {{ __('Panel Kerja & Lokasi') }}
+                        </a>
+                        <a href="{{ route('perawat.finansial') }}" 
+                            class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('perawat.finansial') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            {{ __('Riwayat Finansial') }}
                         </a>
                         <a href="{{ route('perawat.verifikasi') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('perawat.verifikasi*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
@@ -78,12 +95,12 @@ new class extends Component
 
                         <a href="{{ route('pasien.pesanan') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs transition {{ request()->routeIs('pasien.pesanan') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            {{ __('Jadwal & Detail Booking') }}
+                            {{ __('Riwayat Layanan') }}
                         </a>
 
                         <a href="{{ route('pasien.pembayaran') }}" 
                             class="px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 {{ request()->routeIs('pasien.pembayaran') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            <span>{{ __('Pembayaran') }}</span>
+                            <span>{{ __('Tagihan & Pembayaran') }}</span>
                         </a>
 
                         <a href="{{ route('pasien.pembatalan') }}" 
@@ -150,6 +167,12 @@ new class extends Component
             </a>
 
             @if (auth()->user()?->hasRole('admin'))
+                <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('admin.dashboard') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Dashboard Finansial & GMV') }}
+                </a>
+                <a href="{{ route('admin.escrow.index') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('admin.escrow*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Monitoring Mutasi Transaksi') }}
+                </a>
                 <a href="{{ route('admin.nurses.index') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('admin.nurses*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
                     {{ __('Verifikasi Nakes') }}
                 </a>
@@ -160,8 +183,15 @@ new class extends Component
                     {{ __('Pengelolaan Akun') }}
                 </a>
             @elseif (auth()->user()?->hasRole('perawat'))
+                <a href="{{ route('perawat.feed') }}" class="block px-3 py-2 rounded-lg text-xs transition flex items-center gap-1.5 {{ request()->routeIs('perawat.feed') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    <span>📡</span>
+                    <span>{{ __('Feed Order Masuk') }}</span>
+                </a>
                 <a href="{{ route('perawat.dashboard') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('perawat.dashboard') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
                     {{ __('Panel Kerja & Lokasi') }}
+                </a>
+                <a href="{{ route('perawat.finansial') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('perawat.finansial') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
+                    {{ __('Riwayat Finansial') }}
                 </a>
                 <a href="{{ route('perawat.verifikasi') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('perawat.verifikasi*') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
                     {{ __('Verifikasi Dokumen') }}
@@ -172,11 +202,11 @@ new class extends Component
                 </a>
 
                 <a href="{{ route('pasien.pesanan') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.pesanan') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
-                    {{ __('Jadwal & Detail Booking') }}
+                    {{ __('Riwayat Layanan') }}
                 </a>
 
                 <a href="{{ route('pasien.pembayaran') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.pembayaran') ? 'font-bold text-emerald-700 bg-emerald-50 border border-emerald-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">
-                    {{ __('Pembayaran') }}
+                    {{ __('Tagihan & Pembayaran') }}
                 </a>
 
                 <a href="{{ route('pasien.pembatalan') }}" class="block px-3 py-2 rounded-lg text-xs transition {{ request()->routeIs('pasien.pembatalan') ? 'font-bold text-rose-700 bg-rose-50 border border-rose-200' : 'font-semibold text-slate-600 hover:bg-slate-100' }}">

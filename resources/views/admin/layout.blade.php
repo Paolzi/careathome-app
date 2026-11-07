@@ -58,20 +58,32 @@
 
                 <!-- Center: Navigation Menus (Desktop) -->
                 <nav class="hidden md:flex items-center gap-1 text-xs font-bold">
+                    <a href="{{ route('admin.dashboard') }}"
+                        class="px-3 py-2 rounded-xl transition flex items-center gap-1.5 {{ request()->routeIs('admin.dashboard') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs' : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100' }}">
+                        <span class="text-sm">📊</span>
+                        <span>Dashboard Finansial &amp; GMV</span>
+                    </a>
+
+                    <a href="{{ route('admin.escrow.index') }}"
+                        class="px-3 py-2 rounded-xl transition flex items-center gap-1.5 {{ request()->routeIs('admin.escrow*') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs' : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100' }}">
+                        <span class="text-sm">📈</span>
+                        <span>Monitoring Mutasi Transaksi</span>
+                    </a>
+
                     <a href="{{ route('admin.nurses.index') }}"
-                        class="px-3.5 py-2 rounded-xl transition flex items-center gap-2 {{ request()->routeIs('admin.nurses*') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs' : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100' }}">
+                        class="px-3 py-2 rounded-xl transition flex items-center gap-1.5 {{ request()->routeIs('admin.nurses*') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs' : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100' }}">
                         <span class="text-sm">🩺</span>
                         <span>Verifikasi Nakes</span>
                     </a>
 
                     <a href="{{ route('admin.services.index') }}"
-                        class="px-3.5 py-2 rounded-xl transition flex items-center gap-2 {{ request()->routeIs('admin.services*') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs' : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100' }}">
+                        class="px-3 py-2 rounded-xl transition flex items-center gap-1.5 {{ request()->routeIs('admin.services*') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs' : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100' }}">
                         <span class="text-sm">📋</span>
                         <span>Katalog &amp; Tarif</span>
                     </a>
 
                     <a href="{{ route('admin.users.index') }}"
-                        class="px-3.5 py-2 rounded-xl transition flex items-center gap-2 {{ request()->routeIs('admin.users*') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs' : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100' }}">
+                        class="px-3 py-2 rounded-xl transition flex items-center gap-1.5 {{ request()->routeIs('admin.users*') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs' : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-100' }}">
                         <span class="text-sm">👥</span>
                         <span>Pengelolaan Akun</span>
                     </a>
@@ -112,6 +124,14 @@
 
             <!-- Mobile Navigation Drawer -->
             <div x-show="mobileMenu" x-cloak class="md:hidden py-3 border-t border-slate-100 space-y-1">
+                <a href="{{ route('admin.dashboard') }}"
+                    class="block px-3 py-2 rounded-xl text-xs font-bold {{ request()->routeIs('admin.dashboard') ? 'bg-emerald-50 text-emerald-800' : 'text-slate-600 hover:bg-slate-100' }}">
+                    📊 Dashboard Finansial &amp; GMV
+                </a>
+                <a href="{{ route('admin.escrow.index') }}"
+                    class="block px-3 py-2 rounded-xl text-xs font-bold {{ request()->routeIs('admin.escrow*') ? 'bg-emerald-50 text-emerald-800' : 'text-slate-600 hover:bg-slate-100' }}">
+                    📈 Monitoring Mutasi Transaksi
+                </a>
                 <a href="{{ route('admin.nurses.index') }}"
                     class="block px-3 py-2 rounded-xl text-xs font-bold {{ request()->routeIs('admin.nurses*') ? 'bg-emerald-50 text-emerald-800' : 'text-slate-600 hover:bg-slate-100' }}">
                     🩺 Verifikasi Nakes
