@@ -14,18 +14,147 @@
 
             <div class="flex items-center gap-3">
                 <!-- Dropdown Notifikasi In-App -->
-                <div class="relative" x-data="{ notifOpen: false }">
+                <div class="relative" x-data="{
+                    notifOpen: false,
+                    unreadCount: {{ $unreadNotifCount }},
+                    isMarking: false,
+                    toastMessage: '',
+                    toastType: 'success',
+
+                    init() {
+                        window.addEventListener('notification-marked-read', (e) => {
+                            if (typeof e.detail?.unread_count !== 'undefined') {
+                                this.unreadCount = e.detail.unread_count;
+                            } else {
+                                this.unreadCount = Math.max(0, this.unreadCount - 1);
+                            }
+                            const itemEl = document.getElementById('notif-item-' + e.detail.id);
+                            if (itemEl) {
+                                itemEl.classList.remove('notif-item-unread', 'bg-emerald-50/60', 'bg-rose-50/60');
+                                itemEl.classList.add('hover:bg-slate-50');
+                                const dot = itemEl.querySelector('.notif-unread-dot');
+                                if (dot) dot.remove();
+                                const btn = itemEl.querySelector('.notif-mark-single-btn');
+                                if (btn) btn.remove();
+                            }
+                        });
+                    },
+
+                    showToast(msg, type = 'success') {
+                        this.toastMessage = msg;
+                        this.toastType = type;
+                        setTimeout(() => { this.toastMessage = ''; }, 3500);
+                    },
+
+                    async markAllAsRead(event) {
+                        if (event) event.preventDefault();
+                        if (this.isMarking || this.unreadCount <= 0) return;
+                        this.isMarking = true;
+
+                        try {
+                            const token = document.querySelector('meta[name=csrf-token]')?.content 
+                                || '{{ csrf_token() }}';
+
+                            const res = await fetch('{{ route('perawat.notifications.read-all') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': token,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                }
+                            });
+
+                            if (res.ok) {
+                                const data = await res.json();
+                                this.unreadCount = data.unread_count ?? 0;
+
+                                // Ubah status seluruh item notifikasi di dropdown
+                                document.querySelectorAll('.notif-item-unread').forEach(el => {
+                                    el.classList.remove('notif-item-unread', 'bg-emerald-50/60', 'bg-rose-50/60');
+                                    el.classList.add('hover:bg-slate-50');
+                                });
+                                document.querySelectorAll('.notif-unread-dot').forEach(el => el.remove());
+                                document.querySelectorAll('.notif-mark-single-btn').forEach(el => el.remove());
+
+                                // Hilangkan banner verifikasi audit jika ada di dashboard
+                                document.querySelectorAll('.audit-notif-banner').forEach(el => el.remove());
+
+                                this.showToast(data.message || 'Seluruh notifikasi telah ditandai sebagai dibaca.');
+                            } else {
+                                this.showToast('Gagal menandai notifikasi.', 'error');
+                            }
+                        } catch (err) {
+                            console.error('Error markAllAsRead:', err);
+                            this.showToast('Terjadi kesalahan jaringan.', 'error');
+                        } finally {
+                            this.isMarking = false;
+                        }
+                    },
+
+                    async markSingleAsRead(event, url, notifId) {
+                        if (event) event.preventDefault();
+                        try {
+                            const token = document.querySelector('meta[name=csrf-token]')?.content 
+                                || '{{ csrf_token() }}';
+
+                            const res = await fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': token,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                }
+                            });
+
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (typeof data.unread_count !== 'undefined') {
+                                    this.unreadCount = data.unread_count;
+                                } else {
+                                    this.unreadCount = Math.max(0, this.unreadCount - 1);
+                                }
+
+                                const itemEl = document.getElementById('notif-item-' + notifId);
+                                if (itemEl) {
+                                    itemEl.classList.remove('notif-item-unread', 'bg-emerald-50/60', 'bg-rose-50/60');
+                                    itemEl.classList.add('hover:bg-slate-50');
+                                    const dot = itemEl.querySelector('.notif-unread-dot');
+                                    if (dot) dot.remove();
+                                    const btn = itemEl.querySelector('.notif-mark-single-btn');
+                                    if (btn) btn.remove();
+                                }
+
+                                const bannerEl = document.getElementById('notif-banner-' + notifId);
+                                if (bannerEl) bannerEl.remove();
+
+                                this.showToast(data.message || 'Notifikasi ditandai dibaca.');
+                            }
+                        } catch (err) {
+                            console.error('Error markSingleAsRead:', err);
+                        }
+                    }
+                }">
                     <button type="button" @click="notifOpen = !notifOpen"
                         class="relative p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-emerald-700 hover:border-emerald-300 transition shadow-xs flex items-center justify-center">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
-                        @if ($unreadNotifCount > 0)
-                            <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white font-extrabold text-[10px] flex items-center justify-center shadow-xs animate-pulse">
-                                {{ $unreadNotifCount }}
+                        <template x-if="unreadCount > 0">
+                            <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white font-extrabold text-[10px] flex items-center justify-center shadow-xs animate-pulse"
+                                  x-text="unreadCount">
                             </span>
-                        @endif
+                        </template>
                     </button>
+
+                    <!-- Toast Notifikasi Sukses Kecil -->
+                    <div x-show="toastMessage" x-cloak
+                        class="absolute right-0 top-12 z-50 px-3.5 py-2 rounded-xl text-white text-xs font-semibold shadow-lg transition-all flex items-center gap-1.5 whitespace-nowrap"
+                        :class="toastType === 'success' ? 'bg-emerald-700' : 'bg-rose-700'">
+                        <span x-text="toastType === 'success' ? '✓' : '⚠️'"></span>
+                        <span x-text="toastMessage"></span>
+                    </div>
 
                     <!-- Panel Dropdown Notifikasi -->
                     <div x-show="notifOpen" @click.away="notifOpen = false" x-cloak
@@ -34,14 +163,13 @@
                             <span class="font-bold text-slate-900 flex items-center gap-1.5">
                                 <span>🔔</span> Notifikasi Verifikasi &amp; Sistem
                             </span>
-                            @if ($unreadNotifCount > 0)
-                                <form action="{{ route('perawat.notifications.read-all') }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit" class="text-[10px] font-bold text-emerald-700 hover:underline">
-                                        Tandai Semua Dibaca
-                                    </button>
-                                </form>
-                            @endif
+                            <template x-if="unreadCount > 0">
+                                <button type="button" @click="markAllAsRead($event)" :disabled="isMarking"
+                                    class="text-[10px] font-bold text-emerald-700 hover:underline flex items-center gap-1 disabled:opacity-50">
+                                    <span x-show="!isMarking">Tandai Semua Dibaca</span>
+                                    <span x-show="isMarking" x-cloak>Menandai...</span>
+                                </button>
+                            </template>
                         </div>
 
                         <div class="max-h-72 overflow-y-auto divide-y divide-slate-100">
@@ -51,7 +179,8 @@
                                     $isUnread = is_null($n->read_at);
                                     $isApproved = ($data['type'] ?? '') === 'document_approved';
                                 @endphp
-                                <div class="p-3.5 space-y-1.5 transition {{ $isUnread ? ($isApproved ? 'bg-emerald-50/60' : 'bg-rose-50/60') : 'hover:bg-slate-50' }}">
+                                <div id="notif-item-{{ $n->id }}"
+                                     class="p-3.5 space-y-1.5 transition {{ $isUnread ? 'notif-item-unread ' . ($isApproved ? 'bg-emerald-50/60' : 'bg-rose-50/60') : 'hover:bg-slate-50' }}">
                                     <div class="flex items-start justify-between gap-2">
                                         <div class="flex items-center gap-1.5">
                                             <span class="text-sm">{{ $isApproved ? '🎉' : '⚠️' }}</span>
@@ -60,7 +189,7 @@
                                             </span>
                                         </div>
                                         @if ($isUnread)
-                                            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1"></span>
+                                            <span class="notif-unread-dot w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1"></span>
                                         @endif
                                     </div>
                                     <p class="text-[11px] text-slate-600 leading-relaxed">{{ $data['message'] ?? '-' }}</p>
@@ -72,12 +201,11 @@
                                     <div class="flex items-center justify-between pt-1 text-[10px] text-slate-400">
                                         <span>{{ $data['formatted_time'] ?? $n->created_at->diffForHumans() }}</span>
                                         @if ($isUnread)
-                                            <form action="{{ route('perawat.notifications.read', $n->id) }}" method="POST" class="inline">
-                                                @csrf
-                                                <button type="submit" class="text-emerald-700 font-bold hover:underline">
-                                                    Tandai Dibaca
-                                                </button>
-                                            </form>
+                                            <button type="button" 
+                                                @click="markSingleAsRead($event, '{{ route('perawat.notifications.read', $n->id) }}', '{{ $n->id }}')"
+                                                class="notif-mark-single-btn text-emerald-700 font-bold hover:underline">
+                                                Tandai Dibaca
+                                            </button>
                                         @endif
                                     </div>
                                 </div>
@@ -109,7 +237,7 @@
             @if ($latestAuditNotif && is_null($latestAuditNotif->read_at))
                 @php $notifData = $latestAuditNotif->data; @endphp
                 @if (($notifData['type'] ?? '') === 'document_approved')
-                    <div class="p-5 rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-800 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-emerald-500/80">
+                    <div id="notif-banner-{{ $latestAuditNotif->id }}" class="audit-notif-banner p-5 rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-800 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-emerald-500/80">
                         <div class="flex items-center gap-3">
                             <span class="text-3xl">🎉</span>
                             <div class="space-y-0.5">
@@ -117,15 +245,14 @@
                                 <p class="text-xs text-emerald-100">Dokumen Anda telah divalidasi keabsahannya. Anda sekarang dapat mengaktifkan status "Sedang Bekerja" di bawah.</p>
                             </div>
                         </div>
-                        <form action="{{ route('perawat.notifications.read', $latestAuditNotif->id) }}" method="POST">
-                            @csrf
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-white text-emerald-900 font-extrabold text-xs shadow-xs hover:bg-emerald-50 transition whitespace-nowrap">
-                                Mengerti &amp; Tutup
-                            </button>
-                        </form>
+                        <button type="button" 
+                            onclick="dismissAuditBanner(event, '{{ route('perawat.notifications.read', $latestAuditNotif->id) }}', '{{ $latestAuditNotif->id }}')"
+                            class="px-4 py-2 rounded-xl bg-white text-emerald-900 font-extrabold text-xs shadow-xs hover:bg-emerald-50 transition whitespace-nowrap">
+                            Mengerti &amp; Tutup
+                        </button>
                     </div>
                 @elseif (($notifData['type'] ?? '') === 'document_rejected')
-                    <div class="p-5 rounded-2xl bg-gradient-to-r from-rose-800 to-red-900 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-rose-500/80">
+                    <div id="notif-banner-{{ $latestAuditNotif->id }}" class="audit-notif-banner p-5 rounded-2xl bg-gradient-to-r from-rose-800 to-red-900 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-rose-500/80">
                         <div class="flex items-center gap-3">
                             <span class="text-3xl">⚠️</span>
                             <div class="space-y-0.5">
@@ -137,12 +264,11 @@
                             <a href="{{ route('perawat.verifikasi') }}" class="px-4 py-2 rounded-xl bg-white text-rose-900 font-extrabold text-xs shadow-xs hover:bg-rose-50 transition whitespace-nowrap">
                                 Perbaiki Dokumen &rarr;
                             </a>
-                            <form action="{{ route('perawat.notifications.read', $latestAuditNotif->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="px-3 py-2 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs transition">
-                                    ✕
-                                </button>
-                            </form>
+                            <button type="button" 
+                                onclick="dismissAuditBanner(event, '{{ route('perawat.notifications.read', $latestAuditNotif->id) }}', '{{ $latestAuditNotif->id }}')"
+                                class="px-3 py-2 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs transition">
+                                ✕
+                            </button>
                         </div>
                     </div>
                 @endif
@@ -1134,6 +1260,35 @@
                     }
                 }
             };
+        }
+
+        async function dismissAuditBanner(e, url, id) {
+            if (e) e.preventDefault();
+            const banner = document.getElementById('notif-banner-' + id);
+            if (banner) banner.remove();
+            try {
+                const token = document.querySelector('meta[name=csrf-token]')?.content || '{{ csrf_token() }}';
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    window.dispatchEvent(new CustomEvent('notification-marked-read', { 
+                        detail: { 
+                            id: id, 
+                            unread_count: data.unread_count 
+                        } 
+                    }));
+                }
+            } catch(err) {
+                console.error('Error dismissing audit banner:', err);
+            }
         }
     </script>
 </x-app-layout>

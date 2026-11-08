@@ -22,17 +22,24 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
+@php
+    $isLocked = in_array($nurseProfile->verification_status ?? '', ['pending', 'verified']);
+@endphp
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col" x-data="{
     draftSaved: false,
     isSavingDraft: false,
     isSubmitting: false,
     lastSavedTime: '',
+    isLocked: {{ $isLocked ? 'true' : 'false' }},
 
     // Form Inputs — pre-populated dari database
     nik: '{{ old('nik', $nurseProfile->nik ?? '') }}',
     str_number: '{{ old('str_number', $nurseProfile->str_number ?? '') }}',
-    str_expiry: '{{ old('str_expiry', $nurseProfile->str_expiry ? \Carbon\Carbon::parse($nurseProfile->str_expiry)->format('Y-m-d') : '') }}',
+    str_expiry: '{{ old('str_expiry', $nurseProfile->str_expiry ? \Carbon\Carbon::parse($nurseProfile->str_expiry)->format('Y-m-d') : ($nurseProfile->str_expired_at ? \Carbon\Carbon::parse($nurseProfile->str_expired_at)->format('Y-m-d') : '')) }}',
     sip_number: '{{ old('sip_number', $nurseProfile->sip_number ?? '') }}',
+    sip_expiry: '{{ old('sip_expiry', $nurseProfile->sip_expiry ? \Carbon\Carbon::parse($nurseProfile->sip_expiry)->format('Y-m-d') : ($nurseProfile->sip_expired_at ? \Carbon\Carbon::parse($nurseProfile->sip_expired_at)->format('Y-m-d') : '')) }}',
+    sip_institution: '{{ old('sip_institution', $nurseProfile->sip_institution ?? '') }}',
+    specialization: '{{ old('specialization', $nurseProfile->specialization ?? '') }}',
 
     // Dokumen — pre-populated dari database (null = belum ada)
     documents: {
@@ -111,6 +118,7 @@
 
     // SIMPAN DRAF ke DATABASE via AJAX (tanpa navigasi halaman)
     async handleSaveDraft() {
+        if (this.isLocked) return;
         this.isSavingDraft = true;
         try {
             const formData = new FormData();
@@ -119,6 +127,9 @@
             formData.append('str_number', this.str_number || '');
             formData.append('str_expiry', this.str_expiry || '');
             formData.append('sip_number', this.sip_number || '');
+            formData.append('sip_expiry', this.sip_expiry || '');
+            formData.append('sip_institution', this.sip_institution || '');
+            formData.append('specialization', this.specialization || '');
 
             // Lampirkan file nyata jika ada
             ['ktp', 'str', 'sip', 'ijazah'].forEach(type => {
@@ -162,7 +173,14 @@
 
     // KIRIM DOKUMEN ke Admin — form POST native ke server
     handleSubmit() {
-        if (this.isSubmitting) return;
+        if (this.isLocked || this.isSubmitting) return;
+
+        // Validasi kelengkapan awal sebelum submit
+        if (!this.nik || !this.str_number || !this.str_expiry || !this.sip_number) {
+            alert('Mohon lengkapi NIK KTP, Nomor STR, Masa Berlaku STR, dan Nomor SIP sebelum mengirim dokumen.');
+            return;
+        }
+
         this.isSubmitting = true;
 
         // Update hidden inputs dengan nilai Alpine terkini sebelum submit
@@ -170,6 +188,9 @@
         document.getElementById('hidden_str_number').value = this.str_number || '';
         document.getElementById('hidden_str_expiry').value = this.str_expiry || '';
         document.getElementById('hidden_sip_number').value = this.sip_number || '';
+        document.getElementById('hidden_sip_expiry').value = this.sip_expiry || '';
+        document.getElementById('hidden_sip_institution').value = this.sip_institution || '';
+        document.getElementById('hidden_specialization').value = this.specialization || '';
 
         // Submit form ke server secara native
         document.getElementById('nurse-verification-form').submit();
@@ -424,6 +445,24 @@
                         </div>
                     </div>
                 </div>
+            @elseif(($nurseProfile->verification_status ?? '') === 'pending')
+                <div class="p-6 rounded-3xl bg-gradient-to-r from-amber-800 to-amber-950 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border-2 border-amber-500/80">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shrink-0 border border-white/20">
+                            ⏳
+                        </div>
+                        <div class="space-y-1">
+                            <h3 class="text-lg font-black tracking-tight text-white">Dokumen Legalitas Anda Sedang Ditinjau Admin</h3>
+                            <p class="text-xs text-amber-100 leading-relaxed max-w-2xl">
+                                Berkas Anda telah berhasil dikirim ke Admin CareAtHome dan saat ini sedang dalam proses audit keaslian KTKI & Dinkes. Formulir dikunci sementara untuk mencegah perubahan selama proses review.
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ route('perawat.dashboard') }}" class="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-md transition transform hover:-translate-y-0.5 whitespace-nowrap flex items-center gap-2 shrink-0">
+                        <span>Lihat Dashboard Nakes</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
+                </div>
             @endif
 
             <!-- Page Header Card -->
@@ -529,6 +568,43 @@
                 </div>
             </div>
 
+            <!-- Pesan Notifikasi Sukses / Error Validasi -->
+            @if ($errors->any())
+                <div class="p-5 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-950 space-y-2 shadow-sm">
+                    <div class="flex items-center gap-2 font-bold text-sm text-rose-900">
+                        <span>⚠️</span>
+                        <span>Terdapat kesalahan validasi pada formulir:</span>
+                    </div>
+                    <ul class="list-disc list-inside text-xs text-rose-800 space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            @if (session('submitted'))
+                <div class="p-6 rounded-2xl bg-emerald-50 border-2 border-emerald-500 shadow-md text-emerald-950 flex flex-col sm:flex-row items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 text-xl font-bold shadow">
+                        ✓
+                    </div>
+                    <div class="text-center sm:text-left flex-1">
+                        <h3 class="text-base font-extrabold text-emerald-900">Dokumen Berhasil Dikirimkan ke Admin!</h3>
+                        <p class="text-xs text-emerald-800 mt-1">{{ session('submitted') }} Status verifikasi Anda sekarang: <strong>"Menunggu Review (Pending)"</strong>.</p>
+                    </div>
+                    <a href="{{ route('perawat.dashboard') }}" class="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shrink-0 transition shadow-sm">
+                        Ke Dashboard Nakes
+                    </a>
+                </div>
+            @endif
+
+            @if (session('draft_saved'))
+                <div class="p-4 rounded-2xl bg-blue-50 border border-blue-300 shadow-xs text-blue-950 flex items-center gap-3">
+                    <span class="text-xl">💾</span>
+                    <p class="text-xs font-semibold text-blue-900">{{ session('draft_saved') }}</p>
+                </div>
+            @endif
+
             <!-- Form Data Legalitas -->
             <form
                 id="nurse-verification-form"
@@ -543,6 +619,9 @@
                 <input type="hidden" id="hidden_str_number" name="str_number" :value="str_number">
                 <input type="hidden" id="hidden_str_expiry" name="str_expiry" :value="str_expiry">
                 <input type="hidden" id="hidden_sip_number" name="sip_number" :value="sip_number">
+                <input type="hidden" id="hidden_sip_expiry" name="sip_expiry" :value="sip_expiry">
+                <input type="hidden" id="hidden_sip_institution" name="sip_institution" :value="sip_institution">
+                <input type="hidden" id="hidden_specialization" name="specialization" :value="specialization">
 
                 <!-- Hidden inputs for sample files -->
                 <input type="hidden" id="sample_ktp" name="sample_ktp" value="">
@@ -551,67 +630,132 @@
                 <input type="hidden" id="sample_ijazah" name="sample_ijazah" value="">
 
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
-                    <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                        <span class="w-2.5 h-6 rounded-full bg-emerald-600"></span>
-                        Data Nomor Lisensi & Izin Praktik
-                    </h2>
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                            <span class="w-2.5 h-6 rounded-full bg-emerald-600"></span>
+                            Data Nomor Lisensi &amp; Izin Praktik
+                        </h2>
+                        @if($isLocked)
+                            <span class="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                Formulir Dikunci (Sedang Ditinjau Admin)
+                            </span>
+                        @endif
+                    </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         
-                        <!-- NIK KTP (Default: KOSONG, bound with x-model) -->
+                        <!-- NIK KTP -->
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                                 Nomor Induk Kependudukan (NIK KTP) <span class="text-rose-500">*</span>
                             </label>
                             <input 
                                 type="text" 
-                                maxlength="16"
+                                id="input_nik"
+                                maxlength="20"
                                 placeholder="16 Digit Angka NIK KTP" 
                                 x-model="nik"
-                                class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-mono transition"
+                                {{ $isLocked ? 'disabled readonly' : '' }}
+                                class="w-full px-4 py-2.5 rounded-xl border {{ $isLocked ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900' }} border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-mono transition"
                                 required />
-                            <span class="text-[11px] text-slate-500 mt-1 block">Wajib sesuai dengan dokumen KTP asli</span>
+                            <span class="text-[11px] text-slate-500 mt-1 block">Wajib sesuai dengan identitas KTP asli</span>
+                            @error('nik') <span class="text-rose-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
                         </div>
 
-                        <!-- Nomor STR (Default: KOSONG, bound with x-model) -->
+                        <!-- Nomor STR -->
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                                 Nomor Surat Tanda Registrasi (STR) <span class="text-rose-500">*</span>
                             </label>
                             <input 
                                 type="text" 
+                                id="input_str_number"
                                 placeholder="Contoh: 140152119-3891024" 
                                 x-model="str_number"
-                                class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-mono transition"
+                                {{ $isLocked ? 'disabled readonly' : '' }}
+                                class="w-full px-4 py-2.5 rounded-xl border {{ $isLocked ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900' }} border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-mono transition"
                                 required />
                             <span class="text-[11px] text-slate-500 mt-1 block">Diterbitkan oleh KTKI / Konsil Tenaga Kesehatan</span>
+                            @error('str_number') <span class="text-rose-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
                         </div>
 
-                        <!-- Masa Berlaku STR (Default: KOSONG, bound with x-model) -->
+                        <!-- Masa Berlaku STR -->
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                                 Tanggal Masa Berlaku STR <span class="text-rose-500">*</span>
                             </label>
                             <input 
                                 type="date" 
+                                id="input_str_expiry"
                                 x-model="str_expiry"
-                                class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition"
+                                {{ $isLocked ? 'disabled readonly' : '' }}
+                                class="w-full px-4 py-2.5 rounded-xl border {{ $isLocked ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900' }} border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition"
                                 required />
+                            @error('str_expiry') <span class="text-rose-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
                         </div>
 
-                        <!-- Nomor SIP (Default: KOSONG, bound with x-model) -->
+                        <!-- Nomor SIP -->
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                                 Nomor Surat Izin Praktik (SIP) <span class="text-rose-500">*</span>
                             </label>
                             <input 
                                 type="text" 
+                                id="input_sip_number"
                                 placeholder="Contoh: 446.1/1042/Dinkes-PP/2026" 
                                 x-model="sip_number"
-                                class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-mono transition"
+                                {{ $isLocked ? 'disabled readonly' : '' }}
+                                class="w-full px-4 py-2.5 rounded-xl border {{ $isLocked ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900' }} border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-mono transition"
                                 required />
                             <span class="text-[11px] text-slate-500 mt-1 block">Izin praktik dari Dinas Kesehatan setempat</span>
+                            @error('sip_number') <span class="text-rose-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
                         </div>
+
+                        <!-- Masa Berlaku SIP -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                                Tanggal Masa Berlaku SIP
+                            </label>
+                            <input 
+                                type="date" 
+                                id="input_sip_expiry"
+                                x-model="sip_expiry"
+                                {{ $isLocked ? 'disabled readonly' : '' }}
+                                class="w-full px-4 py-2.5 rounded-xl border {{ $isLocked ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900' }} border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition" />
+                            @error('sip_expiry') <span class="text-rose-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
+                        </div>
+
+                        <!-- Institusi SIP -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                                Institusi / Fasilitas Tempat Praktik SIP
+                            </label>
+                            <input 
+                                type="text" 
+                                id="input_sip_institution"
+                                placeholder="Contoh: Praktik Mandiri, RSUD, Puskesmas" 
+                                x-model="sip_institution"
+                                {{ $isLocked ? 'disabled readonly' : '' }}
+                                class="w-full px-4 py-2.5 rounded-xl border {{ $isLocked ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900' }} border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition" />
+                            @error('sip_institution') <span class="text-rose-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
+                        </div>
+
+                        <!-- Spesialisasi Nakes -->
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                                Spesialisasi / Keahlian Nakes
+                            </label>
+                            <input 
+                                type="text" 
+                                id="input_specialization"
+                                placeholder="Contoh: Perawat Umum, Wound Care (Perawatan Luka), Geriatri (Lansia), Pasca Operasi" 
+                                x-model="specialization"
+                                {{ $isLocked ? 'disabled readonly' : '' }}
+                                class="w-full px-4 py-2.5 rounded-xl border {{ $isLocked ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white text-slate-900' }} border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition" />
+                            @error('specialization') <span class="text-rose-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
+                        </div>
+
                     </div>
                 </div>
 
@@ -644,6 +788,7 @@
                                 <h3 class="font-extrabold text-sm text-slate-800">1. Swafoto Bersama KTP Asli</h3>
                                 <p class="text-[11px] text-slate-500 mt-1 max-w-xs leading-relaxed">Pegang KTP sejajar dada. Wajah dan nomor NIK harus terbaca jelas.</p>
                                 
+                                @if(!$isLocked)
                                 <div class="mt-4 flex items-center gap-2">
                                     <label class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm cursor-pointer transition">
                                         Pilih Berkas KTP
@@ -653,6 +798,11 @@
                                         + Contoh File
                                     </button>
                                 </div>
+                                @else
+                                <div class="mt-4 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                                    Berkas terkunci selama peninjauan
+                                </div>
+                                @endif
                             </div>
 
                             <!-- State: Preview Dokumen / Gambar Terunggah -->
@@ -662,6 +812,7 @@
                                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                                         1. Pratinjau Swafoto KTP
                                     </span>
+                                    @if(!$isLocked)
                                     <div class="flex items-center gap-3">
                                         <button type="button" @click="changeDoc('ktp')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
                                             Ganti Berkas
@@ -670,6 +821,7 @@
                                             Hapus
                                         </button>
                                     </div>
+                                    @endif
                                 </div>
 
                                 <!-- Image Preview Card -->
@@ -704,6 +856,7 @@
                                 <h3 class="font-extrabold text-sm text-slate-800">2. Surat Tanda Registrasi (STR)</h3>
                                 <p class="text-[11px] text-slate-500 mt-1 max-w-xs leading-relaxed">Scan dokumen STR aktif lengkap dengan QR code validasi KTKI.</p>
                                 
+                                @if(!$isLocked)
                                 <div class="mt-4 flex items-center gap-2">
                                     <label class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm cursor-pointer transition">
                                         Pilih Berkas STR (PDF)
@@ -713,6 +866,11 @@
                                         + Contoh PDF
                                     </button>
                                 </div>
+                                @else
+                                <div class="mt-4 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                                    Berkas terkunci selama peninjauan
+                                </div>
+                                @endif
                             </div>
 
                             <!-- State: Pratinjau Halaman Pertama Dokumen PDF -->
@@ -722,6 +880,7 @@
                                         <span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold">PDF</span>
                                         2. Pratinjau Halaman 1 Dokumen STR
                                     </span>
+                                    @if(!$isLocked)
                                     <div class="flex items-center gap-3">
                                         <button type="button" @click="changeDoc('str')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
                                             Ganti Berkas
@@ -730,6 +889,7 @@
                                             Hapus
                                         </button>
                                     </div>
+                                    @endif
                                 </div>
 
                                 <!-- Simulated Official Document 1st-Page Preview -->
@@ -774,6 +934,7 @@
                                 <h3 class="font-extrabold text-sm text-slate-800">3. Surat Izin Praktik (SIP) Aktif</h3>
                                 <p class="text-[11px] text-slate-500 mt-1 max-w-xs leading-relaxed">Izin praktik yang diterbitkan oleh Dinas Kesehatan setempat.</p>
                                 
+                                @if(!$isLocked)
                                 <div class="mt-4 flex items-center gap-2">
                                     <label class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm cursor-pointer transition">
                                         Pilih Berkas SIP (PDF)
@@ -783,6 +944,11 @@
                                         + Contoh PDF
                                     </button>
                                 </div>
+                                @else
+                                <div class="mt-4 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                                    Berkas terkunci selama peninjauan
+                                </div>
+                                @endif
                             </div>
 
                             <!-- State: Pratinjau Halaman Pertama Dokumen SIP -->
@@ -792,6 +958,7 @@
                                         <span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold">PDF</span>
                                         3. Pratinjau Halaman 1 Dokumen SIP
                                     </span>
+                                    @if(!$isLocked)
                                     <div class="flex items-center gap-3">
                                         <button type="button" @click="changeDoc('sip')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
                                             Ganti Berkas
@@ -800,6 +967,7 @@
                                             Hapus
                                         </button>
                                     </div>
+                                    @endif
                                 </div>
 
                                 <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2.5">
@@ -843,6 +1011,7 @@
                                 <h3 class="font-extrabold text-sm text-slate-800">4. Ijazah Keperawatan (D3 / S1 / Ners)</h3>
                                 <p class="text-[11px] text-slate-500 mt-1 max-w-xs leading-relaxed">Bukti kelulusan institusi pendidikan keperawatan terakreditasi.</p>
                                 
+                                @if(!$isLocked)
                                 <div class="mt-4 flex items-center gap-2">
                                     <label class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm cursor-pointer transition">
                                         Pilih Berkas Ijazah
@@ -852,6 +1021,11 @@
                                         + Contoh PDF
                                     </button>
                                 </div>
+                                @else
+                                <div class="mt-4 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                                    Berkas terkunci selama peninjauan
+                                </div>
+                                @endif
                             </div>
 
                             <!-- State: Pratinjau Dokumen Ijazah -->
@@ -861,6 +1035,7 @@
                                         <span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold">PDF</span>
                                         4. Pratinjau Ijazah Pendidikan
                                     </span>
+                                    @if(!$isLocked)
                                     <div class="flex items-center gap-3">
                                         <button type="button" @click="changeDoc('ijazah')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
                                             Ganti Berkas
@@ -869,6 +1044,7 @@
                                             Hapus
                                         </button>
                                     </div>
+                                    @endif
                                 </div>
 
                                 <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2.5">
@@ -927,35 +1103,56 @@
                         <span>Kembali ke Beranda</span>
                     </a>
 
-                    <div class="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
-                        
-                        <!-- Simpan Draf (Lanjut Nanti) -->
-                        <button 
-                            type="button" 
-                            @click="handleSaveDraft"
-                            :disabled="isSavingDraft"
-                            class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
-                            <span x-show="!isSavingDraft">💾 Simpan Sebagai Draf</span>
-                            <span x-show="isSavingDraft" x-cloak class="flex items-center gap-1.5">
-                                <svg class="animate-spin w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    @if($isLocked)
+                        <div class="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
+                            @if(($nurseProfile->verification_status ?? '') === 'verified')
+                                <div class="px-5 py-3 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-xs flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span>✓ Akun Anda telah Terverifikasi Resmi. Formulir dikunci.</span>
+                                </div>
+                                <a href="{{ route('perawat.dashboard') }}" class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-sm transition">
+                                    Buka Dashboard Kerja &rarr;
+                                </a>
+                            @else
+                                <div class="px-5 py-3 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                    <span>⏳ Dokumen Sedang Ditinjau Admin (Menunggu Review). Formulir dikunci.</span>
+                                </div>
+                                <a href="{{ route('perawat.dashboard') }}" class="px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-sm transition">
+                                    Ke Dashboard &rarr;
+                                </a>
+                            @endif
+                        </div>
+                    @else
+                        <div class="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
+                            <!-- Simpan Draf (Lanjut Nanti) -->
+                            <button 
+                                type="button" 
+                                @click="handleSaveDraft"
+                                :disabled="isSavingDraft"
+                                class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                                <span x-show="!isSavingDraft">💾 Simpan Sebagai Draf</span>
+                                <span x-show="isSavingDraft" x-cloak class="flex items-center gap-1.5">
+                                    <svg class="animate-spin w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    Menyimpan...
+                                </span>
+                            </button>
+                            
+                            <!-- Submit to Admin — @click calls handleSubmit yang submit form ke server -->
+                            <button 
+                                type="button"
+                                @click="handleSubmit"
+                                class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 hover:shadow-emerald-600/40 transform hover:-translate-y-0.5 active:translate-y-0 transition flex items-center justify-center gap-2">
+                                <span>Simpan dan Kirim Dokumen</span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                                 </svg>
-                                Menyimpan...
-                            </span>
-                        </button>
-                        
-                        <!-- Submit to Admin — @click calls handleSubmit yang submit form ke server -->
-                        <button 
-                            type="button"
-                            @click="handleSubmit"
-                            class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 hover:shadow-emerald-600/40 transform hover:-translate-y-0.5 active:translate-y-0 transition flex items-center justify-center gap-2">
-                            <span>Simpan dan Kirim Dokumen</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                            </svg>
-                        </button>
-                    </div>
+                            </button>
+                        </div>
+                    @endif
                 </div>
             </form>
 

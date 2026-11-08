@@ -203,12 +203,12 @@
                         <div>
                             <span class="text-[10px] uppercase font-bold text-slate-400 block">Nomor STR</span>
                             <strong class="text-slate-800 font-mono" x-text="selectedNurse?.str_number || '-'"></strong>
-                            <span class="text-[10px] text-slate-500 block" x-text="'Masa Berlaku: ' + (selectedNurse?.str_expiry || selectedNurse?.str_expired_at || '-')"></span>
+                            <span class="text-[10px] text-slate-500 block" x-text="'Masa Berlaku: ' + (selectedNurse?.str_expiry ? selectedNurse.str_expiry.substring(0, 10) : (selectedNurse?.str_expired_at ? selectedNurse.str_expired_at.substring(0, 10) : '-'))"></span>
                         </div>
                         <div>
                             <span class="text-[10px] uppercase font-bold text-slate-400 block">Nomor SIP</span>
                             <strong class="text-slate-800 font-mono" x-text="selectedNurse?.sip_number || '-'"></strong>
-                            <span class="text-[10px] text-slate-500 block" x-text="'Masa Berlaku: ' + (selectedNurse?.sip_expiry || selectedNurse?.sip_expired_at || '-')"></span>
+                            <span class="text-[10px] text-slate-500 block" x-text="'Masa Berlaku: ' + (selectedNurse?.sip_expiry ? selectedNurse.sip_expiry.substring(0, 10) : (selectedNurse?.sip_expired_at ? selectedNurse.sip_expired_at.substring(0, 10) : '-'))"></span>
                         </div>
                         <div>
                             <span class="text-[10px] uppercase font-bold text-slate-400 block">Institusi SIP</span>
