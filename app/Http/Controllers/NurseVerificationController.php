@@ -43,6 +43,27 @@ class NurseVerificationController extends Controller
     }
 
     /**
+     * Helper untuk memparsing berbagai format tanggal (d/m/Y, Y-m-d, d-m-Y)
+     * menjadi format YYYY-MM-DD standar MySQL
+     */
+    private function parseDateSafely(?string $date): ?string
+    {
+        if (blank($date)) {
+            return null;
+        }
+
+        try {
+            $trimmed = trim($date);
+            if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $trimmed, $matches)) {
+                return sprintf('%04d-%02d-%02d', (int) $matches[3], (int) $matches[2], (int) $matches[1]);
+            }
+            return \Carbon\Carbon::parse($trimmed)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
      * Simpan Sebagai Draf ke Database (Auto-save & Manual Draft)
      */
     public function saveDraft(Request $request)
@@ -54,16 +75,21 @@ class NurseVerificationController extends Controller
             ['user_id' => $user->id]
         );
 
+        $strExpiry = $this->parseDateSafely($request->input('str_expiry'));
+        $sipExpiry = $this->parseDateSafely($request->input('sip_expiry'));
+
         // Update data formulir ke database
         $nurseProfile->update([
-            'nik' => $request->input('nik'),
-            'str_number' => $request->input('str_number'),
-            'str_expiry' => $request->input('str_expiry') ?: null,
-            'str_expired_at' => $request->input('str_expiry') ?: null,
-            'sip_number' => $request->input('sip_number'),
-            'sip_expiry' => $request->input('sip_expiry') ?: null,
-            'sip_expired_at' => $request->input('sip_expiry') ?: null,
-            'verification_status' => 'draft',
+            'nik' => $request->input('nik') !== null && $request->input('nik') !== '' ? $request->input('nik') : $nurseProfile->nik,
+            'str_number' => $request->input('str_number') !== null && $request->input('str_number') !== '' ? $request->input('str_number') : $nurseProfile->str_number,
+            'str_expiry' => $strExpiry ?: $nurseProfile->str_expiry,
+            'str_expired_at' => $strExpiry ?: $nurseProfile->str_expired_at,
+            'sip_number' => $request->input('sip_number') !== null && $request->input('sip_number') !== '' ? $request->input('sip_number') : $nurseProfile->sip_number,
+            'sip_expiry' => $sipExpiry ?: $nurseProfile->sip_expiry,
+            'sip_expired_at' => $sipExpiry ?: $nurseProfile->sip_expired_at,
+            'sip_institution' => $request->input('sip_institution') ?: $nurseProfile->sip_institution,
+            'specialization' => $request->input('specialization') ?: $nurseProfile->specialization,
+            'verification_status' => in_array($nurseProfile->verification_status, ['pending', 'verified']) ? $nurseProfile->verification_status : 'draft',
         ]);
 
         // Simpan lampiran file fisik jika ada yang diunggah
@@ -82,8 +108,8 @@ class NurseVerificationController extends Controller
                     [
                         'file_path' => $path,
                         'storage_driver' => $disk,
-                        'str_number' => $type === 'str' ? $request->input('str_number') : null,
-                        'sip_number' => $type === 'sip' ? $request->input('sip_number') : null,
+                        'str_number' => $type === 'str' ? ($request->input('str_number') ?: $nurseProfile->str_number) : null,
+                        'sip_number' => $type === 'sip' ? ($request->input('sip_number') ?: $nurseProfile->sip_number) : null,
                         'original_name' => $file->getClientOriginalName(),
                         'file_size' => round($file->getSize() / (1024 * 1024), 2) . ' MB',
                         'mime_type' => $file->getClientMimeType(),
@@ -101,8 +127,8 @@ class NurseVerificationController extends Controller
                     [
                         'file_path' => 'samples/' . $type . ($isPdf ? '.pdf' : '.jpg'),
                         'storage_driver' => 'public',
-                        'str_number' => $type === 'str' ? $request->input('str_number') : null,
-                        'sip_number' => $type === 'sip' ? $request->input('sip_number') : null,
+                        'str_number' => $type === 'str' ? ($request->input('str_number') ?: $nurseProfile->str_number) : null,
+                        'sip_number' => $type === 'sip' ? ($request->input('sip_number') ?: $nurseProfile->sip_number) : null,
                         'original_name' => strtoupper($type) . '_Resmi_Tervalidasi' . ($isPdf ? '.pdf' : '.jpg'),
                         'file_size' => '1.2 MB',
                         'mime_type' => $isPdf ? 'application/pdf' : 'image/jpeg',
@@ -131,24 +157,52 @@ class NurseVerificationController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+        // Normalisasi format tanggal input jika menggunakan format d/m/Y
+        $rawStrExpiry = $request->input('str_expiry');
+        $rawSipExpiry = $request->input('sip_expiry');
+        $parsedStrExpiry = $this->parseDateSafely($rawStrExpiry);
+        $parsedSipExpiry = $this->parseDateSafely($rawSipExpiry);
+
+        $request->merge([
+            'str_expiry' => $parsedStrExpiry ?: $rawStrExpiry,
+            'sip_expiry' => $parsedSipExpiry ?: $rawSipExpiry,
+        ]);
+
         $request->validate([
-            'nik' => ['required', 'string', 'min:16', 'max:16'],
+            'nik' => ['required', 'string', 'min:8', 'max:20'],
             'str_number' => ['required', 'string', 'max:50'],
             'str_expiry' => ['required', 'date'],
             'sip_number' => ['required', 'string', 'max:100'],
+            'sip_expiry' => ['nullable', 'date'],
+            'sip_institution' => ['nullable', 'string', 'max:255'],
+            'specialization' => ['nullable', 'string', 'max:255'],
+        ], [
+            'nik.required' => 'Nomor Induk Kependudukan (NIK) wajib diisi.',
+            'nik.min' => 'NIK minimal terdiri dari 8 karakter/angka.',
+            'str_number.required' => 'Nomor STR wajib diisi.',
+            'str_expiry.required' => 'Tanggal masa berlaku STR wajib diisi.',
+            'str_expiry.date' => 'Format tanggal masa berlaku STR tidak valid.',
+            'sip_number.required' => 'Nomor SIP wajib diisi.',
         ]);
 
         $nurseProfile = NurseProfile::firstOrCreate(['user_id' => $user->id]);
 
-        // Update data profil perawat
+        // Jika sudah terverifikasi resmi oleh admin, cegah overwrite status
+        if ($nurseProfile->verification_status === 'verified') {
+            return redirect()->back()->with('status', 'Profil Anda telah terverifikasi resmi.');
+        }
+
+        // Update data profil perawat ke status pending (Menunggu Review)
         $nurseProfile->update([
             'nik' => $request->input('nik'),
             'str_number' => $request->input('str_number'),
-            'str_expiry' => $request->input('str_expiry'),
-            'str_expired_at' => $request->input('str_expiry'),
+            'str_expiry' => $parsedStrExpiry,
+            'str_expired_at' => $parsedStrExpiry,
             'sip_number' => $request->input('sip_number'),
-            'sip_expiry' => $request->input('sip_expiry') ?: null,
-            'sip_expired_at' => $request->input('sip_expiry') ?: null,
+            'sip_expiry' => $parsedSipExpiry,
+            'sip_expired_at' => $parsedSipExpiry,
+            'sip_institution' => $request->input('sip_institution') ?: ($nurseProfile->sip_institution ?: 'Praktik Mandiri'),
+            'specialization' => $request->input('specialization') ?: ($nurseProfile->specialization ?: 'Perawat Umum'),
             'verification_status' => 'pending',
             'rejection_reason' => null,
         ]);

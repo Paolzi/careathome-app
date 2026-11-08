@@ -135,7 +135,7 @@ class NurseDocumentController extends Controller
     /**
      * Tandai satu notifikasi perawat sebagai sudah dibaca.
      */
-    public function markNotificationAsRead(string $id): JsonResponse
+    public function markNotificationAsRead(Request $request, string $id)
     {
         /** @var User $user */
         $user = Auth::user();
@@ -145,27 +145,37 @@ class NurseDocumentController extends Controller
             $notification->markAsRead();
         }
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Notifikasi telah ditandai sebagai sudah dibaca.',
-            'unread_count' => $user->unreadNotifications()->count(),
-        ]);
+        $unreadCount = $user->unreadNotifications()->count();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Notifikasi telah ditandai sebagai sudah dibaca.',
+                'unread_count' => $unreadCount,
+            ]);
+        }
+
+        return redirect()->back()->with('status', 'Notifikasi telah ditandai sebagai sudah dibaca.');
     }
 
     /**
      * Tandai seluruh notifikasi perawat sebagai sudah dibaca.
      */
-    public function markAllNotificationsAsRead(): JsonResponse
+    public function markAllNotificationsAsRead(Request $request)
     {
         /** @var User $user */
         $user = Auth::user();
         $user->unreadNotifications->markAsRead();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Seluruh notifikasi telah ditandai sebagai sudah dibaca.',
-            'unread_count' => 0,
-        ]);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Seluruh notifikasi telah ditandai sebagai sudah dibaca.',
+                'unread_count' => 0,
+            ]);
+        }
+
+        return redirect()->back()->with('status', 'Seluruh notifikasi telah ditandai sebagai sudah dibaca.');
     }
 }
 
