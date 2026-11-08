@@ -26,6 +26,8 @@ class NurseProfile extends Model
         'sip_institution',
         'specialization',
         'verification_status',
+        'status_verifikasi',
+        'status_legalitas',
         'rejection_reason',
         'reviewed_by',
         'reviewed_at',
@@ -55,6 +57,20 @@ class NurseProfile extends Model
             'balance' => 'decimal:2',
             'rating_avg' => 'decimal:2',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (NurseProfile $profile) {
+            $status = $profile->verification_status
+                ?? $profile->status_verifikasi
+                ?? $profile->status_legalitas
+                ?? 'draft';
+
+            $profile->verification_status = $status;
+            $profile->status_verifikasi = $status;
+            $profile->status_legalitas = $status;
+        });
     }
 
     public function user(): BelongsTo
@@ -97,10 +113,15 @@ class NurseProfile extends Model
      */
     public function scopeActive(Builder $query): Builder
     {
-        $timeoutMinutes = Setting::getInt('location_timeout_minutes', 15);
+        $defaultTimeout = config('nursing.location_timeout_minutes', 15);
+        $timeoutMinutes = (int) Setting::getInt('location_timeout_minutes', $defaultTimeout);
         $thresholdTime = now()->subMinutes($timeoutMinutes);
 
-        return $query->where('verification_status', 'verified')
+        return $query->where(function ($q) {
+                $q->where('status_verifikasi', 'verified')
+                  ->orWhere('verification_status', 'verified')
+                  ->orWhere('status_legalitas', 'verified');
+            })
             ->where('is_online', true)
             ->whereNotNull('location_updated_at')
             ->where('location_updated_at', '>=', $thresholdTime)
@@ -117,7 +138,8 @@ class NurseProfile extends Model
      */
     public function scopeNearby(Builder $query, float $latitude, float $longitude, ?float $radiusKm = null): Builder
     {
-        $radius = $radiusKm ?? Setting::getFloat('max_radius_km', 10.0);
+        $defaultRadius = config('nursing.max_radius_km', 10.0);
+        $radius = $radiusKm ?? (float) Setting::getFloat('max_radius_km', $defaultRadius);
 
         // Derajat perkiraan bounding box
         // 1 deg lat ~ 111.045 km
@@ -130,7 +152,7 @@ class NurseProfile extends Model
         $minLng = $longitude - $lngDelta;
         $maxLng = $longitude + $lngDelta;
 
-        // Bounding box filter
+        // Bounding box filter (memanfaatkan index nurse_profiles_lat_lng_idx)
         $query->whereBetween('latitude', [$minLat, $maxLat])
             ->whereBetween('longitude', [$minLng, $maxLng]);
 
@@ -138,9 +160,10 @@ class NurseProfile extends Model
         $haversine = "(6371 * acos(least(1.0, greatest(-1.0, cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))))";
 
         $query->select('nurse_profiles.*')
+            ->selectRaw("round({$haversine}, 2) AS distance", [$latitude, $longitude, $latitude])
             ->selectRaw("round({$haversine}, 2) AS distance_km", [$latitude, $longitude, $latitude])
-            ->havingRaw("distance_km <= ?", [$radius])
-            ->orderBy('distance_km', 'asc');
+            ->having('distance', '<=', $radius)
+            ->orderBy('distance', 'asc');
 
         return $query;
     }

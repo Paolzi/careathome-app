@@ -21,9 +21,9 @@ class OrderPaymentService
         $feePercent = Setting::getFloat('platform_fee_percent', 15.0);
 
         if ($orderInput instanceof Order) {
-            $basePrice = (float) ($orderInput->base_price ?: ($orderInput->total_amount * 0.8));
-            $transportFee = (float) ($orderInput->transport_fee ?: 10000.0);
-            $platformFee = (float) ($orderInput->platform_fee ?: 5000.0);
+            $basePrice = (float) ($orderInput->base_price ?? ($orderInput->total_amount * 0.8));
+            $transportFee = (float) ($orderInput->transport_fee ?? 10000.0);
+            $platformFee = (float) ($orderInput->platform_fee ?? 5000.0);
             $total = (int) round($orderInput->total_amount ?: ($basePrice + $transportFee + $platformFee));
 
             $adminFee = (int) round(($basePrice * ($feePercent / 100.0)) + $platformFee);
