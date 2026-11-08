@@ -18,6 +18,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+    <!-- Alpine.js Framework -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
     <style>
         [x-cloak] { display: none !important; }
         .leaflet-container { font-family: inherit; }
@@ -78,14 +81,14 @@
                 <div class="flex items-center gap-3">
                     <div class="hidden md:flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span>Pasien Terdaftar: <strong>{{ auth()->user()->name }}</strong></span>
+                        <span>Pasien Terdaftar: <strong>{{ auth()->user()?->name ?? 'Pasien' }}</strong></span>
                     </div>
 
                     <!-- Dropdown / Logout -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open" type="button" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-200">
                             <div class="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">
-                                {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                                {{ strtoupper(substr(auth()->user()?->name ?? 'PA', 0, 2)) }}
                             </div>
                             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -95,8 +98,8 @@
                         <div x-show="open" @click.away="open = false" x-cloak
                             class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 text-xs text-slate-700 z-50">
                             <div class="px-3 py-2 border-b border-slate-100">
-                                <p class="font-bold text-slate-900 truncate">{{ auth()->user()->name }}</p>
-                                <p class="text-[11px] text-slate-500 truncate">{{ auth()->user()->email }}</p>
+                                <p class="font-bold text-slate-900 truncate">{{ auth()->user()?->name ?? 'Pasien' }}</p>
+                                <p class="text-[11px] text-slate-500 truncate">{{ auth()->user()?->email ?? '' }}</p>
                             </div>
                             <a href="{{ route('profile') }}" class="block px-3 py-2 hover:bg-slate-50 text-slate-700 font-medium">Pengaturan Profil</a>
                             <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="block px-3 py-2 hover:bg-rose-50 text-rose-600 font-medium">
@@ -169,20 +172,58 @@
                         <span x-text="hasPatientLocation ? 'Radius Layanan Presisi: Maksimal 10 KM' : 'Jangkauan: Seluruh Mitra Online'"></span>
                     </div>
                     <h2 class="text-lg font-bold text-slate-900 tracking-tight">Mitra Perawat Aktif</h2>
-                    <p class="text-xs text-slate-500" x-show="hasPatientLocation">
-                        Menampilkan perawat yang berstatus <strong>Online (Sedang Bekerja)</strong>, terverifikasi STR/SIP, dan berjarak maksimal 10 km dari posisi GPS Anda.
-                    </p>
-                    <p class="text-xs text-slate-500" x-show="!hasPatientLocation">
-                        Menampilkan seluruh mitra perawat terverifikasi yang sedang berstatus <strong>Online &amp; Siap Melayani</strong>.
+                    <p class="text-xs text-slate-500">
+                        <span x-show="hasPatientLocation" x-cloak>
+                            Menampilkan perawat yang berstatus <strong>Online (Sedang Bekerja)</strong>, terverifikasi STR/SIP, dan berjarak maksimal 10 km dari posisi GPS Anda.
+                        </span>
+                        <span x-show="!hasPatientLocation">
+                            Menampilkan seluruh mitra perawat terverifikasi yang sedang berstatus <strong>Online &amp; Siap Melayani</strong> di wilayah jangkauan Anda.
+                        </span>
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button type="button" @click="requestBrowserLocation()"
+                    <button id="btn-detect-gps" type="button" @click="requestBrowserLocation()"
                         :disabled="loadingNurses"
                         class="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer">
                         <span x-show="loadingNurses" class="animate-spin text-sm">⏳</span>
-                        <span x-show="!loadingNurses">🎯 Deteksi Lokasi GPS Saya</span>
+                        <span>🎯 Deteksi Lokasi GPS Saya</span>
                     </button>
+
+                    <!-- Manual Location Dropdown Fallback -->
+                    <div class="relative" x-data="{ locDropdown: false }">
+                        <button id="btn-manual-location" type="button" @click="locDropdown = !locDropdown"
+                            class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                            title="Pilih koordinat acuan manual">
+                            <span>📍</span>
+                            <span id="selected-location-label">Pilih Manual</span>
+                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="locDropdown" @click.away="locDropdown = false" x-cloak
+                            class="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-50 text-xs space-y-1.5">
+                            <p class="font-bold text-slate-800 px-1 text-[11px] uppercase tracking-wider text-slate-400">PILIH TITIK ACUAN:</p>
+                            <button type="button"
+                                data-lat="-7.3144" data-lng="112.7304" data-label="Surabaya Selatan (Pos Dinda)"
+                                @click="selectPresetLocation($el); locDropdown = false"
+                                class="btn-location-preset w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 hover:text-emerald-800 font-medium transition flex items-center justify-between cursor-pointer">
+                                <span>Surabaya Selatan (Pos Dinda)</span>
+                                <span class="text-[10px] text-emerald-600 font-bold">&lt; 1 km</span>
+                            </button>
+                            <button type="button"
+                                data-lat="-7.2575" data-lng="112.7521" data-label="Surabaya Pusat (Gubeng)"
+                                @click="selectPresetLocation($el); locDropdown = false"
+                                class="btn-location-preset w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 hover:text-emerald-800 font-medium transition flex items-center justify-between cursor-pointer">
+                                <span>Surabaya Pusat (Gubeng)</span>
+                                <span class="text-[10px] text-slate-500 font-semibold">~7 km</span>
+                            </button>
+                            <button type="button"
+                                data-lat="-7.2891" data-lng="112.7344" data-label="Surabaya Selatan (Wonokromo)"
+                                @click="selectPresetLocation($el); locDropdown = false"
+                                class="btn-location-preset w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 hover:text-emerald-800 font-medium transition flex items-center justify-between cursor-pointer">
+                                <span>Surabaya Selatan (Wonokromo)</span>
+                                <span class="text-[10px] text-emerald-600 font-bold">~3 km</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -205,92 +246,25 @@
                 </button>
             </div>
 
-            <!-- Loading State -->
-            <div x-show="loadingNurses" class="py-8 text-center text-xs text-slate-500 space-y-2">
+            <!-- Loading State Indicator -->
+            <div id="nurse-loading-state" x-show="loadingNurses" class="py-8 text-center text-xs text-slate-500 space-y-2 hidden">
                 <span class="animate-spin text-2xl inline-block">⏳</span>
                 <p>Memuat mitra perawat aktif...</p>
             </div>
 
-            <!-- Empty State: No Nurse in Radius or None Online -->
-            <div x-show="!loadingNurses && nearbyNurses.length === 0" x-cloak
-                class="py-8 px-4 text-center rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
-                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mx-auto border border-amber-200">
-                    🛵
-                </div>
-                <div class="space-y-1 max-w-md mx-auto">
-                    <h4 class="text-sm font-bold text-slate-800" x-text="hasPatientLocation ? 'Tidak Ada Perawat Aktif Dalam Radius 10 KM' : 'Belum Ada Mitra Perawat yang Online'"></h4>
-                    <p class="text-xs text-slate-500 leading-relaxed" x-text="hasPatientLocation ? 'Saat ini belum ada perawat aktif yang berstatus online dalam jarak 10 km dari titik GPS Anda. Anda tetap dapat memilih tindakan medis dari katalog di bawah.' : 'Saat ini belum ada mitra perawat yang mengaktifkan status online di sistem CareAtHome. Anda tetap dapat menjelajahi katalog layanan.'">
-                    </p>
-                </div>
+            <!-- Error State: Gagal Memuat Data -->
+            <div id="nurse-error-state" class="py-6 px-4 text-center rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 space-y-2 max-w-lg mx-auto hidden">
+                <span class="text-2xl inline-block">⚠️</span>
+                <p class="text-xs font-bold" id="nurse-error-message">Gagal memuat mitra perawat aktif.</p>
+                <button type="button" @click="fetchNearbyNurses(true)"
+                    class="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs cursor-pointer">
+                    Muat Ulang
+                </button>
             </div>
 
-            <!-- Nurse Cards Grid -->
-            <div x-show="!loadingNurses && nearbyNurses.length > 0" x-cloak
-                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <template x-for="nurse in nearbyNurses" :key="nurse.id">
-                    <div class="bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md transition p-5 flex flex-col justify-between space-y-4">
-                        
-                        <!-- Header Nurse Card -->
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center shadow-sm">
-                                    <span x-text="nurse.name ? nurse.name.substring(0, 2).toUpperCase() : 'NS'"></span>
-                                </div>
-                                <div>
-                                    <div class="flex items-center gap-1.5">
-                                        <h4 class="text-xs font-bold text-slate-900" x-text="nurse.name"></h4>
-                                        <span class="text-emerald-600 text-xs" title="Terverifikasi Kemenkes">✓</span>
-                                    </div>
-                                    <span class="text-[10px] text-slate-500 block" x-text="nurse.specialization || 'Perawat Homecare'"></span>
-                                    <div class="flex items-center gap-1 mt-0.5 text-[11px] text-amber-500 font-bold">
-                                        <span>⭐</span>
-                                        <span x-text="nurse.rating_avg.toFixed(1)"></span>
-                                        <span class="text-slate-400 font-normal" x-text="'(' + nurse.total_reviews + ' ulasan)'"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Jarak Pill -->
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                                <span>📍</span>
-                                <span x-text="nurse.formatted_distance"></span>
-                            </span>
-                        </div>
-
-                        <!-- Layanan yang Disediakan -->
-                        <!-- Layanan yang Disediakan (Klik langsung untuk memilih) -->
-                        <div class="space-y-1.5 text-xs">
-                            <div class="flex items-center justify-between">
-                                <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Layanan Disediakan:</span>
-                                <span class="text-[10px] text-emerald-600 font-semibold" x-text="nurse.services ? nurse.services.length + ' pilihan' : ''"></span>
-                            </div>
-                            <div class="flex flex-wrap gap-1.5">
-                                <template x-for="s in nurse.services" :key="s.id">
-                                    <button type="button" 
-                                        @click.stop="selectNurseWithSpecificService(nurse, s)"
-                                        class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 font-medium border border-slate-200/80 hover:border-emerald-300 transition-all flex items-center gap-1 group/btn cursor-pointer hover:scale-102"
-                                        :title="'Klik untuk memesan layanan ' + s.name + ' bersama ' + nurse.name">
-                                        <span x-text="s.image_emoji"></span>
-                                        <span class="group-hover/btn:underline" x-text="s.name"></span>
-                                    </button>
-                                </template>
-                                <template x-if="!nurse.services || nurse.services.length === 0">
-                                    <span class="text-[10px] text-slate-400 italic">Semua layanan standar</span>
-                                </template>
-                            </div>
-                        </div>
-
-                        <!-- Tombol Pilih Perawat -->
-                        <div class="pt-2 border-t border-slate-100">
-                            <button type="button" @click="openNurseServicePicker(nurse)"
-                                class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 hover:-translate-y-0.5">
-                                <span>Pilih Layanan &amp; Pesan Perawat</span>
-                                <span>&rarr;</span>
-                            </button>
-                        </div>
-
-                    </div>
-                </template>
+            <!-- Target Container for Nurse Cards (#nurse-cards-container & #nurse-list-container) -->
+            <div id="nurse-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Kartu perawat aktif di-render dinamis oleh JavaScript renderNurseCards() -->
             </div>
         </div>
 
@@ -355,13 +329,13 @@
                     <span :class="selectedCategory === 'Semua' ? 'bg-emerald-700 text-white' : 'bg-slate-200 text-slate-700'" class="px-1.5 py-0.2 rounded-full text-[10px]" x-text="rawServices.length"></span>
                 </button>
 
-                <template x-for="cat in availableCategories" :key="cat.name">
+                <template x-for="cat in availableCategories" :key="cat.category || cat.name">
                     <button type="button"
-                        @click="setCategory(cat.name)"
-                        :class="selectedCategory === cat.name ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
-                        <span x-text="cat.name"></span>
-                        <span :class="selectedCategory === cat.name ? 'bg-emerald-700 text-white' : 'bg-slate-200 text-slate-700'" class="px-1.5 py-0.2 rounded-full text-[10px]" x-text="cat.count"></span>
+                        @click="setCategory(cat.category || cat.name)"
+                        :class="selectedCategory === (cat.category || cat.name) ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-600/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                        <span x-text="cat.category || cat.name"></span>
+                        <span :class="selectedCategory === (cat.category || cat.name) ? 'bg-emerald-700 text-white' : 'bg-slate-200 text-slate-700'" class="px-1.5 py-0.2 rounded-full text-[10px]" x-text="cat.count"></span>
                     </button>
                 </template>
             </div>
@@ -380,7 +354,7 @@
 
                 <div class="flex items-center gap-3">
                     <span class="text-slate-500">
-                        Menampilkan <strong class="text-slate-800" x-text="filteredServices.length"></strong> dari <span x-text="rawServices.length"></span> layanan
+                        Menampilkan <strong class="text-slate-800" x-text="filteredServices.length">{{ count($services) }}</strong> dari <span x-text="rawServices.length">{{ count($services) }}</span> layanan
                     </span>
 
                     <button type="button"
@@ -1508,8 +1482,10 @@
                 patientLat: {{ $userLat ? (float) $userLat : 'null' }},
                 patientLng: {{ $userLng ? (float) $userLng : 'null' }},
                 hasPatientLocation: {{ $hasPatientCoords ? 'true' : 'false' }},
-                nearbyNurses: [],
+                nearbyNurses: @json($onlineNurses ?? []),
                 loadingNurses: false,
+                nurseError: false,
+                nurseErrorMessage: '',
                 selectedNurse: null,
 
                 bookingForm: {
@@ -1543,77 +1519,173 @@
                 marker: null,
 
                 initData() {
+                    window.catalogAppInstance = this;
                     this.filterServices();
+
+                    // Cek lokasi tersimpan di localStorage browser
+                    const savedLat = localStorage.getItem('careathome_patient_lat');
+                    const savedLng = localStorage.getItem('careathome_patient_lng');
+                    if (this.patientLat === null && savedLat && savedLng) {
+                        this.patientLat = parseFloat(savedLat);
+                        this.patientLng = parseFloat(savedLng);
+                        this.hasPatientLocation = true;
+                        this.bookingForm.latitude = this.patientLat;
+                        this.bookingForm.longitude = this.patientLng;
+                    }
+
+                    // Render langsung kartu awal jika sudah ada dari SSR
+                    if (Array.isArray(this.nearbyNurses) && this.nearbyNurses.length > 0) {
+                        window.__nearbyNursesCache = this.nearbyNurses;
+                        renderNurseCards(this.nearbyNurses);
+                    }
+
+                    // Muat perawat terdekat via AJAX
+                    this.fetchNearbyNurses(this.nearbyNurses.length === 0);
+
+                    // Polling real-time background setiap 60 detik untuk sinkronisasi status nakes
+                    setInterval(() => {
+                        if (!this.loadingNurses && !this.bookingModalOpen) {
+                            this.fetchNearbyNurses(false);
+                        }
+                    }, 60000);
+
+                    // Deteksi lokasi presisi pengguna di browser jika didukung dan belum tersimpan
                     if (this.patientLat !== null && this.patientLng !== null) {
                         this.hasPatientLocation = true;
-                        this.fetchNearbyNurses();
                     } else if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition(
                             (pos) => {
                                 this.patientLat = parseFloat(pos.coords.latitude.toFixed(6));
                                 this.patientLng = parseFloat(pos.coords.longitude.toFixed(6));
                                 this.hasPatientLocation = true;
-                                if (this.bookingForm.latitude === null) {
+                                if (this.bookingForm.latitude === null || this.bookingForm.latitude === -6.2088) {
                                     this.bookingForm.latitude = this.patientLat;
                                     this.bookingForm.longitude = this.patientLng;
                                 }
-                                this.fetchNearbyNurses();
+                                localStorage.setItem('careathome_patient_lat', this.patientLat);
+                                localStorage.setItem('careathome_patient_lng', this.patientLng);
+                                this.fetchNearbyNurses(false);
                             },
-                            () => {
-                                // Izin lokasi ditolak / belum aktif, fallback tampilkan seluruh perawat online
-                                this.hasPatientLocation = false;
-                                this.fetchNearbyNurses();
+                            (err) => {
+                                console.info('Geolokasi browser belum diizinkan, menggunakan fallback Surabaya default.');
                             },
-                            { enableHighAccuracy: true, timeout: 6000 }
+                            { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
                         );
-                    } else {
-                        this.hasPatientLocation = false;
-                        this.fetchNearbyNurses();
                     }
                 },
 
-                async fetchNearbyNurses() {
-                    this.loadingNurses = true;
+                selectPresetLocation(el) {
+                    if (!el) return;
+                    const lat = el.getAttribute('data-lat') || el.dataset.lat;
+                    const lng = el.getAttribute('data-lng') || el.dataset.lng;
+                    const label = el.getAttribute('data-label') || el.dataset.label || el.innerText.trim();
+                    if (lat && lng) {
+                        this.setManualLocation(parseFloat(lat), parseFloat(lng), label);
+                    }
+                },
+
+                setManualLocation(lat, lng, label = '') {
+                    this.patientLat = parseFloat(lat);
+                    this.patientLng = parseFloat(lng);
+                    this.hasPatientLocation = true;
+                    this.bookingForm.latitude = this.patientLat;
+                    this.bookingForm.longitude = this.patientLng;
+                    localStorage.setItem('careathome_patient_lat', this.patientLat);
+                    localStorage.setItem('careathome_patient_lng', this.patientLng);
+
+                    const labelEl = document.getElementById('selected-location-label');
+                    if (labelEl && label) {
+                        labelEl.textContent = label;
+                    }
+
+                    showLocationToast(`📍 Titik acuan diubah ke: ${label || (lat + ', ' + lng)}`, 'info');
+                    this.fetchNearbyNurses(true);
+                },
+
+                async fetchNearbyNurses(showLoading = true) {
+                    const loadingState = document.getElementById('nurse-loading-state');
+                    const errorState = document.getElementById('nurse-error-state');
+
+                    if (showLoading && (!this.nearbyNurses || this.nearbyNurses.length === 0)) {
+                        this.loadingNurses = true;
+                        if (loadingState) loadingState.classList.remove('hidden');
+                    }
+                    this.nurseError = false;
+                    this.nurseErrorMessage = '';
+                    if (errorState) errorState.classList.add('hidden');
+
                     try {
-                        let url = '/api/v1/perawat/terdekat';
-                        if (this.patientLat !== null && this.patientLng !== null) {
-                            url += `?latitude=${this.patientLat}&longitude=${this.patientLng}`;
-                        }
-                        const res = await fetch(url);
-                        const data = await res.json();
-                        if (res.ok && data.status === 'success') {
-                            this.nearbyNurses = data.data || [];
-                            if (data.meta && typeof data.meta.has_patient_location !== 'undefined') {
-                                this.hasPatientLocation = Boolean(data.meta.has_patient_location);
+                        const effectiveLat = this.patientLat !== null ? this.patientLat : -7.3144;
+                        const effectiveLng = this.patientLng !== null ? this.patientLng : 112.7304;
+
+                        // Mendukung ?lat=...&lng=... serta ?latitude=...&longitude=...
+                        const url = `/api/v1/perawat/terdekat?lat=${encodeURIComponent(effectiveLat)}&lng=${encodeURIComponent(effectiveLng)}&latitude=${encodeURIComponent(effectiveLat)}&longitude=${encodeURIComponent(effectiveLng)}`;
+
+                        const res = await fetch(url, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
                             }
+                        });
+                        const json = await res.json();
+                        if (res.ok && (json.status === 'success' || json.success === true)) {
+                            const list = json.data || [];
+                            this.nearbyNurses = list;
+                            window.__nearbyNursesCache = list;
+                            if (json.meta && typeof json.meta.has_patient_location !== 'undefined') {
+                                this.hasPatientLocation = Boolean(json.meta.has_patient_location);
+                            }
+                            renderNurseCards(list);
+                        } else {
+                            throw new Error(json.message || 'Gagal memuat mitra perawat.');
                         }
                     } catch (e) {
                         console.warn('Gagal memuat perawat terdekat:', e);
+                        this.nurseError = true;
+                        this.nurseErrorMessage = e.message || 'Koneksi terputus saat memuat mitra perawat.';
+                        if (errorState) {
+                            errorState.classList.remove('hidden');
+                            const msgEl = document.getElementById('nurse-error-message');
+                            if (msgEl) msgEl.textContent = this.nurseErrorMessage;
+                        }
                     } finally {
                         this.loadingNurses = false;
+                        if (loadingState) loadingState.classList.add('hidden');
                     }
                 },
 
                 requestBrowserLocation() {
+                    this.loadingNurses = true;
+                    this.nurseError = false;
+                    showLocationToast('⏳ Meminta deteksi GPS dari browser...', 'info');
+
+                    const detectBtn = document.getElementById('btn-detect-gps');
+                    if (detectBtn) {
+                        detectBtn.classList.add('opacity-75');
+                    }
+
                     if (!navigator.geolocation) {
-                        alert('Browser Anda tidak mendukung Geolocation.');
+                        showLocationToast('⚠️ Browser tidak mendukung GPS. Menggunakan acuan Surabaya Selatan (Pos Dinda).', 'warning');
+                        this.setManualLocation(-7.3144, 112.7304, 'Surabaya Selatan (Pos Dinda)');
+                        if (detectBtn) detectBtn.classList.remove('opacity-75');
                         return;
                     }
-                    this.loadingNurses = true;
+
                     navigator.geolocation.getCurrentPosition(
                         (pos) => {
-                            this.patientLat = parseFloat(pos.coords.latitude.toFixed(6));
-                            this.patientLng = parseFloat(pos.coords.longitude.toFixed(6));
-                            this.hasPatientLocation = true;
-                            this.bookingForm.latitude = this.patientLat;
-                            this.bookingForm.longitude = this.patientLng;
-                            this.fetchNearbyNurses();
+                            const lat = parseFloat(pos.coords.latitude.toFixed(6));
+                            const lng = parseFloat(pos.coords.longitude.toFixed(6));
+                            showLocationToast(`🎯 GPS Terdeteksi: ${lat}, ${lng}`, 'success');
+                            this.setManualLocation(lat, lng, 'Lokasi GPS Presisi');
+                            if (detectBtn) detectBtn.classList.remove('opacity-75');
                         },
                         (err) => {
-                            this.loadingNurses = false;
-                            alert('Gagal mendeteksi lokasi GPS: ' + (err.message || 'Izin akses lokasi ditolak') + '. Harap izinkan akses lokasi pada peramban Anda.');
+                            console.warn('GPS browser ditolak/timeout di localhost:', err.message);
+                            showLocationToast('📍 Izin GPS tidak aktif / diblokir. Menggunakan acuan Surabaya Selatan (Pos Dinda).', 'info');
+                            this.setManualLocation(-7.3144, 112.7304, 'Surabaya Selatan (Pos Dinda)');
+                            if (detectBtn) detectBtn.classList.remove('opacity-75');
                         },
-                        { enableHighAccuracy: true, timeout: 8000 }
+                        { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
                     );
                 },
 
@@ -1623,9 +1695,9 @@
                     if (nurse.distance_km !== undefined && nurse.distance_km !== null) {
                         this.bookingForm.distance_km = parseFloat(nurse.distance_km);
                     }
-                    if (nurse.latitude && (this.bookingForm.latitude === null || this.bookingForm.latitude === -6.2088)) {
-                        this.bookingForm.latitude = parseFloat(nurse.latitude);
-                        this.bookingForm.longitude = parseFloat(nurse.longitude);
+                    if (this.bookingForm.latitude === null || this.bookingForm.latitude === -6.2088) {
+                        this.bookingForm.latitude = this.patientLat || -7.3144;
+                        this.bookingForm.longitude = this.patientLng || 112.7304;
                     }
 
                     if (nurse.services && nurse.services.length > 1) {
@@ -1645,9 +1717,9 @@
                     if (nurse.distance_km !== undefined && nurse.distance_km !== null) {
                         this.bookingForm.distance_km = parseFloat(nurse.distance_km);
                     }
-                    if (nurse.latitude && (this.bookingForm.latitude === null || this.bookingForm.latitude === -6.2088)) {
-                        this.bookingForm.latitude = parseFloat(nurse.latitude);
-                        this.bookingForm.longitude = parseFloat(nurse.longitude);
+                    if (this.bookingForm.latitude === null || this.bookingForm.latitude === -6.2088) {
+                        this.bookingForm.latitude = this.patientLat || -7.3144;
+                        this.bookingForm.longitude = this.patientLng || 112.7304;
                     }
                     this.nurseServicePickerOpen = false;
 
@@ -1843,15 +1915,9 @@
                             if (this.patientLat !== null && this.patientLat !== -6.2088) {
                                 lat = this.patientLat;
                                 lng = this.patientLng;
-                            } else if (this.selectedNurse && this.selectedNurse.latitude) {
-                                lat = parseFloat(this.selectedNurse.latitude);
-                                lng = parseFloat(this.selectedNurse.longitude);
-                            } else if (this.nearbyNurses && this.nearbyNurses.length > 0 && this.nearbyNurses[0].latitude) {
-                                lat = parseFloat(this.nearbyNurses[0].latitude);
-                                lng = parseFloat(this.nearbyNurses[0].longitude);
                             } else {
-                                lat = -6.2088;
-                                lng = 106.8456;
+                                lat = -7.3144;
+                                lng = 112.7304;
                             }
                             this.bookingForm.latitude = lat;
                             this.bookingForm.longitude = lng;
@@ -1925,30 +1991,19 @@
                     this.bookingForm.latitude = parseFloat(Number(lat).toFixed(6));
                     this.bookingForm.longitude = parseFloat(Number(lng).toFixed(6));
 
-                    // Titik koordinat acuan pos perawat/nakes yang dipilih
-                    let baseLat = null;
-                    let baseLng = null;
+                    // Titik acuan jarak: prioritaskan distance_km yang telah dihitung server Haversine
+                    let dist = 0.5;
 
-                    if (this.selectedNurse && this.selectedNurse.latitude && this.selectedNurse.longitude) {
-                        baseLat = parseFloat(this.selectedNurse.latitude);
-                        baseLng = parseFloat(this.selectedNurse.longitude);
+                    if (this.selectedNurse && this.selectedNurse.distance_km !== undefined && this.selectedNurse.distance_km !== null) {
+                        dist = parseFloat(this.selectedNurse.distance_km);
                     } else if (this.nearbyNurses && this.nearbyNurses.length > 0) {
                         const matchedNurse = this.nearbyNurses.find(n => 
                             !this.activeService || (n.services && n.services.some(s => s.id === this.activeService.id))
                         ) || this.nearbyNurses[0];
 
-                        if (matchedNurse && matchedNurse.latitude && matchedNurse.longitude) {
-                            baseLat = parseFloat(matchedNurse.latitude);
-                            baseLng = parseFloat(matchedNurse.longitude);
+                        if (matchedNurse && matchedNurse.distance_km !== undefined && matchedNurse.distance_km !== null) {
+                            dist = parseFloat(matchedNurse.distance_km);
                         }
-                    }
-
-                    let dist = 0.5;
-                    if (baseLat !== null && baseLng !== null) {
-                        dist = this.haversineDistance(baseLat, baseLng, this.bookingForm.latitude, this.bookingForm.longitude);
-                    } else {
-                        // Jika belum ada perawat spesifik, beri jarak default aman 0.5 km
-                        dist = 0.5;
                     }
 
                     // Format jarak 1 desimal. Jika kurang dari 0.1 km (sama persis), tetapkan 0 km
@@ -2023,6 +2078,7 @@
                     })
                     .catch(() => {
                         // Fallback ke hitungan lokal jika offline
+                    });
                 },
 
                 handlePhotoUpload(event) {
@@ -2153,6 +2209,185 @@
                 }
             };
         }
+
+        /**
+         * Toast Notifikasi Lokasi & Status Nakes
+         */
+        function showLocationToast(message, type = 'info') {
+            let toast = document.getElementById('location-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'location-toast';
+                document.body.appendChild(toast);
+            }
+
+            let bgClass = 'bg-slate-900 text-white shadow-slate-900/40';
+            if (type === 'success') {
+                bgClass = 'bg-emerald-700 text-white shadow-emerald-900/30';
+            } else if (type === 'warning') {
+                bgClass = 'bg-amber-600 text-white shadow-amber-900/30';
+            } else if (type === 'error') {
+                bgClass = 'bg-rose-700 text-white shadow-rose-900/30';
+            }
+
+            toast.className = `fixed bottom-5 right-5 z-50 max-w-sm px-4 py-3 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2.5 transition-all duration-300 transform translate-y-0 opacity-100 ${bgClass}`;
+            toast.innerHTML = message;
+
+            clearTimeout(window.__toastTimer);
+            window.__toastTimer = setTimeout(() => {
+                if (toast) {
+                    toast.style.transform = 'translateY(40px)';
+                    toast.style.opacity = '0';
+                }
+            }, 4500);
+        }
+
+        /**
+         * Render Kartu Mitra Perawat Aktif ke DOM (#nurse-cards-container / #nurse-list-container)
+         */
+        function renderNurseCards(nurses) {
+            const container = document.getElementById('nurse-cards-container') || document.getElementById('nurse-list-container');
+            if (!container) return;
+
+            // Kosongkan container sebelum mengisi data baru
+            container.innerHTML = '';
+
+            if (!Array.isArray(nurses) || nurses.length === 0) {
+                showLocationToast('⚠️ Tidak ada perawat aktif ditemukan di sekitar lokasi ini.', 'warning');
+                container.innerHTML = `
+                    <div class="col-span-full py-10 px-6 text-center rounded-3xl bg-amber-50/70 border border-dashed border-amber-300 space-y-3">
+                        <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-3xl mx-auto shadow-xs">🛵</div>
+                        <div class="space-y-1">
+                            <h4 class="text-sm font-bold text-slate-800">Tidak ada perawat aktif ditemukan di sekitar titik lokasi ini</h4>
+                            <p class="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                                Saat ini belum ada mitra perawat yang berstatus online dalam radius maksimal 10 km dari lokasi yang dipilih.
+                            </p>
+                        </div>
+                        <div class="pt-2 flex flex-wrap items-center justify-center gap-2">
+                            <button type="button" onclick="window.catalogAppInstance && window.catalogAppInstance.setManualLocation(-7.3144, 112.7304, 'Surabaya Selatan (Pos Dinda)')"
+                                class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm cursor-pointer">
+                                📍 Pilih Acuan Surabaya Selatan (Pos Dinda)
+                            </button>
+                            <button type="button" onclick="window.catalogAppInstance && window.catalogAppInstance.setManualLocation(-7.2575, 112.7521, 'Surabaya Pusat (Gubeng)')"
+                                class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold transition shadow-2xs cursor-pointer">
+                                📍 Surabaya Pusat (Gubeng)
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            nurses.forEach(nurse => {
+                const name = nurse.name || nurse.nama || 'Ns. Mitra Perawat';
+                const initials = name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'NS';
+                const spec = nurse.specialization || nurse.spesialisasi || 'Perawat Umum Homecare';
+                const rating = (nurse.rating_avg !== undefined && nurse.rating_avg !== null) ? Number(nurse.rating_avg).toFixed(1) : (nurse.rating ? Number(nurse.rating).toFixed(1) : '5.0');
+                const reviews = nurse.total_reviews || 0;
+                const distanceStr = nurse.formatted_distance || (nurse.distance_km !== null && nurse.distance_km !== undefined ? `${nurse.distance_km} km dari lokasi Anda` : (nurse.distance || 'Aktif Online'));
+                const photo = nurse.profile_photo || nurse.foto;
+
+                let servicesHtml = '';
+                if (Array.isArray(nurse.services) && nurse.services.length > 0) {
+                    servicesHtml = nurse.services.map(s => `
+                        <button type="button" 
+                            onclick="window.openNurseServiceWithService(${nurse.nurse_id || nurse.id}, ${s.id})"
+                            class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 font-medium border border-slate-200 hover:border-emerald-300 transition-all flex items-center gap-1 cursor-pointer">
+                            <span>${s.image_emoji || '🩺'}</span>
+                            <span class="hover:underline">${s.name}</span>
+                        </button>
+                    `).join('');
+                } else {
+                    servicesHtml = '<span class="text-[10px] text-slate-400 italic">Semua layanan standar homecare</span>';
+                }
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md transition p-5 flex flex-col justify-between space-y-4';
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            ${photo
+                                ? `<img src="${photo}" alt="${name}" class="w-11 h-11 rounded-2xl object-cover shadow-sm border border-slate-200">`
+                                : `<div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center shadow-sm">${initials}</div>`
+                            }
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <h4 class="text-xs font-bold text-slate-900">${name}</h4>
+                                    <span class="text-emerald-600 text-xs font-bold" title="Terverifikasi STR/SIP Kemenkes">✓</span>
+                                </div>
+                                <span class="text-[10px] text-slate-500 block">${spec}</span>
+                                <div class="flex items-center gap-1 mt-0.5 text-[11px] text-amber-500 font-bold">
+                                    <span>⭐</span>
+                                    <span>${rating}</span>
+                                    <span class="text-slate-400 font-normal">(${reviews} ulasan)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                <span>📍</span>
+                                <span>${distanceStr}</span>
+                            </span>
+                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>Online</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Layanan Disediakan:</span>
+                            <span class="text-[10px] text-emerald-600 font-semibold">${nurse.services ? nurse.services.length + ' pilihan' : ''}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            ${servicesHtml}
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100">
+                        <button type="button" 
+                            onclick="window.openBookingWithNurse(${nurse.nurse_id || nurse.id})"
+                            class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 hover:-translate-y-0.5 cursor-pointer">
+                            <span>Pilih Perawat / Pesan</span>
+                            <span>&rarr;</span>
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        window.openBookingWithNurse = function(nurseId) {
+            const list = window.__nearbyNursesCache || (window.catalogAppInstance ? window.catalogAppInstance.nearbyNurses : []);
+            const nurse = list.find(n => (n.nurse_id == nurseId || n.id == nurseId));
+            if (nurse && window.catalogAppInstance) {
+                window.catalogAppInstance.openNurseServicePicker(nurse);
+            }
+        };
+
+        window.openNurseServiceWithService = function(nurseId, serviceId) {
+            const list = window.__nearbyNursesCache || (window.catalogAppInstance ? window.catalogAppInstance.nearbyNurses : []);
+            const nurse = list.find(n => (n.nurse_id == nurseId || n.id == nurseId));
+            if (nurse && window.catalogAppInstance) {
+                const service = (nurse.services || []).find(s => s.id == serviceId);
+                if (service) {
+                    window.catalogAppInstance.selectNurseWithSpecificService(nurse, service);
+                } else {
+                    window.catalogAppInstance.openNurseServicePicker(nurse);
+                }
+            }
+        };
+
+        // Render awal saat dokumen siap
+        document.addEventListener('DOMContentLoaded', function() {
+            const initialNurses = @json($onlineNurses ?? []);
+            if (Array.isArray(initialNurses) && initialNurses.length > 0) {
+                window.__nearbyNursesCache = initialNurses;
+                renderNurseCards(initialNurses);
+            }
+        });
     </script>
 </body>
 </html>

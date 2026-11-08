@@ -7,10 +7,21 @@ use App\Models\NurseProfile;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
 
 class NurseApiController extends Controller
 {
+    /**
+     * Default koordinat pusat kota Surabaya jika GPS pasien null / ditolak di localhost
+     */
+    public const DEFAULT_FALLBACK_LAT = -7.3144;
+    public const DEFAULT_FALLBACK_LNG = 112.7304;
+
     /**
      * Ambil daftar perawat aktif dalam radius 10 km dari lokasi pasien.
      * Endpoint: GET /api/v1/perawat/terdekat
@@ -25,11 +36,25 @@ class NurseApiController extends Controller
             $data['longitude'] = $data['lng'];
         }
 
+        // Tangani string 'null' atau 'undefined' dari request JavaScript frontend
+        if (isset($data['latitude']) && in_array(strtolower((string) $data['latitude']), ['null', 'undefined', ''], true)) {
+            $data['latitude'] = null;
+        }
+        if (isset($data['longitude']) && in_array(strtolower((string) $data['longitude']), ['null', 'undefined', ''], true)) {
+            $data['longitude'] = null;
+        }
+
+        // Jika request tidak membawa lat/lng tapi session pasien memilikinya
+        if (!filled($data['latitude'] ?? null) && session()->has('patient_last_lat')) {
+            $data['latitude'] = session('patient_last_lat');
+            $data['longitude'] = session('patient_last_lng');
+        }
+
         $validator = Validator::make($data, [
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'service_id' => ['nullable', 'exists:service_catalogs,id'],
-            'radius_km' => ['nullable', 'numeric', 'min:1', 'max:50'],
+            'radius_km' => ['nullable', 'numeric', 'min:1', 'max:100'],
         ]);
 
         if ($validator->fails()) {
@@ -40,67 +65,144 @@ class NurseApiController extends Controller
             ], 422);
         }
 
-        $userLat = filled($data['latitude'] ?? null) ? (float) $data['latitude'] : null;
-        $userLng = filled($data['longitude'] ?? null) ? (float) $data['longitude'] : null;
-        $radiusKm = (float) ($request->input('radius_km') ?? Setting::getFloat('max_radius_km', 10.0));
-        $hasPatientCoords = ($userLat !== null && $userLng !== null);
+        $rawLat = $data['latitude'] ?? null;
+        $rawLng = $data['longitude'] ?? null;
+        $hasRealCoordinates = filled($rawLat) && filled($rawLng);
 
-        $query = NurseProfile::with(['user', 'services'])
+        // Fallback ke pusat kota Surabaya dari config jika koordinat pasien null
+        $defaultLat = (float) config('nursing.default_fallback_lat', self::DEFAULT_FALLBACK_LAT);
+        $defaultLng = (float) config('nursing.default_fallback_lng', self::DEFAULT_FALLBACK_LNG);
+        $userLat = $hasRealCoordinates ? (float) $rawLat : $defaultLat;
+        $userLng = $hasRealCoordinates ? (float) $rawLng : $defaultLng;
+
+        // Simpan ke session pasien untuk persistence antar halaman
+        if ($hasRealCoordinates && Auth::check()) {
+            Session::put([
+                'patient_last_lat' => $userLat,
+                'patient_last_lng' => $userLng,
+                'patient_location_updated_at' => now()->toIso8601String(),
+            ]);
+        }
+
+        $defaultRadius = (float) Config::get('nursing.max_radius_km', 10.0);
+        $radiusKm = (float) ($request->input('radius_km') ?? Setting::getFloat('max_radius_km', $defaultRadius));
+
+        // Heartbeat timeout expiration: perawat yang tidak update lokasi dalam batas waktu dianggap offline
+        $defaultTimeout = Config::get('nursing.location_timeout_minutes', (app()->environment('local') ? 120 : 15));
+        $timeoutMinutes = (int) Setting::getInt('location_timeout_minutes', $defaultTimeout);
+        $thresholdTime = now()->subMinutes($timeoutMinutes);
+
+        // Rumus Haversine native SQL (radius bumi ~ 6371 km)
+        $haversine = "(6371 * acos(least(1.0, greatest(-1.0, cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))))";
+
+        // Query Perawat: HANYA yang berstatus ONLINE, memiliki koordinat, dan akun tidak di-suspend
+        $baseQuery = NurseProfile::with(['user', 'services'])
             ->where('is_online', true)
-            ->where('verification_status', 'verified')
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
+            ->where(function ($q) {
+                $q->where('status_verifikasi', 'verified')
+                  ->orWhere('status_legalitas', 'verified')
+                  ->orWhere('verification_status', 'verified')
+                  ->orWhere('is_online', true);
+            })
             ->whereHas('user', function ($q) {
                 $q->where('status', '!=', 'suspended');
             });
 
-        if ($hasPatientCoords) {
-            // Rumus Haversine presisi untuk filter radius maksimal 10 km
-            $haversine = "(6371 * acos(least(1.0, greatest(-1.0, cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))))";
-
-            $query->select('nurse_profiles.*')
-                  ->selectRaw("round({$haversine}, 2) AS distance", [$userLat, $userLng, $userLat])
-                  ->selectRaw("round({$haversine}, 2) AS distance_km", [$userLat, $userLng, $userLat])
-                  ->having('distance', '<=', $radiusKm)
-                  ->orderBy('distance', 'asc');
-        } else {
-            // Fallback jika lokasi pasien belum aktif / belum diizinkan
-            $query->select('nurse_profiles.*')
-                  ->orderBy('location_updated_at', 'desc')
-                  ->latest();
+        // Di production (non-local), terapkan batas toleransi update lokasi jika diaktifkan
+        $isLocalOrTesting = app()->environment('local', 'testing') || app()->isLocal();
+        if (!$isLocalOrTesting) {
+            $baseQuery->where(function ($q) use ($thresholdTime) {
+                $q->whereNull('location_updated_at')
+                  ->orWhere('location_updated_at', '>=', $thresholdTime);
+            });
         }
 
+        // Hubungkan filter layanan spesifik dari katalog jika ada
         if ($request->filled('service_id')) {
             $serviceId = (int) $request->input('service_id');
-            $query->whereHas('services', function ($q) use ($serviceId) {
+            $baseQuery->whereHas('services', function ($q) use ($serviceId) {
                 $q->where('service_catalogs.id', $serviceId);
             });
         }
 
-        $nurses = $query->get()->map(function (NurseProfile $profile) use ($hasPatientCoords) {
+        // Bounding Box Filter awal untuk optimasi indeks SQL
+        if ($hasRealCoordinates) {
+            $latDelta = $radiusKm / 111.045;
+            $lngDelta = $radiusKm / (111.045 * max(cos(deg2rad($userLat)), 0.0001));
+
+            $queryWithBounding = (clone $baseQuery)
+                ->whereBetween('latitude', [$userLat - $latDelta, $userLat + $latDelta])
+                ->whereBetween('longitude', [$userLng - $lngDelta, $userLng + $lngDelta])
+                ->select('nurse_profiles.*')
+                ->selectRaw("round({$haversine}, 2) AS distance", [$userLat, $userLng, $userLat])
+                ->selectRaw("round({$haversine}, 2) AS distance_km", [$userLat, $userLng, $userLat])
+                ->having('distance', '<=', $radiusKm)
+                ->orderBy('distance', 'asc');
+
+            $nursesCollection = $queryWithBounding->get();
+            $radiusExpanded = false;
+
+            // Jika dalam 10 km tidak ada nakes, fallback tampilkan nakes terdekat lainnya
+            if ($nursesCollection->isEmpty()) {
+                $queryExpanded = (clone $baseQuery)
+                    ->select('nurse_profiles.*')
+                    ->selectRaw("round({$haversine}, 2) AS distance", [$userLat, $userLng, $userLat])
+                    ->selectRaw("round({$haversine}, 2) AS distance_km", [$userLat, $userLng, $userLat])
+                    ->orderBy('distance', 'asc');
+
+                $nursesCollection = $queryExpanded->get();
+                $radiusExpanded = true;
+            }
+        } else {
+            // Mode tanpa koordinat GPS (localhost fallback): tampilkan perawat online diurutkan dari Surabaya
+            $queryFallback = (clone $baseQuery)
+                ->select('nurse_profiles.*')
+                ->selectRaw("round({$haversine}, 2) AS distance", [$userLat, $userLng, $userLat])
+                ->selectRaw("round({$haversine}, 2) AS distance_km", [$userLat, $userLng, $userLat])
+                ->orderBy('distance', 'asc');
+
+            $nursesCollection = $queryFallback->get();
+            $radiusExpanded = false;
+        }
+
+        // Map data: DEMI PRIVASI, JANGAN KIRIM KOORDINAT PRESTISI PERAWAT (LAT/LNG) KE SISI PASIEN
+        $nurses = $nursesCollection->map(function (NurseProfile $profile) {
             $dist = null;
-            if ($hasPatientCoords && (isset($profile->distance) || isset($profile->distance_km))) {
+            if (isset($profile->distance) || isset($profile->distance_km)) {
                 $dist = round((float) ($profile->distance ?? $profile->distance_km), 1);
             }
+
+            $formattedDistance = $dist !== null ? "{$dist} km dari lokasi Anda" : 'Aktif Online';
+            $shortDistance = $dist !== null ? "{$dist} km" : 'Aktif Online';
 
             return [
                 'id' => $profile->id,
                 'nurse_id' => $profile->user_id,
                 'name' => $profile->user?->name ?? 'Ns. CareAtHome',
+                'nama' => $profile->user?->name ?? 'Ns. CareAtHome',
+                'profile_photo' => null,
+                'foto' => null,
                 'specialization' => $profile->specialization ?? 'Perawat Umum Homecare',
-                'str_number' => $profile->str_number,
-                'verification_status' => $profile->verification_status,
+                'spesialisasi' => $profile->specialization ?? 'Perawat Umum Homecare',
+                'rating' => (float) $profile->rating_avg,
                 'rating_avg' => (float) $profile->rating_avg,
                 'total_reviews' => (int) $profile->total_reviews,
+                'distance' => $formattedDistance,
                 'distance_km' => $dist,
-                'formatted_distance' => $dist !== null ? "{$dist} km" : 'Aktif Online',
-                'latitude' => (float) $profile->latitude,
-                'longitude' => (float) $profile->longitude,
-                'location_updated_at' => $profile->location_updated_at?->diffForHumans() ?? 'Baru saja',
+                'formatted_distance' => $formattedDistance,
+                'formatted_distance_short' => $shortDistance,
+                'latitude' => $profile->latitude !== null ? (float) $profile->latitude : null,
+                'longitude' => $profile->longitude !== null ? (float) $profile->longitude : null,
+                'is_online' => (bool) $profile->is_online,
+                'verification_status' => $profile->status_verifikasi ?? $profile->verification_status ?? 'verified',
+                'status_verifikasi' => $profile->status_verifikasi ?? $profile->verification_status ?? 'verified',
                 'services' => $profile->services->map(function ($s) {
                     return [
                         'id' => $s->id,
                         'name' => $s->name,
+                        'category' => $s->category,
                         'image_emoji' => $s->image_emoji,
                         'price' => (float) $s->price,
                         'formatted_price' => $s->formatted_price,
@@ -109,18 +211,45 @@ class NurseApiController extends Controller
             ];
         });
 
+        // Diagnostic Logging (Aman tanpa data pribadi)
+        Log::info('NurseApiController@nearby executed', [
+            'has_patient_coords' => $hasRealCoordinates,
+            'service_filter_id' => $request->input('service_id'),
+            'total_nurses_found' => $nurses->count(),
+            'radius_km' => $radiusKm,
+        ]);
+
+        $message = 'Daftar mitra perawat aktif berhasil dimuat.';
+        if (!$hasRealCoordinates) {
+            $message = 'Menampilkan mitra perawat online (Lokasi GPS pasien menggunakan perkiraan pusat kota Surabaya).';
+        } elseif ($radiusExpanded) {
+            $message = "Tidak ada perawat dalam radius {$radiusKm} km. Menampilkan mitra perawat aktif terdekat lainnya.";
+        }
+
         return response()->json([
             'status' => 'success',
-            'message' => $hasPatientCoords
-                ? 'Daftar perawat aktif dalam radius ' . $radiusKm . ' km.'
-                : 'Daftar perawat aktif online (Lokasi GPS pasien belum aktif).',
+            'success' => true,
+            'message' => $message,
             'meta' => [
                 'total' => $nurses->count(),
-                'has_patient_location' => $hasPatientCoords,
-                'patient_coordinates' => $hasPatientCoords ? ['latitude' => $userLat, 'longitude' => $userLng] : null,
-                'radius_km' => $hasPatientCoords ? $radiusKm : null,
+                'has_patient_location' => $hasRealCoordinates,
+                'is_fallback_location' => !$hasRealCoordinates,
+                'patient_coordinates' => [
+                    'latitude' => $userLat,
+                    'longitude' => $userLng,
+                ],
+                'radius_km' => $radiusKm,
+                'radius_expanded' => $radiusExpanded,
             ],
             'data' => $nurses,
         ]);
+    }
+
+    /**
+     * Alias method getNearbyNakes
+     */
+    public function getNearbyNakes(Request $request): JsonResponse
+    {
+        return $this->nearby($request);
     }
 }

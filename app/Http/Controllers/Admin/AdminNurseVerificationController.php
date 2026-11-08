@@ -13,7 +13,10 @@ use App\Services\KtkiValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -216,26 +219,28 @@ class AdminNurseVerificationController extends Controller
 
         // Jika tersimpan di S3
         if ($driver === 's3') {
-            $disk = Storage::disk('s3');
-            if (method_exists($disk, 'temporaryUrl')) {
-                return redirect()->away($disk->temporaryUrl($document->file_path, now()->addMinutes(15)));
+            try {
+                return redirect()->away(Storage::temporaryUrl($document->file_path, now()->addMinutes(15)));
+            } catch (\Throwable $e) {
+                return redirect()->away(Storage::url($document->file_path));
             }
-            return redirect()->away($disk->url($document->file_path));
         }
 
         // Jika local / public
-        $disk = Storage::disk($driver);
-        if (!$disk->exists($document->file_path)) {
+        if (!Storage::disk($driver)->exists($document->file_path)) {
             if (Storage::disk('public')->exists($document->file_path)) {
-                $disk = Storage::disk('public');
+                $driver = 'public';
             } else {
                 abort(404, 'Berkas dokumen tidak ditemukan di server.');
             }
         }
 
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk($driver);
         $filePath = $disk->path($document->file_path);
+
         return response()->file($filePath, [
-            'Content-Type' => $document->mime_type ?: mime_content_type($filePath),
+            'Content-Type' => $document->mime_type ?: (file_exists($filePath) ? mime_content_type($filePath) : 'application/octet-stream'),
             'Content-Disposition' => 'inline; filename="' . ($document->original_name ?: basename($filePath)) . '"',
         ]);
     }

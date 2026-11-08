@@ -92,6 +92,8 @@ class DemoCareAtHomeSeeder extends Seeder
                 'longitude' => 106.8400000,
                 'location_updated_at' => now(),
                 'verification_status' => 'verified',
+                'status_verifikasi' => 'verified',
+                'status_legalitas' => 'verified',
                 'reviewed_by' => $admin->id,
                 'reviewed_at' => now()->subWeeks(2),
                 'str_number' => 'STR-12345678-2026',
@@ -128,6 +130,8 @@ class DemoCareAtHomeSeeder extends Seeder
                 'longitude' => 106.8300000,
                 'location_updated_at' => now(),
                 'verification_status' => 'verified',
+                'status_verifikasi' => 'verified',
+                'status_legalitas' => 'verified',
                 'reviewed_by' => $admin->id,
                 'reviewed_at' => now()->subWeeks(1),
                 'str_number' => 'STR-87654321-2027',
@@ -163,6 +167,8 @@ class DemoCareAtHomeSeeder extends Seeder
                 'longitude' => 106.8166000,
                 'location_updated_at' => now(),
                 'verification_status' => 'verified',
+                'status_verifikasi' => 'verified',
+                'status_legalitas' => 'verified',
                 'reviewed_by' => $admin->id,
                 'reviewed_at' => now()->subDays(5),
                 'str_number' => 'STR-11223344-2028',
@@ -194,6 +200,8 @@ class DemoCareAtHomeSeeder extends Seeder
                 'longitude' => 106.8450000,
                 'location_updated_at' => now()->subHours(1),
                 'verification_status' => 'verified',
+                'status_verifikasi' => 'verified',
+                'status_legalitas' => 'verified',
                 'reviewed_by' => $admin->id,
                 'reviewed_at' => now()->subDays(10),
             ]
@@ -241,6 +249,110 @@ class DemoCareAtHomeSeeder extends Seeder
             );
         }
         Wallet::firstOrCreate(['user_id' => $perawat5->id], ['balance' => 0]);
+
+        // 9b. Perawat 6: Dinda (Surabaya Pusat - Verified, Online Aktif)
+        $perawatDinda = User::firstOrCreate(
+            ['email' => 'dinda@careathome.com'],
+            [
+                'name' => 'Dinda',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'status' => 'active',
+            ]
+        );
+        $perawatDinda->syncRoles(['perawat']);
+
+        $profileDinda = NurseProfile::updateOrCreate(
+            ['user_id' => $perawatDinda->id],
+            [
+                'nik' => '1234567898',
+                'str_number' => '12344321-0987',
+                'str_expired_at' => '2030-12-12',
+                'str_expiry' => '2030-12-12',
+                'sip_number' => '466.2/dinkes-433',
+                'sip_expired_at' => '2031-08-15',
+                'sip_expiry' => '2031-08-15',
+                'sip_institution' => 'Puskesmas Gambir',
+                'specialization' => 'Perawat Medikal Bedah',
+                'verification_status' => 'verified',
+                'is_online' => true,
+                'is_available' => true,
+                'latitude' => -7.3143043,
+                'longitude' => 112.7303940,
+                'location_updated_at' => now(),
+                'rating_avg' => 5.0,
+                'total_reviews' => 1,
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => now()->subDays(1),
+            ]
+        );
+        $profileDinda->services()->sync($serviceIds);
+        Wallet::firstOrCreate(['user_id' => $perawatDinda->id], ['balance' => 0]);
+
+        // 9c. Perawat 7: Dealova (Surabaya - Verified, Online Aktif)
+        $perawatDealova = User::firstOrCreate(
+            ['email' => 'dealova@careathome.com'],
+            [
+                'name' => 'Dealova',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'status' => 'active',
+            ]
+        );
+        $perawatDealova->syncRoles(['perawat']);
+
+        $profileDealova = NurseProfile::updateOrCreate(
+            ['user_id' => $perawatDealova->id],
+            [
+                'nik' => '1234567892006',
+                'str_number' => '12345678-09876',
+                'str_expired_at' => '2030-03-12',
+                'str_expiry' => '2030-03-12',
+                'sip_number' => '446.0/dinkes-00/11',
+                'specialization' => 'Pemberian Infus & Injeksi Berkala',
+                'verification_status' => 'verified',
+                'is_online' => true,
+                'is_available' => true,
+                'latitude' => -7.3184190,
+                'longitude' => 112.7307530,
+                'location_updated_at' => now(),
+                'rating_avg' => 5.0,
+                'total_reviews' => 1,
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => now()->subDays(2),
+            ]
+        );
+        $profileDealova->services()->sync(array_slice($serviceIds, 0, 5));
+        Wallet::firstOrCreate(['user_id' => $perawatDealova->id], ['balance' => 0]);
+
+        // 9d. Perawat 8: zahwa aisya (Surabaya - Verified, Online Aktif)
+        $perawatZahwa = User::firstOrCreate(
+            ['email' => 'zahwa@careathome.com'],
+            [
+                'name' => 'zahwa aisya',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'status' => 'active',
+            ]
+        );
+        $perawatZahwa->syncRoles(['perawat']);
+
+        $profileZahwa = NurseProfile::updateOrCreate(
+            ['user_id' => $perawatZahwa->id],
+            [
+                'specialization' => 'Perawat Umum Homecare',
+                'verification_status' => 'verified',
+                'is_online' => true,
+                'is_available' => true,
+                'latitude' => -7.3184190,
+                'longitude' => 112.7307530,
+                'location_updated_at' => now(),
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => now()->subDays(3),
+            ]
+        );
+        $profileZahwa->services()->sync($serviceIds);
+        Wallet::firstOrCreate(['user_id' => $perawatZahwa->id], ['balance' => 0]);
 
         // 10. Sample Pesanan Selesai & Pembayaran (15% Admin, 85% Perawat)
         // Hitung: Total 100.000 -> Admin 15.000, Perawat 85.000
