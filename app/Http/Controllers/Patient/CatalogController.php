@@ -7,6 +7,7 @@ use App\Models\NurseProfile;
 use App\Models\ServiceCatalog;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Session;
 use Illuminate\View\View;
 
 class CatalogController extends Controller
@@ -67,9 +68,9 @@ class CatalogController extends Controller
         }
 
         // Ambil dari session jika request kosong
-        if ($rawLat === null && session()->has('patient_last_lat')) {
-            $rawLat = session('patient_last_lat');
-            $rawLng = session('patient_last_lng');
+        if ($rawLat === null && Session::has('patient_last_lat')) {
+            $rawLat = Session::get('patient_last_lat');
+            $rawLng = Session::get('patient_last_lng');
         }
 
         $hasPatientCoords = filled($rawLat) && filled($rawLng);

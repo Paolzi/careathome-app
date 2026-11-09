@@ -58,6 +58,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('perawat/feed', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'index'])->name('perawat.feed');
         Route::post('perawat/orders/{order}/accept', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'accept'])->name('perawat.orders.accept');
         Route::post('perawat/orders/{order}/decline', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'decline'])->name('perawat.orders.decline');
+        Route::post('perawat/orders/{order}/status', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'updateStatus'])->name('perawat.orders.status');
         Route::get('perawat/finansial', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'financialHistory'])->name('perawat.finansial');
     });
 

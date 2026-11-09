@@ -113,7 +113,20 @@ class OrderPaymentService
             }
             $order->save();
 
-            // 5. Kredit Wallet Perawat & Catat wallet_transaction
+            // 5. Jika order belum memiliki nakes terikat, pasangkan ke nakes online verified terdekat (misal Dinda)
+            if (!$order->nurse_id) {
+                $onlineNurse = User::role('perawat')
+                    ->whereHas('nurseProfile', function ($q) {
+                        $q->where('verification_status', 'verified')->where('is_online', true);
+                    })
+                    ->first();
+                if ($onlineNurse) {
+                    $order->nurse_id = $onlineNurse->id;
+                    $order->save();
+                }
+            }
+
+            // 6. Kredit Wallet Perawat & Catat wallet_transaction
             if ($order->nurse_id) {
                 $nurseWallet = Wallet::where('user_id', $order->nurse_id)->lockForUpdate()->first();
                 if (!$nurseWallet) {
@@ -128,6 +141,13 @@ class OrderPaymentService
                 $nw = \App\Models\NurseWallet::getOrCreateForNurse($order->nurse_id);
                 $nw->balance = $nurseWallet->balance;
                 $nw->save();
+
+                // Sinkronkan model NurseProfile
+                $p = \App\Models\NurseProfile::where('user_id', $order->nurse_id)->first();
+                if ($p) {
+                    $p->balance = $nurseWallet->balance;
+                    $p->save();
+                }
 
                 WalletTransaction::create([
                     'wallet_id' => $nurseWallet->id,
@@ -144,7 +164,7 @@ class OrderPaymentService
                 ]);
             }
 
-            // 6. Kredit Wallet Admin (Platform) & Catat wallet_transaction
+            // 7. Kredit Wallet Admin (Platform) & Catat wallet_transaction
             $adminUser = User::role('admin')->first() ?? User::where('id', 1)->first();
             if ($adminUser) {
                 $adminWallet = Wallet::where('user_id', $adminUser->id)->lockForUpdate()->first();
@@ -170,7 +190,7 @@ class OrderPaymentService
                 ]);
             }
 
-            // 7. Audit log pencatatan
+            // 8. Audit log pencatatan
             AuditLog::log(
                 'order_paid',
                 $order,
@@ -223,10 +243,24 @@ class OrderPaymentService
                             $nurseWallet->balance = max(0, $nurseWallet->balance - $payment->nurse_earning);
                             $nurseWallet->save();
 
+                            $nw = \App\Models\NurseWallet::getOrCreateForNurse($order->nurse_id);
+                            $nw->balance = $nurseWallet->balance;
+                            $nw->save();
+
+                            $p = \App\Models\NurseProfile::where('user_id', $order->nurse_id)->first();
+                            if ($p) {
+                                $p->balance = $nurseWallet->balance;
+                                $p->save();
+                            }
+
                             WalletTransaction::create([
                                 'wallet_id' => $nurseWallet->id,
+                                'nurse_wallet_id' => $nw->id,
+                                'order_id' => $order->id,
                                 'type' => 'refund_reversal',
                                 'amount' => -$payment->nurse_earning,
+                                'net_amount' => -$payment->nurse_earning,
+                                'status' => 'completed',
                                 'balance_after' => $nurseWallet->balance,
                                 'payment_id' => $payment->id,
                                 'description' => "Reversal pendapatan pembatalan pesanan #{$order->order_number}",

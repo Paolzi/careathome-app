@@ -39,16 +39,26 @@ class OrderScheduleController extends Controller
             $currentUser = $defaultPatient;
         }
 
-        $activeOrders = Order::with(['serviceCatalog', 'nurse', 'latestPayment', 'eReport'])
-            ->where('patient_id', $userId)
+        $activeOrders = Order::with(['serviceCatalog', 'nurse.nurseProfile', 'latestPayment', 'eReport'])
+            ->where(function ($query) use ($userId, $currentUser) {
+                $query->where('patient_id', $userId);
+                if ($currentUser && $currentUser->name) {
+                    $query->orWhere('patient_name', $currentUser->name);
+                }
+            })
             ->whereIn('status', ['menunggu_konfirmasi', 'diterima', 'dalam_perjalanan', 'tiba', 'tindakan_berlangsung'])
             ->orderBy('scheduled_date', 'asc')
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $pastOrders = Order::with(['serviceCatalog', 'nurse', 'latestPayment', 'eReport.photos', 'review'])
-            ->where('patient_id', $userId)
-            ->whereIn('status', ['selesai', 'completed', 'dibatalkan'])
+        $pastOrders = Order::with(['serviceCatalog', 'nurse.nurseProfile', 'latestPayment', 'eReport.photos', 'review'])
+            ->where(function ($query) use ($userId, $currentUser) {
+                $query->where('patient_id', $userId);
+                if ($currentUser && $currentUser->name) {
+                    $query->orWhere('patient_name', $currentUser->name);
+                }
+            })
+            ->whereIn('status', ['selesai', 'completed', 'dibatalkan', 'ditolak', 'declined'])
             ->orderBy('scheduled_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -78,14 +88,14 @@ class OrderScheduleController extends Controller
         [$activeOrders, $pastOrders] = $this->getPatientOrders($request);
 
         $unpaidOrders = $activeOrders->where('payment_status', '!=', 'paid');
-        $escrowHeldOrders = $activeOrders->where('payment_status', 'paid');
+        $escrowHeldOrders = $activeOrders->concat($pastOrders)->where('payment_status', 'paid');
 
         return view('pages.patient.payment', [
             'unpaidOrders' => $unpaidOrders,
             'escrowHeldOrders' => $escrowHeldOrders,
             'totalPending' => $unpaidOrders->count(),
             'totalHeld' => $escrowHeldOrders->count(),
-            'totalOrders' => $activeOrders->count(),
+            'totalOrders' => $activeOrders->count() + $pastOrders->count(),
             'paymentService' => $this->paymentService,
         ]);
     }
@@ -101,7 +111,7 @@ class OrderScheduleController extends Controller
             return $o->isCancellable();
         });
 
-        $cancelledOrders = $pastOrders->where('status', 'dibatalkan');
+        $cancelledOrders = $pastOrders->whereIn('status', ['dibatalkan', 'ditolak', 'declined']);
 
         return view('pages.patient.cancellation', [
             'cancellableOrders' => $cancellableOrders,
@@ -195,7 +205,11 @@ class OrderScheduleController extends Controller
         $currentUser = Auth::user();
         $userId = $currentUser?->id;
 
-        if ($userId && (int) $orderModel->patient_id !== (int) $userId && !($currentUser?->hasRole('admin') ?? false)) {
+        $isOwner = !$userId
+            || ((int) $orderModel->patient_id === (int) $userId)
+            || ($currentUser && strcasecmp((string) $orderModel->patient_name, (string) $currentUser->name) === 0);
+
+        if (!$isOwner && !($currentUser?->hasRole('admin') ?? false)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Anda tidak memiliki otorisasi untuk membatalkan pesanan ini.',
@@ -205,20 +219,16 @@ class OrderScheduleController extends Controller
         if (!$orderModel->isCancellable()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pesanan dengan status "' . $orderModel->status_label . '" sudah tidak dapat dibatalkan secara mandiri karena perawat telah dalam perjalanan atau tindakan telah berlangsung.',
+                'message' => 'Pesanan dengan status "' . $orderModel->status_label . '" sudah selesai atau dibatalkan sebelumnya.',
             ], 422);
         }
 
-        $validated = $request->validate([
-            'reason' => ['required', 'string', 'max:255'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ], [
-            'reason.required' => 'Silakan pilih alasan pembatalan pesanan.',
-        ]);
+        $reason = $request->input('reason', 'Perubahan jadwal mendadak / pembatalan mandiri pasien');
+        $notes = $request->input('notes', '');
 
-        $fullReason = $validated['reason'];
-        if (!empty($validated['notes'])) {
-            $fullReason .= ' - Catatan: ' . $validated['notes'];
+        $fullReason = $reason;
+        if (!empty($notes)) {
+            $fullReason .= ' - Catatan: ' . $notes;
         }
 
         try {

@@ -2099,6 +2099,7 @@
                     this.errorMessage = '';
 
                     const formData = new FormData();
+                    formData.append('patient_id', '{{ auth()->id() }}');
                     formData.append('service_catalog_id', this.activeService.id);
                     formData.append('scheduled_date', this.bookingForm.scheduled_date);
                     formData.append('scheduled_time', this.bookingForm.scheduled_time);
@@ -2111,6 +2112,8 @@
 
                     if (this.bookingForm.nurse_id) {
                         formData.append('nurse_id', this.bookingForm.nurse_id);
+                    } else if (this.selectedNurse?.nurse_id || this.selectedNurse?.id) {
+                        formData.append('nurse_id', this.selectedNurse.nurse_id || this.selectedNurse.id);
                     }
                     if (this.bookingForm.clinical_notes) {
                         formData.append('clinical_notes', this.bookingForm.clinical_notes);

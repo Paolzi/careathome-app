@@ -13,6 +13,7 @@
 
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
     <style>
         [x-cloak] { display: none !important; }
@@ -263,47 +264,36 @@
 
                                     <!-- Status Pembayaran -->
                                     <td class="py-4 px-4 text-center whitespace-nowrap">
-                                        <template x-if="!isRowPaid">
-                                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
-                                                Belum Dibayar
-                                            </span>
-                                        </template>
-                                        <template x-if="isRowPaid">
-                                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs flex items-center justify-center gap-1">
-                                                <span>✓</span>
-                                                <span>Lunas (Paid)</span>
-                                            </span>
-                                        </template>
+                                        <span x-show="!isRowPaid" class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs inline-block">
+                                            Belum Dibayar
+                                        </span>
+                                        <span x-show="isRowPaid" x-cloak class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs inline-flex items-center justify-center gap-1">
+                                            <span>✓</span>
+                                            <span>Lunas (Paid)</span>
+                                        </span>
                                     </td>
 
                                     <!-- Tombol Aksi Langsung (Instant Pay) -->
                                     <td class="py-4 px-4 text-center whitespace-nowrap">
-                                        <template x-if="!isRowPaid">
-                                            <button type="button"
-                                                :disabled="isRowPaying"
-                                                @click="payOrderRow({{ $order->id }}, '{{ $order->order_number }}', $data)"
-                                                class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs shadow-md shadow-emerald-500/20 transition-all transform active:scale-95 disabled:opacity-50 flex items-center gap-1.5 mx-auto cursor-pointer">
-                                                <template x-if="!isRowPaying">
-                                                    <span class="flex items-center gap-1.5">
-                                                        <span>⚡</span>
-                                                        <span>Bayar Sekarang</span>
-                                                    </span>
-                                                </template>
-                                                <template x-if="isRowPaying">
-                                                    <span class="flex items-center gap-1.5">
-                                                        <span class="animate-spin">⏳</span>
-                                                        <span>Memproses...</span>
-                                                    </span>
-                                                </template>
-                                            </button>
-                                        </template>
-
-                                        <template x-if="isRowPaid">
-                                            <span class="text-[11px] font-bold text-emerald-600 flex items-center justify-center gap-1">
-                                                <span>🎉</span>
-                                                <span>Pembayaran Selesai</span>
+                                        <button type="button"
+                                            x-show="!isRowPaid"
+                                            :disabled="isRowPaying"
+                                            @click="payOrderRow({{ $order->id }}, '{{ $order->order_number }}', $data)"
+                                            class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs shadow-md shadow-emerald-500/20 transition-all transform active:scale-95 disabled:opacity-50 inline-flex items-center gap-1.5 mx-auto cursor-pointer">
+                                            <span x-show="!isRowPaying" class="inline-flex items-center gap-1.5">
+                                                <span>⚡</span>
+                                                <span>Bayar Sekarang</span>
                                             </span>
-                                        </template>
+                                            <span x-show="isRowPaying" x-cloak class="inline-flex items-center gap-1.5">
+                                                <span class="animate-spin">⏳</span>
+                                                <span>Memproses...</span>
+                                            </span>
+                                        </button>
+
+                                        <span x-show="isRowPaid" x-cloak class="text-[11px] font-bold text-emerald-600 inline-flex items-center justify-center gap-1">
+                                            <span>🎉</span>
+                                            <span>Pembayaran Selesai</span>
+                                        </span>
                                     </td>
 
                                 </tr>
@@ -436,7 +426,8 @@
                             rowScope.isRowPaid = true;
                             this.unpaidOrdersCount = Math.max(0, this.unpaidOrdersCount - 1);
                             this.alertType = 'success';
-                            this.alertMessage = `✓ Pembayaran pesanan #${orderNumber} sebesar Rp ${Number(res.data.gross_amount).toLocaleString('id-ID')} Berhasil! Status berubah Lunas secara instan.`;
+                            this.alertMessage = `✓ Pembayaran pesanan #${orderNumber} sebesar Rp ${Number(res.data.gross_amount).toLocaleString('id-ID')} Berhasil! Dana telah langsung dialokasikan ke Perawat (85% + transport) dan Admin (15%).`;
+                            setTimeout(() => window.location.reload(), 1300);
                         } else {
                             rowScope.isRowPaying = false;
                             this.alertType = 'error';
