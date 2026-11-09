@@ -13,6 +13,7 @@
 
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
     <!-- Leaflet CSS & JS for Interactive Map Tracking -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -23,6 +24,25 @@
     <style>
         [x-cloak] { display: none !important; }
         .leaflet-container { font-family: inherit; }
+
+        @keyframes dashMove {
+            to {
+                stroke-dashoffset: -32px;
+            }
+        }
+        .animated-route-polyline {
+            stroke-dasharray: 8, 8;
+            animation: dashMove 1.2s linear infinite;
+        }
+
+        @keyframes pulseGlow {
+            0% { transform: scale(0.95); opacity: 0.9; }
+            50% { transform: scale(1.15); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.9; }
+        }
+        .ping-glow {
+            animation: pulseGlow 1.8s ease-in-out infinite;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col"
@@ -129,6 +149,40 @@
             </div>
         </div>
 
+        <!-- Banner Notifikasi Status Pesanan Pasien (Diterima / Ditolak / E-Report Selesai) -->
+        @php
+            $patientNotifs = auth()->user() ? auth()->user()->notifications()->take(3)->get() : collect();
+        @endphp
+        @if ($patientNotifs->isNotEmpty())
+            <div class="space-y-2">
+                @foreach ($patientNotifs as $pNotif)
+                    @php
+                        $nData = $pNotif->data;
+                        $nStatus = $nData['status'] ?? '';
+                        $isDeclined = in_array($nStatus, ['ditolak', 'declined']);
+                    @endphp
+                    <div class="p-4 rounded-2xl border text-xs flex items-center justify-between gap-3 shadow-2xs {{ $isDeclined ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900' }}">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-lg">{{ $isDeclined ? '⚠️' : ($nStatus === 'selesai' ? '📄' : '✓') }}</span>
+                            <div>
+                                <span class="font-extrabold block">{{ $nData['message'] ?? 'Pembaruan status pesanan Anda.' }}</span>
+                                <span class="text-[10px] opacity-75">{{ $pNotif->created_at->diffForHumans() }}</span>
+                            </div>
+                        </div>
+                        @if ($isDeclined)
+                            <a href="{{ route('pasien.katalog') }}" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] whitespace-nowrap">
+                                Pilih Perawat Lain &rarr;
+                            </a>
+                        @elseif ($nStatus === 'selesai')
+                            <button type="button" @click="activeTab = 'past'" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] whitespace-nowrap cursor-pointer">
+                                Lihat E-Report &rarr;
+                            </button>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
         <!-- 3. TABS SWITCHER -->
         <div class="flex items-center gap-2 border-b border-slate-200 pb-2">
             <button type="button"
@@ -146,7 +200,7 @@
                 @click="activeTab = 'past'"
                 class="px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2"
                 :class="activeTab === 'past' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'">
-                <span>Riwayat Selesai &amp; Batal</span>
+                <span>Riwayat Selesai, Batal &amp; Ditolak</span>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold"
                     :class="activeTab === 'past' ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-700'">
                     {{ $pastOrders->count() }}
@@ -338,24 +392,24 @@
                                 <div class="flex items-center gap-2">
                                     <!-- Detail & Tracking Button -->
                                     <button type="button"
-                                        @click="openTrackingModal({{ json_encode($order) }})"
-                                        class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">
+                                        @click="openTrackingModal(@js($order))"
+                                        class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer">
                                         <span>🗺️ Detail &amp; Tracking</span>
                                     </button>
 
                                     @if ($order->payment_status !== 'paid')
                                         <button type="button"
-                                            @click="openPaymentModal({{ json_encode($order) }})"
-                                            class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm shadow-emerald-600/30 transition flex items-center gap-1.5">
-                                            <span>💳 Bayar Escrow</span>
+                                            @click="directPayOrder(@js($order))"
+                                            class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm shadow-emerald-600/30 transition flex items-center gap-1.5 cursor-pointer">
+                                            <span>⚡ Bayar Sekarang</span>
                                         </button>
                                     @endif
 
                                     <!-- Pembatalan Button -->
                                     @if ($order->isCancellable())
                                         <button type="button"
-                                            @click="openCancelModal({{ json_encode($order) }})"
-                                            class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition flex items-center gap-1">
+                                            @click="openCancelModal(@js($order))"
+                                            class="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
                                             <span>Batalkan</span>
                                         </button>
                                     @endif
@@ -390,11 +444,22 @@
                                 </div>
 
                                 <div class="text-right space-y-1">
-                                    <span class="text-[11px] font-bold px-3 py-1 rounded-full inline-block {{ $order->status === 'selesai' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200' }}">
+                                    <span class="text-[11px] font-bold px-3 py-1 rounded-full inline-block {{ in_array($order->status, ['selesai', 'completed']) ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : (in_array($order->status, ['ditolak', 'declined']) ? 'bg-amber-50 text-amber-900 border border-amber-200' : 'bg-rose-50 text-rose-800 border border-rose-200') }}">
                                         {{ $order->status_label }}
                                     </span>
                                 </div>
                             </div>
+
+                            <!-- Detail Penolakan Mitra Perawat -->
+                            @if (in_array($order->status, ['ditolak', 'declined']))
+                                <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 text-xs space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-bold text-amber-900">Alasan Penolakan Perawat:</span>
+                                        <span class="text-[10px] text-amber-700 font-semibold">{{ $order->nurse?->name ?? 'Mitra Nakes' }}</span>
+                                    </div>
+                                    <p class="text-amber-800 italic">{{ $order->cancellation_reason ?: 'Jadwal kunjungan berbenturan atau kapasitas tindakan perawat penuh. Anda dapat memesan perawat terdekat lainnya di katalog.' }}</p>
+                                </div>
+                            @endif
 
                             <!-- Detail Pembatalan & Refund Escrow -->
                             @if ($order->status === 'dibatalkan')
@@ -485,7 +550,7 @@
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0">
 
-        <div @click.away="trackingModalOpen = false"
+        <div @click.away="closeTrackingModal()"
             class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 max-h-[90vh] flex flex-col"
             x-transition:enter="ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
@@ -498,7 +563,7 @@
                     <h3 class="text-lg font-bold mt-0.5" x-text="selectedOrder?.service_catalog?.name || 'Detail Pesanan Kunjungan'"></h3>
                     <p class="text-xs text-slate-300 font-mono" x-text="'No. Pesanan: ' + (selectedOrder?.order_number || '-')"></p>
                 </div>
-                <button type="button" @click="trackingModalOpen = false" class="text-slate-300 hover:text-white p-1">
+                <button type="button" @click="closeTrackingModal()" class="text-slate-300 hover:text-white p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -515,16 +580,35 @@
                             <span>🗺️</span>
                             <span>Peta Pelacakan Rute Nakes &amp; Titik Pasien</span>
                         </span>
-                        <span class="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-bold"
-                            x-text="'Estimasi Tiba: ~' + Math.max(10, Math.round((selectedOrder?.distance_km || 3) * 4)) + ' Menit'"></span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-bold"
+                                x-text="'Estimasi Tiba: ~' + (liveEtaMin !== null ? liveEtaMin : Math.max(8, Math.round((selectedOrder?.distance_km || 3) * 3))) + ' Menit'"></span>
+                            <button type="button" @click="startNurseMovementSimulation()"
+                                class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-xs transition flex items-center gap-1 cursor-pointer"
+                                :disabled="isTrackingAnimating">
+                                <span x-show="!isTrackingAnimating">▶ Simulasikan Perjalanan</span>
+                                <span x-show="isTrackingAnimating" class="animate-pulse">🛵 Nakes Melaju...</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Map Container -->
-                    <div id="tracking-map" class="h-60 sm:h-64 w-full rounded-2xl border border-slate-200 shadow-inner z-0"></div>
-                    <div class="flex items-center justify-between text-[11px] text-slate-500 mt-2 px-1">
-                        <span>Titik Merah: Alamat Pasien</span>
-                        <span>Titik Hijau: Posisi Mitra Nakes</span>
-                        <span x-text="'Jarak: ' + (selectedOrder?.distance_km || '3.5') + ' km'"></span>
+                    <div id="tracking-map" class="h-64 sm:h-72 w-full rounded-2xl border border-slate-200 shadow-inner z-0"></div>
+
+                    <!-- Live Metrics Strip -->
+                    <div class="grid grid-cols-3 gap-2 mt-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                        <div>
+                            <span class="text-[9px] text-slate-400 block font-semibold">JARAK KE LOKASI</span>
+                            <span class="text-xs font-bold text-slate-800" x-text="(liveDistanceKm !== null ? liveDistanceKm : (selectedOrder?.distance_km || '2.8')) + ' km'"></span>
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-slate-400 block font-semibold">STATUS PERJALANAN</span>
+                            <span class="text-xs font-bold text-emerald-700" x-text="liveStatusText || (selectedOrder?.status_label || 'Siap Berangkat')"></span>
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-slate-400 block font-semibold">MITRA PENANGGUNG JAWAB</span>
+                            <span class="text-xs font-bold text-slate-800" x-text="selectedOrder?.nurse?.name || 'Ns. Dinda'"></span>
+                        </div>
                     </div>
                 </div>
 
@@ -623,9 +707,9 @@
                         Tutup
                     </button>
                     <template x-if="selectedOrder?.payment_status !== 'paid'">
-                        <button type="button" @click="trackingModalOpen = false; openPaymentModal(selectedOrder)"
-                            class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition">
-                            Bayar Sekarang (Escrow)
+                        <button type="button" @click="directPayOrder(selectedOrder)"
+                            class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition cursor-pointer">
+                            ⚡ Bayar Sekarang (Langsung Lunas)
                         </button>
                     </template>
                 </div>
@@ -1292,6 +1376,13 @@
                 nurseMarker: null,
                 routeLine: null,
                 radiusCircle: null,
+                isTrackingAnimating: false,
+                trackingInterval: null,
+                liveDistanceKm: null,
+                liveEtaMin: null,
+                liveStatusText: '',
+                originNurseCoords: null,
+                patientCoords: null,
 
                 // E-Report & Review State
                 ereportModalOpen: false,
@@ -1364,6 +1455,33 @@
                                 this.openTrackingModal(activeOrder);
                             });
                         }
+                    }
+                },
+
+                async directPayOrder(order) {
+                    if (!order) return;
+                    if (!confirm(`Konfirmasi pembayaran langsung untuk pesanan #${order.order_number} sebesar Rp ${Number(order.total_amount || 0).toLocaleString('id-ID')}?\n\nSaldo akan langsung masuk ke Perawat (85% + transport) dan Admin (15%).`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/pasien/pesanan/${order.id}/bayar`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            }
+                        });
+                        const res = await response.json();
+                        if (response.ok && res.status === 'success') {
+                            alert(`✓ Pembayaran pesanan #${order.order_number} Berhasil! Dana telah langsung dialokasikan ke dompet Perawat dan Admin.`);
+                            window.location.reload();
+                        } else {
+                            alert(res.message || 'Gagal memproses pembayaran.');
+                        }
+                    } catch (e) {
+                        alert('Terjadi gangguan jaringan saat memproses pembayaran.');
                     }
                 },
 
@@ -1454,19 +1572,56 @@
                     this.selectedOrder = order;
                     this.trackingModalOpen = true;
 
+                    if (this.trackingInterval) {
+                        clearInterval(this.trackingInterval);
+                        this.trackingInterval = null;
+                    }
+                    this.isTrackingAnimating = false;
+
                     // Beri waktu modal untuk dirender di DOM sebelum init Leaflet map
                     this.$nextTick(() => {
                         this.initTrackingMap(order);
                     });
                 },
 
+                closeTrackingModal() {
+                    if (this.trackingInterval) {
+                        clearInterval(this.trackingInterval);
+                        this.trackingInterval = null;
+                    }
+                    this.isTrackingAnimating = false;
+                    this.trackingModalOpen = false;
+                },
+
                 initTrackingMap(order) {
-                    const lat = parseFloat(order.latitude) || -6.2088;
-                    const lng = parseFloat(order.longitude) || 106.8456;
-                    
-                    // Posisi perawat (dalam radius operasional ~3 km)
-                    const nurseLat = lat + 0.015;
-                    const nurseLng = lng - 0.012;
+                    if (this.trackingInterval) {
+                        clearInterval(this.trackingInterval);
+                        this.trackingInterval = null;
+                    }
+                    this.isTrackingAnimating = false;
+
+                    // Titik Alamat Pasien
+                    const patLat = parseFloat(order.latitude || order.patient_latitude) || -7.3144;
+                    const patLng = parseFloat(order.longitude || order.patient_longitude) || 112.7304;
+                    this.patientCoords = [patLat, patLng];
+
+                    // Posisi Mitra Perawat (dari profil nyata atau offset Surabaya)
+                    let nLat = parseFloat(order.nurse?.nurse_profile?.latitude);
+                    let nLng = parseFloat(order.nurse?.nurse_profile?.longitude);
+
+                    if (isNaN(nLat) || isNaN(nLng)) {
+                        nLat = patLat - 0.016;
+                        nLng = patLng + 0.014;
+                    } else if (Math.abs(nLat - patLat) < 0.0008 && Math.abs(nLng - patLng) < 0.0008) {
+                        nLat = patLat - 0.015;
+                        nLng = patLng + 0.012;
+                    }
+                    this.originNurseCoords = [nLat, nLng];
+
+                    const baseDist = parseFloat(order.distance_km) || 2.8;
+                    this.liveDistanceKm = baseDist.toFixed(1);
+                    this.liveEtaMin = Math.max(8, Math.round(baseDist * 3));
+                    this.liveStatusText = order.status === 'dalam_perjalanan' ? '🛵 Nakes Menuju Rumah Anda' : (order.status_label || 'Siap Berangkat');
 
                     const mapContainer = document.getElementById('tracking-map');
                     if (!mapContainer) return;
@@ -1476,62 +1631,138 @@
                         this.trackingMap = null;
                     }
 
-                    this.trackingMap = L.map('tracking-map').setView([lat, lng], 13);
+                    this.trackingMap = L.map('tracking-map').setView([patLat, patLng], 14);
 
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         maxZoom: 19,
                         attribution: '&copy; OpenStreetMap contributors'
                     }).addTo(this.trackingMap);
 
-                    // Marker Rumah Pasien (Merah)
-                    this.patientMarker = L.circleMarker([lat, lng], {
-                        radius: 9,
-                        fillColor: '#e11d48',
-                        color: '#ffffff',
-                        weight: 2,
-                        fillOpacity: 1
-                    }).addTo(this.trackingMap)
-                      .bindPopup('<strong>Titik Alamat Pasien</strong><br>' + (order.patient_name || 'Rumah'))
-                      .openPopup();
+                    // Custom HTML Icon: Rumah Pasien (Denyut Merah)
+                    const patientIcon = L.divIcon({
+                        className: 'patient-div-icon',
+                        html: `
+                            <div style="position:relative; width:34px; height:34px; display:flex; align-items:center; justify-content:center;">
+                                <div style="position:absolute; width:34px; height:34px; border-radius:50%; background:rgba(225,29,72,0.35); animation:pulseGlow 1.6s infinite;"></div>
+                                <div style="width:26px; height:26px; border-radius:50%; background:#e11d48; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; box-shadow:0 4px 6px -1px rgba(0,0,0,0.3); border:2px solid #ffffff;">
+                                    🏠
+                                </div>
+                            </div>
+                        `,
+                        iconSize: [34, 34],
+                        iconAnchor: [17, 17],
+                    });
 
-                    // Marker Perawat (Hijau)
-                    this.nurseMarker = L.circleMarker([nurseLat, nurseLng], {
-                        radius: 9,
-                        fillColor: '#059669',
-                        color: '#ffffff',
-                        weight: 2,
-                        fillOpacity: 1
-                    }).addTo(this.trackingMap)
-                      .bindPopup('<strong>Mitra Nakes Bergerak</strong><br>' + (order.nurse?.name || 'Perawat Homecare'));
+                    this.patientMarker = L.marker([patLat, patLng], { icon: patientIcon })
+                        .addTo(this.trackingMap)
+                        .bindPopup(`<strong>Titik Alamat Pasien</strong><br>${order.patient_name || 'Rumah Pasien'}`)
+                        .openPopup();
 
-                    // Garis Rute Perjalanan
-                    this.routeLine = L.polyline([[nurseLat, nurseLng], [lat, lng]], {
+                    // Custom HTML Icon: Nakes Motor Bergerak
+                    const nurseName = order.nurse?.name || 'Ns. Dinda';
+                    const nurseIcon = L.divIcon({
+                        className: 'nurse-div-icon',
+                        html: `
+                            <div style="position:relative; display:inline-flex; align-items:center; justify-content:center;">
+                                <div style="position:absolute; width:100%; height:100%; border-radius:9999px; background:rgba(16,185,129,0.35); animation:pulseGlow 1.4s infinite;"></div>
+                                <div style="padding:4px 10px; border-radius:9999px; background:#059669; color:white; display:flex; align-items:center; gap:5px; font-size:11px; font-weight:800; box-shadow:0 10px 15px -3px rgba(0,0,0,0.3); border:2px solid #ffffff; white-space:nowrap;">
+                                    <span>🛵</span>
+                                    <span>${nurseName}</span>
+                                </div>
+                            </div>
+                        `,
+                        iconSize: [110, 32],
+                        iconAnchor: [55, 16],
+                    });
+
+                    this.nurseMarker = L.marker([nLat, nLng], { icon: nurseIcon })
+                        .addTo(this.trackingMap)
+                        .bindPopup(`<strong>Posisi Mitra Nakes</strong><br>${nurseName} (Sedang Siaga / Bergerak)`);
+
+                    // Garis Rute Perjalanan Beranimasi
+                    this.routeLine = L.polyline([this.originNurseCoords, this.patientCoords], {
                         color: '#059669',
-                        weight: 4,
-                        opacity: 0.8,
-                        dashArray: '6, 8'
+                        weight: 5,
+                        opacity: 0.9,
+                        className: 'animated-route-polyline',
                     }).addTo(this.trackingMap);
 
-                    // Lingkaran Radius Operasional 10 KM
-                    this.radiusCircle = L.circle([lat, lng], {
+                    // Lingkaran Radius 10 KM
+                    this.radiusCircle = L.circle([patLat, patLng], {
                         radius: 10000,
                         color: '#10b981',
                         fillColor: '#10b981',
-                        fillOpacity: 0.05,
+                        fillOpacity: 0.04,
                         weight: 1
                     }).addTo(this.trackingMap);
 
                     // Auto-fit kedua titik
                     this.trackingMap.fitBounds([
-                        [lat, lng],
-                        [nurseLat, nurseLng]
-                    ], { padding: [40, 40] });
+                        this.patientCoords,
+                        this.originNurseCoords
+                    ], { padding: [50, 50] });
 
                     setTimeout(() => {
                         if (this.trackingMap) {
                             this.trackingMap.invalidateSize();
                         }
                     }, 300);
+                },
+
+                startNurseMovementSimulation() {
+                    if (this.isTrackingAnimating || !this.nurseMarker || !this.patientCoords || !this.originNurseCoords) {
+                        return;
+                    }
+
+                    this.isTrackingAnimating = true;
+                    this.liveStatusText = '🛵 Nakes Meluncur ke Lokasi...';
+
+                    const [startLat, startLng] = this.originNurseCoords;
+                    const [destLat, destLng] = this.patientCoords;
+                    const totalDist = parseFloat(this.selectedOrder?.distance_km) || 2.8;
+                    const totalEta = Math.max(8, Math.round(totalDist * 3));
+
+                    const totalSteps = 60;
+                    let currentStep = 0;
+                    const stepInterval = 140;
+
+                    if (this.trackingInterval) {
+                        clearInterval(this.trackingInterval);
+                    }
+
+                    this.trackingInterval = setInterval(() => {
+                        currentStep++;
+                        const progress = Math.min(1.0, currentStep / totalSteps);
+
+                        // Interpolasi koordinat
+                        const curLat = startLat + (destLat - startLat) * progress;
+                        const curLng = startLng + (destLng - startLng) * progress;
+
+                        if (this.nurseMarker) {
+                            this.nurseMarker.setLatLng([curLat, curLng]);
+                        }
+
+                        // Update jarak dan ETA live
+                        const remainingDist = Math.max(0, totalDist * (1.0 - progress));
+                        const remainingEta = Math.max(1, Math.round(totalEta * (1.0 - progress)));
+
+                        this.liveDistanceKm = remainingDist.toFixed(1);
+                        this.liveEtaMin = remainingEta;
+
+                        if (progress >= 0.85 && progress < 1.0) {
+                            this.liveStatusText = '📍 Nakes Hampir Tiba di Rumah Anda';
+                        } else if (progress >= 1.0) {
+                            clearInterval(this.trackingInterval);
+                            this.trackingInterval = null;
+                            this.isTrackingAnimating = false;
+                            this.liveDistanceKm = '0.0';
+                            this.liveEtaMin = 0;
+                            this.liveStatusText = '✓ Nakes Telah Tiba di Lokasi Pasien!';
+                            if (this.nurseMarker) {
+                                this.nurseMarker.bindPopup(`<strong>✓ Nakes Telah Tiba!</strong><br>Persiapan tindakan medis dimulai.`).openPopup();
+                            }
+                        }
+                    }, stepInterval);
                 },
 
                 submitPayment() {

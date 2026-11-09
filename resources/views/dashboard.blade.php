@@ -169,9 +169,9 @@
                             </p>
                         </div>
                         <div class="pt-5 mt-4 border-t border-slate-100">
-                            <span class="inline-flex items-center justify-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-semibold">
-                                <span>Tersedia Pasca Tindakan</span>
-                            </span>
+                            <a href="{{ route('pasien.pesanan', ['tab' => 'past']) }}" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition">
+                                <span>📄 Buka Riwayat &amp; E-Report</span>
+                            </a>
                         </div>
                     </div>
 

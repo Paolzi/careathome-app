@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @method static Builder active()
+ * @method static Builder search(?string $keyword)
+ * @method static Builder category(?string $category)
+ * @method static Builder priceRange(?float $min, ?float $max)
+ * @method static Builder sort(?string $sortBy)
+ */
 class ServiceCatalog extends Model
 {
     use HasFactory;

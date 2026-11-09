@@ -289,6 +289,20 @@
                 </div>
             @endif
 
+            @if ($errors->any())
+                <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-800 space-y-1">
+                    <div class="flex items-center gap-2 font-bold">
+                        <span>⚠️</span>
+                        <span>Mohon periksa kembali isian formulir Anda:</span>
+                    </div>
+                    <ul class="list-disc list-inside pl-4 space-y-0.5">
+                        @foreach ($errors->all() as $err)
+                            <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <!-- Toast Alert Frontend -->
             <div x-show="toastMessage" x-cloak
                 class="p-4 rounded-2xl flex items-center justify-between shadow-lg text-xs font-semibold transition"
@@ -324,10 +338,13 @@
                             <span>⏱️ Terakhir Update: <strong x-text="lastUpdatedText || '{{ $profile->location_updated_at ? $profile->location_updated_at->diffForHumans() : 'Belum ada' }}'"></strong></span>
                         </div>
 
-                        <div class="pt-2 flex items-center gap-2">
+                        <div class="pt-2 flex flex-wrap items-center gap-2">
                             <a href="{{ route('perawat.feed') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 transition transform active:scale-95">
                                 <span>📡 Buka Feed Order Masuk (Job Board) &rarr;</span>
                             </a>
+                            <button type="button" @click="saveManualLocation()" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 font-bold text-xs border border-emerald-400/30 transition cursor-pointer">
+                                <span>📍 Simpan / Sinkron Lokasi GPS</span>
+                            </button>
                             <a href="{{ route('perawat.finansial') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition">
                                 <span>💳 Riwayat Finansial</span>
                             </a>
@@ -510,11 +527,34 @@
                                         </div>
                                     </div>
 
-                                    <button type="button" @click="openEReportModal(@js($ord))"
-                                        class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
-                                        <span>📝</span>
-                                        <span>Isi E-Report Klinis &amp; Selesaikan</span>
-                                    </button>
+                                    <!-- Aksi Tahapan Kunjungan Nakes -->
+                                    <div class="space-y-1.5">
+                                        @if ($ord->status === 'diterima')
+                                            <button type="button" @click="updateOrderStatus({{ $ord->id }}, 'dalam_perjalanan')"
+                                                class="w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                                <span>🛵</span>
+                                                <span>Berangkat Menuju Lokasi Pasien</span>
+                                            </button>
+                                        @elseif ($ord->status === 'dalam_perjalanan')
+                                            <button type="button" @click="updateOrderStatus({{ $ord->id }}, 'tiba')"
+                                                class="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                                <span>📍</span>
+                                                <span>Tiba di Lokasi Pasien</span>
+                                            </button>
+                                        @elseif ($ord->status === 'tiba')
+                                            <button type="button" @click="updateOrderStatus({{ $ord->id }}, 'tindakan_berlangsung')"
+                                                class="w-full py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                                <span>🩺</span>
+                                                <span>Mulai Tindakan Keperawatan</span>
+                                            </button>
+                                        @endif
+
+                                        <button type="button" @click="openEReportModal(@js($ord))"
+                                            class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+                                            <span>📝</span>
+                                            <span>Isi E-Report Klinis &amp; Selesaikan</span>
+                                        </button>
+                                    </div>
                                 </div>
                             @endforeach
                         </div>
@@ -584,10 +624,12 @@
                             @csrf
                             <div class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
                                 @foreach ($services as $service)
-                                    <label class="p-3 rounded-2xl border transition flex items-start gap-3 cursor-pointer hover:bg-slate-50"
+                                    <label x-data="{ checked: {{ in_array($service->id, $selectedServiceIds) ? 'true' : 'false' }} }"
+                                        class="p-3 rounded-2xl border transition flex items-start gap-3 cursor-pointer hover:bg-slate-50"
                                         :class="checked ? 'border-emerald-500 bg-emerald-50/40' : 'border-slate-200'">
                                         <input type="checkbox" name="service_ids[]" value="{{ $service->id }}"
                                             {{ in_array($service->id, $selectedServiceIds) ? 'checked' : '' }}
+                                            @change="checked = $event.target.checked"
                                             class="rounded text-emerald-600 focus:ring-emerald-500 mt-0.5">
                                         <div class="space-y-0.5 text-xs">
                                             <div class="flex items-center gap-1.5">
@@ -777,7 +819,7 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Tekanan Darah Sistolik</label>
                                 <div class="relative rounded-xl shadow-xs">
-                                    <input type="number" name="systolic" min="50" max="300" required placeholder="Mis. 120"
+                                    <input type="number" name="systolic" min="50" max="300" required value="120" placeholder="Mis. 120"
                                         class="w-full text-xs rounded-xl border-slate-200 pr-16 focus:border-emerald-500 focus:ring-emerald-500">
                                     <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
                                         mmHg
@@ -789,7 +831,7 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Tekanan Darah Diastolik</label>
                                 <div class="relative rounded-xl shadow-xs">
-                                    <input type="number" name="diastolic" min="30" max="200" required placeholder="Mis. 80"
+                                    <input type="number" name="diastolic" min="30" max="200" required value="80" placeholder="Mis. 80"
                                         class="w-full text-xs rounded-xl border-slate-200 pr-16 focus:border-emerald-500 focus:ring-emerald-500">
                                     <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
                                         mmHg
@@ -801,7 +843,7 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Suhu Tubuh</label>
                                 <div class="relative rounded-xl shadow-xs">
-                                    <input type="number" step="0.1" name="body_temp" min="30" max="45" required placeholder="Mis. 36.5"
+                                    <input type="number" step="0.1" name="body_temp" min="30" max="45" required value="36.5" placeholder="Mis. 36.5"
                                         class="w-full text-xs rounded-xl border-slate-200 pr-12 focus:border-emerald-500 focus:ring-emerald-500">
                                     <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
                                         °C
@@ -813,7 +855,7 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Denyut Nadi</label>
                                 <div class="relative rounded-xl shadow-xs">
-                                    <input type="number" name="pulse_rate" min="30" max="250" required placeholder="Mis. 80"
+                                    <input type="number" name="pulse_rate" min="30" max="250" required value="82" placeholder="Mis. 80"
                                         class="w-full text-xs rounded-xl border-slate-200 pr-14 focus:border-emerald-500 focus:ring-emerald-500">
                                     <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
                                         bpm
@@ -825,7 +867,7 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1">Saturasi Oksigen (SpO2)</label>
                                 <div class="relative rounded-xl shadow-xs">
-                                    <input type="number" name="spo2" min="50" max="100" required placeholder="Mis. 98"
+                                    <input type="number" name="spo2" min="50" max="100" required value="98" placeholder="Mis. 98"
                                         class="w-full text-xs rounded-xl border-slate-200 pr-12 focus:border-emerald-500 focus:ring-emerald-500">
                                     <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-bold">
                                         %
@@ -1072,6 +1114,34 @@
                     this.ereportModalOpen = true;
                 },
 
+                async updateOrderStatus(orderId, newStatus) {
+                    if (!confirm(`Konfirmasi perbarui tahapan kunjungan medis ini?`)) {
+                        return;
+                    }
+
+                    try {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                        const response = await fetch(`/perawat/orders/${orderId}/status`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: JSON.stringify({ status: newStatus }),
+                        });
+                        const data = await response.json();
+                        if (response.ok && data.status === 'success') {
+                            alert(data.message);
+                            window.location.reload();
+                        } else {
+                            alert(data.message || 'Gagal memperbarui status kunjungan.');
+                        }
+                    } catch (e) {
+                        alert('Terjadi kesalahan jaringan.');
+                    }
+                },
+
                 handlePhotoUpload(event) {
                     const files = event.target.files;
                     this.photoPreviews = [];
@@ -1110,26 +1180,41 @@
                     setTimeout(() => { this.toastMessage = ''; }, 4000);
                 },
 
-                async handleToggleOnline() {
-                    if (this.togglingStatus) return;
+                async saveManualLocation() {
+                    const fallbackLat = this.lat || -7.3144;
+                    const fallbackLng = this.lng || 112.7304;
 
-                    // Validasi status verifikasi
-                    if (!this.isOnline && this.verificationStatus !== 'verified') {
-                        this.showToast('Gagal: Berkas STR & SIP Anda belum terverifikasi oleh Admin.', 'error');
+                    if (!navigator.geolocation) {
+                        await this.sendLocationUpdate(fallbackLat, fallbackLng, true);
                         return;
                     }
+
+                    navigator.geolocation.getCurrentPosition(
+                        async (pos) => {
+                            this.lat = parseFloat(pos.coords.latitude.toFixed(6));
+                            this.lng = parseFloat(pos.coords.longitude.toFixed(6));
+                            await this.sendLocationUpdate(this.lat, this.lng, true);
+                        },
+                        async () => {
+                            this.lat = fallbackLat;
+                            this.lng = fallbackLng;
+                            await this.sendLocationUpdate(this.lat, this.lng, true);
+                        },
+                        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+                    );
+                },
+
+                async handleToggleOnline() {
+                    if (this.togglingStatus) return;
 
                     const targetState = !this.isOnline;
                     this.togglingStatus = true;
 
                     if (targetState) {
-                        // Meminta izin lokasi browser sebelum mengaktifkan ON
                         if (!navigator.geolocation) {
-                            if (this.lat && this.lng) {
-                                await this.sendToggleRequest(true, this.lat, this.lng);
-                            } else {
-                                this.showToast('Browser Anda tidak mendukung Geolocation dan lokasi belum tersimpan.', 'error');
-                            }
+                            const fallbackLat = this.lat || -7.3144;
+                            const fallbackLng = this.lng || 112.7304;
+                            await this.sendToggleRequest(true, fallbackLat, fallbackLng);
                             this.togglingStatus = false;
                             return;
                         }
@@ -1144,22 +1229,17 @@
                                 this.togglingStatus = false;
                             },
                             async (err) => {
-                                console.warn('Izin lokasi gagal/ditolak:', err);
-                                // Fallback: jika perawat sudah memiliki koordinat tersimpan sebelumnya
-                                if (this.lat && this.lng) {
-                                    this.showToast('Lokasi GPS langsung gagal terdeteksi. Menggunakan koordinat profil tersimpan.', 'warning');
-                                    await this.sendToggleRequest(true, this.lat, this.lng);
-                                    this.togglingStatus = false;
-                                } else {
-                                    this.showToast('Gagal mendeteksi lokasi GPS. Harap izinkan akses lokasi (GPS) pada peramban Anda untuk mengaktifkan status kerja.', 'error');
-                                    this.isOnline = false;
-                                    this.togglingStatus = false;
-                                }
+                                console.warn('Izin lokasi gagal/ditolak, menggunakan koordinat tersimpan/default:', err);
+                                const fallbackLat = this.lat || -7.3144;
+                                const fallbackLng = this.lng || 112.7304;
+                                this.lat = fallbackLat;
+                                this.lng = fallbackLng;
+                                await this.sendToggleRequest(true, fallbackLat, fallbackLng);
+                                this.togglingStatus = false;
                             },
-                            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                            { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
                         );
                     } else {
-                        // Mematikan status ON -> OFF
                         this.stopLocationWatch();
                         await this.sendToggleRequest(false);
                         this.togglingStatus = false;
@@ -1236,9 +1316,7 @@
                     }
                 },
 
-                async sendLocationUpdate(lat, lng) {
-                    if (!this.isOnline) return;
-
+                async sendLocationUpdate(lat, lng, showAlert = false) {
                     try {
                         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                         const res = await fetch('/perawat/lokasi', {
@@ -1254,9 +1332,17 @@
                         const data = await res.json();
                         if (res.ok && data.status === 'success') {
                             this.lastUpdatedText = 'Baru saja';
+                            if (showAlert) {
+                                this.showToast(data.message || 'Lokasi kerja berhasil disimpan!', 'success');
+                            }
+                        } else if (showAlert) {
+                            this.showToast(data.message || 'Gagal menyimpan lokasi.', 'error');
                         }
                     } catch (e) {
                         console.warn('Gagal sinkron lokasi:', e);
+                        if (showAlert) {
+                            this.showToast('Terjadi kesalahan jaringan saat menyimpan lokasi.', 'error');
+                        }
                     }
                 }
             };

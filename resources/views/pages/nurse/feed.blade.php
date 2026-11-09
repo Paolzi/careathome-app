@@ -276,9 +276,25 @@
                                     <h5 class="font-bold text-xs text-slate-900">{{ $act->serviceCatalog->name ?? 'Layanan Medis' }}</h5>
                                     <p class="text-[11px] text-slate-500">Pasien: {{ $act->patient_name }} ({{ $act->patient_phone }})</p>
                                 </div>
-                                <div class="pt-2 border-t border-slate-200/60 flex items-center justify-between">
-                                    <a href="{{ route('perawat.dashboard') }}" class="text-xs font-bold text-emerald-700 hover:underline">
-                                        Buka Lembar E-Report &rarr;
+                                <div class="pt-2 border-t border-slate-200/60 space-y-2">
+                                    @if ($act->status === 'diterima')
+                                        <button type="button" @click="updateOrderStatus({{ $act->id }}, 'dalam_perjalanan')"
+                                            class="w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <span>🛵 Berangkat Menuju Pasien</span>
+                                        </button>
+                                    @elseif ($act->status === 'dalam_perjalanan')
+                                        <button type="button" @click="updateOrderStatus({{ $act->id }}, 'tiba')"
+                                            class="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <span>📍 Tiba di Lokasi Pasien</span>
+                                        </button>
+                                    @elseif ($act->status === 'tiba')
+                                        <button type="button" @click="updateOrderStatus({{ $act->id }}, 'tindakan_berlangsung')"
+                                            class="w-full py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <span>🩺 Mulai Tindakan Keperawatan</span>
+                                        </button>
+                                    @endif
+                                    <a href="{{ route('perawat.dashboard') }}" class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
+                                        <span>📝 Isi E-Report di Panel Kerja &rarr;</span>
                                     </a>
                                 </div>
                             </div>
@@ -370,6 +386,33 @@
                         }
                     } catch (error) {
                         cardScope.isProcessing = false;
+                        this.toastType = 'error';
+                        this.toastMessage = 'Terjadi gangguan jaringan.';
+                    }
+                },
+
+                async updateOrderStatus(orderId, newStatus) {
+                    try {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                        const response = await fetch(`/perawat/orders/${orderId}/status`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
+                            },
+                            body: JSON.stringify({ status: newStatus })
+                        });
+                        const data = await response.json();
+                        if (response.ok && data.status === 'success') {
+                            this.toastType = 'success';
+                            this.toastMessage = data.message;
+                            setTimeout(() => window.location.reload(), 800);
+                        } else {
+                            this.toastType = 'error';
+                            this.toastMessage = data.message || 'Gagal memperbarui status kunjungan.';
+                        }
+                    } catch (e) {
                         this.toastType = 'error';
                         this.toastMessage = 'Terjadi gangguan jaringan.';
                     }

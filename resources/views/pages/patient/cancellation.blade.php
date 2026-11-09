@@ -13,6 +13,7 @@
 
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
     <style>
         [x-cloak] { display: none !important; }
@@ -199,8 +200,8 @@
                                 <span class="text-[11px] text-slate-500">
                                     {{ $order->payment_status === 'paid' ? 'Garansi refund 100% dana escrow.' : 'Dapat dibatalkan tanpa biaya.' }}
                                 </span>
-                                <button type="button" @click="openCancelModal({{ json_encode($order) }})"
-                                    class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition">
+                                <button type="button" @click="openCancelModal(@js($order))"
+                                    class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition cursor-pointer">
                                     Batalkan Pesanan Ini
                                 </button>
                             </div>
@@ -241,7 +242,7 @@
                                     <p class="text-[11px] text-slate-500 mt-0.5">Jadwal Sebelumnya: {{ $order->scheduled_date->format('d M Y') }} • {{ $order->scheduled_time }}</p>
                                 </div>
                                 <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                                    Dibatalkan
+                                    {{ in_array($order->status, ['ditolak', 'declined']) ? 'Ditolak Perawat' : 'Dibatalkan' }}
                                 </span>
                             </div>
 

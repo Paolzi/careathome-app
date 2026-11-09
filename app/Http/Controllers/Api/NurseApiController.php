@@ -45,9 +45,9 @@ class NurseApiController extends Controller
         }
 
         // Jika request tidak membawa lat/lng tapi session pasien memilikinya
-        if (!filled($data['latitude'] ?? null) && session()->has('patient_last_lat')) {
-            $data['latitude'] = session('patient_last_lat');
-            $data['longitude'] = session('patient_last_lng');
+        if (!filled($data['latitude'] ?? null) && Session::has('patient_last_lat')) {
+            $data['latitude'] = Session::get('patient_last_lat');
+            $data['longitude'] = Session::get('patient_last_lng');
         }
 
         $validator = Validator::make($data, [

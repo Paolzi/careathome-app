@@ -12,21 +12,17 @@ use App\Models\Order;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
-use Illuminate\Http\JsonResponse;
+use App\Notifications\PatientOrderStatusNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Storage;
 
 class NurseEReportController extends Controller
 {
     /**
      * Tampilkan formulir atau data E-Report untuk pesanan tertentu.
      */
-    public function show(Order $order)
+    public function show(Request $request, Order $order)
     {
         /** @var User $user */
         $user = Auth::user();
@@ -38,7 +34,7 @@ class NurseEReportController extends Controller
 
         $order->load(['patient', 'serviceCatalog', 'eReport.photos']);
 
-        if (request()->wantsJson()) {
+        if ($request->wantsJson()) {
             return response()->json([
                 'status' => 'success',
                 'order' => $order,
@@ -77,7 +73,7 @@ class NurseEReportController extends Controller
             'pulse_rate' => ['required', 'integer', 'between:30,250'],
             'spo2' => ['required', 'integer', 'between:50,100'],
             'gds' => ['nullable', 'integer', 'between:20,800'],
-            'clinical_notes' => ['required', 'string', 'min:10'],
+            'clinical_notes' => ['required', 'string', 'min:2'],
             'family_education' => ['nullable', 'string'],
             'photos' => ['nullable', 'array', 'max:5'],
             'photos.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
@@ -90,7 +86,7 @@ class NurseEReportController extends Controller
             'pulse_rate.required' => 'Denyut nadi pasien wajib diisi.',
             'spo2.required' => 'Saturasi oksigen (SpO2) wajib diisi.',
             'clinical_notes.required' => 'Ringkasan asuhan keperawatan / catatan klinis wajib diisi.',
-            'clinical_notes.min' => 'Catatan klinis minimal berisi 10 karakter.',
+            'clinical_notes.min' => 'Catatan klinis minimal berisi 2 karakter.',
         ]);
 
         try {
@@ -127,46 +123,89 @@ class NurseEReportController extends Controller
 
                 // 3. Ubah status pesanan secara otomatis menjadi 'selesai'
                 $order->status = 'selesai';
+                if ($order->payment_status !== 'paid') {
+                    $order->payment_status = 'paid';
+                }
                 $order->save();
 
-                // 4. Automated Settlement Pembagian Pendapatan
-                $basePrice = (float) $order->base_price;
-                $transportFee = (float) $order->transport_fee;
+                // 4. Automated Settlement Pembagian Pendapatan (Cek agar tidak double credit jika sudah dibayar di muka)
+                $basePrice = (float) ($order->base_price ?: ($order->total_amount * 0.8));
+                $transportFee = (float) ($order->transport_fee ?: 10000);
                 $platformFee = round($basePrice * 0.15); // 15% dari biaya tindakan
                 $nurseEarnings = round(($basePrice * 0.85) + $transportFee); // 85% tindakan + 100% transport
 
                 $nurseId = $order->nurse_id ?? $user->id;
-
-                // Update Dompet Khusus Perawat (nurse_wallets)
-                $nurseWallet = NurseWallet::getOrCreateForNurse($nurseId);
-                $nurseWallet->balance += (int) $nurseEarnings;
-                $nurseWallet->save();
-
-                // Sinkronisasi ke model Wallet universal
                 $wallet = Wallet::getOrCreateForUser($nurseId);
-                $wallet->balance += (int) $nurseEarnings;
-                $wallet->save();
+                $nurseWallet = NurseWallet::getOrCreateForNurse($nurseId);
 
-                // Sinkronisasi ke profil perawat
-                $profile = NurseProfile::where('user_id', $nurseId)->first();
-                if ($profile) {
-                    $profile->balance = $nurseWallet->balance;
-                    $profile->save();
+                $alreadyCredited = WalletTransaction::where('order_id', $order->id)
+                    ->whereIn('type', ['income', 'order_income'])
+                    ->where(function ($q) use ($wallet, $nurseWallet) {
+                        $q->where('wallet_id', $wallet->id)
+                          ->orWhere('nurse_wallet_id', $nurseWallet->id);
+                    })
+                    ->exists();
+
+                if (!$alreadyCredited) {
+                    // Update Dompet Khusus Perawat (nurse_wallets)
+                    $nurseWallet->balance += (int) $nurseEarnings;
+                    $nurseWallet->save();
+
+                    // Sinkronisasi ke model Wallet universal
+                    $wallet->balance = $nurseWallet->balance;
+                    $wallet->save();
+
+                    // Sinkronisasi ke profil perawat
+                    $profile = NurseProfile::where('user_id', $nurseId)->first();
+                    if ($profile) {
+                        $profile->balance = $nurseWallet->balance;
+                        $profile->save();
+                    }
+
+                    // Simpan detail riwayat transaksi ke wallet_transactions
+                    WalletTransaction::create([
+                        'wallet_id' => $wallet->id,
+                        'nurse_wallet_id' => $nurseWallet->id,
+                        'order_id' => $order->id,
+                        'type' => 'order_income',
+                        'amount' => (int) $order->total_amount,
+                        'platform_fee' => (int) $platformFee,
+                        'net_amount' => (int) $nurseEarnings,
+                        'balance_after' => $wallet->balance,
+                        'status' => 'completed',
+                        'description' => "Pendapatan layanan #{$order->order_number} ({$order->serviceCatalog?->name})",
+                    ]);
+
+                    // Kreditkan juga ke dompet Admin jika belum ada
+                    $adminUser = User::whereHas('roles', fn($q) => $q->where('name', 'admin'))->first();
+                    if ($adminUser) {
+                        $adminWallet = Wallet::getOrCreateForUser($adminUser->id);
+                        $adminWallet->balance += (int) $platformFee;
+                        $adminWallet->save();
+
+                        WalletTransaction::create([
+                            'wallet_id' => $adminWallet->id,
+                            'order_id' => $order->id,
+                            'type' => 'admin_fee',
+                            'amount' => (int) $platformFee,
+                            'platform_fee' => (int) $platformFee,
+                            'net_amount' => (int) $platformFee,
+                            'balance_after' => $adminWallet->balance,
+                            'status' => 'completed',
+                            'description' => "Komisi platform (15%) pesanan #{$order->order_number}",
+                        ]);
+                    }
                 }
 
-                // Simpan detail riwayat transaksi ke wallet_transactions
-                WalletTransaction::create([
-                    'wallet_id' => $wallet->id,
-                    'nurse_wallet_id' => $nurseWallet->id,
-                    'order_id' => $order->id,
-                    'type' => 'income',
-                    'amount' => (int) $order->total_amount,
-                    'platform_fee' => (int) $platformFee,
-                    'net_amount' => (int) $nurseEarnings,
-                    'balance_after' => $wallet->balance,
-                    'status' => 'completed',
-                    'description' => "Pendapatan layanan #{$order->order_number} ({$order->serviceCatalog?->name})",
-                ]);
+                /** @var User|null $patientUser */
+                $patientUser = $order->patient;
+                if ($patientUser) {
+                    $patientUser->notify(new PatientOrderStatusNotification(
+                        $order,
+                        'selesai',
+                        "E-Report Klinis & Tanda Vital (TTV) untuk pesanan #{$order->order_number} telah diterbitkan oleh perawat {$user->name}. Anda kini dapat melihat hasil pemeriksaan medis di Riwayat Layanan."
+                    ));
+                }
 
                 AuditLog::log('nurse_ereport_submitted', $order, null, [
                     'order_id' => $order->id,

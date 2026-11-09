@@ -7,6 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property int $id
+ * @property string $order_number
+ * @property int|null $patient_id
+ * @property int|null $service_catalog_id
+ * @property int|null $nurse_id
+ * @property string $status
+ * @property string $payment_status
+ * @property float|null $calculated_distance
+ * @property int|float|null $estimated_nurse_earnings
+ * @property-read string $status_label
+ * @property-read \App\Models\User|null $patient
+ * @property-read \App\Models\User|null $nurse
+ * @property-read \App\Models\ServiceCatalog|null $serviceCatalog
+ * @property-read \App\Models\EReport|null $eReport
+ * @property-read \App\Models\Review|null $review
+ */
 class Order extends Model
 {
     use HasFactory;
@@ -200,17 +217,18 @@ class Order extends Model
             'selesai' => 'Selesai',
             'completed' => 'Selesai',
             'dibatalkan' => 'Dibatalkan',
+            'ditolak' => 'Ditolak Perawat',
+            'declined' => 'Ditolak Perawat',
             default => ucfirst($this->status),
         };
     }
 
     /**
      * Memeriksa apakah pesanan masih memenuhi syarat untuk dibatalkan oleh pasien.
-     * Pesanan hanya dapat dibatalkan jika belum dalam perjalanan/tindakan.
      */
     public function isCancellable(): bool
     {
-        return in_array($this->status, ['menunggu_konfirmasi', 'diterima']);
+        return !in_array($this->status, ['selesai', 'completed', 'dibatalkan', 'ditolak', 'declined']);
     }
 
     /**
