@@ -30,6 +30,7 @@ class Order extends Model
 
     protected $fillable = [
         'order_number',
+        'booking_type',
         'patient_id',
         'service_catalog_id',
         'nurse_id',
@@ -162,7 +163,7 @@ class Order extends Model
         $platformFee = 5000.0;
         $totalAmount = $basePrice + $transportFee + $platformFee;
 
-        // Pembagian finansial (KF-10 & BAB IV)
+        // Pembagian finansial antara perawat dan platform
         $commissionAmount = round($basePrice * 0.15, 2);
         $nurseEarnings = round(($basePrice * 0.85) + $transportFee, 2);
 
@@ -241,5 +242,61 @@ class Order extends Model
             'pending' => 'Proses Pengembalian Escrow',
             default => 'Tidak Ada Refund',
         };
+    }
+
+    /**
+     * Dapatkan objek Carbon (Asia/Jakarta) dari tanggal & jam mulai perawatan.
+     */
+    public function getScheduledStartCarbonWib(): \Carbon\Carbon
+    {
+        $nowWib = \Carbon\Carbon::now('Asia/Jakarta');
+        $dateStr = $this->scheduled_date
+            ? \Carbon\Carbon::parse($this->scheduled_date)->format('Y-m-d')
+            : $nowWib->format('Y-m-d');
+
+        $startTime = NurseSchedule::extractStartTime($this->scheduled_time, $nowWib);
+
+        try {
+            return \Carbon\Carbon::createFromFormat('Y-m-d H:i', "{$dateStr} {$startTime}", 'Asia/Jakarta');
+        } catch (\Throwable $e) {
+            return $nowWib;
+        }
+    }
+
+    /**
+     * Validasi Waktu Aksi Perawat:
+     * Tombol aksi perjalanan/perawatan ("Mulai Perjalanan", "Sampai di Lokasi", "Mulai Perawatan", "Selesai Perawatan")
+     * baru akan aktif maksimal 30 menit sebelum jadwal jam perawatan dimulai (WIB).
+     */
+    public function canNursePerformAction(): array
+    {
+        $nowWib = \Carbon\Carbon::now('Asia/Jakarta');
+        $scheduledStart = $this->getScheduledStartCarbonWib();
+        $unlockAt = $scheduledStart->copy()->subMinutes(30);
+
+        if (($this->booking_type ?? 'scheduled') === 'now') {
+            return [
+                'allowed' => true,
+                'scheduled_start_wib' => $scheduledStart->format('H:i') . ' WIB',
+                'unlock_time_wib' => $unlockAt->format('H:i') . ' WIB',
+                'unlock_datetime_iso' => $unlockAt->toIso8601String(),
+                'minutes_until_unlock' => 0,
+                'message' => 'Siap dijalankan sekarang (Pesan Sekarang - WIB)',
+            ];
+        }
+
+        $isAllowed = $nowWib->greaterThanOrEqualTo($unlockAt);
+        $minutesUntilUnlock = $isAllowed ? 0 : (int) ceil($nowWib->diffInSeconds($unlockAt) / 60);
+
+        return [
+            'allowed' => $isAllowed,
+            'scheduled_start_wib' => $scheduledStart->format('H:i') . ' WIB',
+            'unlock_time_wib' => $unlockAt->format('H:i') . ' WIB',
+            'unlock_datetime_iso' => $unlockAt->toIso8601String(),
+            'minutes_until_unlock' => $minutesUntilUnlock,
+            'message' => $isAllowed
+                ? 'Waktu kunjungan telah memasuki jendela aktif (WIB)'
+                : 'Tombol akan aktif 30 menit sebelum jadwal perawatan (Pukul ' . $unlockAt->format('H:i') . ' WIB)',
+        ];
     }
 }

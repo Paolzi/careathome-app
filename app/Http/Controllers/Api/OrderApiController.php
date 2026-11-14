@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\NurseSchedule;
 use App\Models\Order;
 use App\Models\ServiceCatalog;
+use App\Services\OsrmRoutingService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +24,10 @@ class OrderApiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'service_catalog_id' => ['required', 'exists:service_catalogs,id'],
-            'distance_km' => ['nullable', 'numeric', 'min:0', 'max:50'],
+            'distance_km' => ['nullable', 'numeric', 'min:0', 'max:500'],
+            'nurse_id' => ['nullable', 'exists:users,id'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         if ($validator->fails()) {
@@ -34,6 +40,17 @@ class OrderApiController extends Controller
 
         $service = ServiceCatalog::findOrFail($request->input('service_catalog_id'));
         $distanceKm = (float) $request->input('distance_km', 2.5);
+
+        if ($request->filled('nurse_id') && $request->filled('latitude') && $request->filled('longitude')) {
+            $nurseUser = \App\Models\User::find($request->input('nurse_id'));
+            $profile = $nurseUser?->nurseProfile;
+            if ($profile) {
+                $distanceKm = $profile->distanceTo(
+                    (float) $request->input('latitude'),
+                    (float) $request->input('longitude')
+                );
+            }
+        }
 
         $breakdown = Order::calculatePriceBreakdown((float) $service->price, $distanceKm);
 
@@ -52,29 +69,44 @@ class OrderApiController extends Controller
     }
 
     /**
-     * Simpan pembuatan pesanan baru (Order Booking).
+     * Simpan pembuatan pesanan baru (Order Booking: "Pesan Sekarang" maupun "Pesan Untuk Nanti").
      * Endpoint: POST /api/v1/orders
      */
     public function store(Request $request): JsonResponse
     {
+        $nowWib = Carbon::now('Asia/Jakarta');
+        $bookingType = $request->input('booking_type', 'scheduled');
+        if (! in_array($bookingType, ['now', 'scheduled'], true)) {
+            $bookingType = 'scheduled';
+        }
+
+        // Jika "Pesan Sekarang", otomatis gunakan tanggal & jam saat ini (WIB)
+        if ($bookingType === 'now') {
+            $request->merge([
+                'scheduled_date' => $nowWib->toDateString(),
+                'scheduled_time' => $nowWib->format('H:i') . ' WIB (Pesan Sekarang)',
+            ]);
+        }
+
         $validator = Validator::make($request->all(), [
             'service_catalog_id' => ['required', 'exists:service_catalogs,id'],
             'nurse_id' => ['nullable', 'exists:users,id'],
-            'scheduled_date' => ['required', 'date', 'after_or_equal:today'],
+            'booking_type' => ['nullable', 'in:now,scheduled'],
+            'scheduled_date' => ['required', 'date', 'after_or_equal:' . $nowWib->toDateString()],
             'scheduled_time' => ['required', 'string', 'max:50'],
             'patient_name' => ['required', 'string', 'max:150'],
             'patient_phone' => ['required', 'string', 'min:9', 'max:25'],
             'address' => ['required', 'string', 'max:1000'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'distance_km' => ['nullable', 'numeric', 'min:0', 'max:50'],
+            'distance_km' => ['nullable', 'numeric', 'min:0', 'max:500'],
             'clinical_notes' => ['nullable', 'string', 'max:2000'],
-            'medical_photo' => ['nullable', 'file', 'image', 'max:5120'], // Max 5MB
+            'medical_photo' => ['nullable', 'file', 'image', 'max:5120'],
         ], [
             'service_catalog_id.required' => 'Layanan medis wajib dipilih.',
             'scheduled_date.required' => 'Tanggal kunjungan wajib diisi.',
             'scheduled_date.after_or_equal' => 'Tanggal kunjungan tidak boleh di masa lampau.',
-            'scheduled_time.required' => 'Waktu/sesi kunjungan wajib dipilih.',
+            'scheduled_time.required' => 'Waktu/jam kunjungan (WIB) wajib dipilih.',
             'patient_name.required' => 'Nama lengkap pasien wajib diisi.',
             'patient_phone.required' => 'Nomor kontak/WhatsApp pasien wajib diisi.',
             'address.required' => 'Alamat lengkap lokasi tindakan wajib diisi.',
@@ -93,19 +125,17 @@ class OrderApiController extends Controller
         $validated = $validator->validated();
         $service = ServiceCatalog::findOrFail($validated['service_catalog_id']);
 
-        // Upload foto kondisi medis jika ada
         $photoPath = null;
         if ($request->hasFile('medical_photo')) {
             $photoPath = $request->file('medical_photo')->store('medical_photos', 'public');
         }
 
-        // Tentukan user pemesan (jika sudah login atau fallback ke akun pasien aktif)
         $userId = Auth::id() ?? $request->input('patient_id');
-        if (!$userId && $request->filled('patient_name')) {
+        if (! $userId && $request->filled('patient_name')) {
             $patientByName = \App\Models\User::role('pasien')->where('name', $request->input('patient_name'))->first();
             $userId = $patientByName?->id;
         }
-        if (!$userId) {
+        if (! $userId) {
             $defaultPatient = \App\Models\User::role('pasien')->first() ?? \App\Models\User::first();
             $userId = $defaultPatient?->id ?? 1;
         }
@@ -113,66 +143,77 @@ class OrderApiController extends Controller
         $distanceKm = (float) ($validated['distance_km'] ?? 2.5);
         $selectedNurseId = $validated['nurse_id'] ?? null;
 
-        // Jika pasien belum memilih perawat khusus, otomatis tugaskan perawat online verified terdekat (misal Dinda)
-        if (!$selectedNurseId) {
-            $onlineNurse = \App\Models\User::role('perawat')
+        // Jika pasien belum memilih perawat spesifik, cari perawat verified yang jadwalnya tersedia pada waktu tersebut
+        if (! $selectedNurseId) {
+            $verifiedNurses = \App\Models\User::role('perawat')
                 ->whereHas('nurseProfile', function ($q) {
-                    $q->where('verification_status', 'verified')->where('is_online', true);
+                    $q->where('verification_status', 'verified');
                 })
                 ->where('status', '!=', 'suspended')
-                ->first();
-            if ($onlineNurse) {
-                $selectedNurseId = $onlineNurse->id;
+                ->get();
+
+            foreach ($verifiedNurses as $candidate) {
+                $avail = NurseSchedule::checkAvailability(
+                    $candidate->id,
+                    $bookingType,
+                    $validated['scheduled_date'],
+                    $validated['scheduled_time']
+                );
+                if ($avail['available']) {
+                    $selectedNurseId = $candidate->id;
+                    break;
+                }
             }
         }
 
-        // VALIDASI BACKEND RADIUS 10 KM & STATUS AKTIF NAKES (BAGIAN 3)
+        // Validasi jadwal & hitung jarak jalan raya sebenarnya (OSRM) tanpa batasan radius 10 km
         if ($selectedNurseId) {
             $nurse = \App\Models\User::find($selectedNurseId);
             $profile = $nurse?->nurseProfile;
-            $timeoutMin = \App\Models\Setting::getInt('location_timeout_minutes', 15);
-            $maxRadius = \App\Models\Setting::getFloat('max_radius_km', 10.0);
 
-            if (!$profile || $profile->verification_status !== 'verified' || !$profile->is_online || $nurse->isSuspended()) {
+            if (! $profile || $profile->verification_status !== 'verified' || $nurse->isSuspended()) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Perawat yang dipilih saat ini sedang offline atau tidak aktif menerima pesanan.',
+                    'message' => 'Perawat yang dipilih belum terverifikasi atau sedang dinonaktifkan.',
                 ], 422);
             }
 
-            $isLocalOrTesting = app()->environment('local', 'testing') || app()->isLocal();
-            if (!$isLocalOrTesting && (!$profile->location_updated_at || $profile->location_updated_at < now()->subMinutes($timeoutMin))) {
+            $avail = NurseSchedule::checkAvailability(
+                (int) $selectedNurseId,
+                $bookingType,
+                $validated['scheduled_date'],
+                $validated['scheduled_time']
+            );
+
+            if (! $avail['available']) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Perawat yang dipilih tidak aktif (lokasi perawat tidak diperbarui dalam ' . $timeoutMin . ' menit terakhir).',
+                    'message' => 'Perawat ' . ($nurse->name ?? '') . ' tidak tersedia pada waktu tersebut (' . $avail['reason'] . '). Silakan pilih jam lain atau perawat lain pada Rekomendasi Cerdas.',
                 ], 422);
             }
 
             if (isset($validated['latitude']) && isset($validated['longitude'])) {
                 $patientLat = (float) $validated['latitude'];
                 $patientLng = (float) $validated['longitude'];
-                $calculatedDist = $profile->distanceTo($patientLat, $patientLng);
-
-                if ($calculatedDist > $maxRadius) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Perawat berada di luar radius operasional maksimal ' . $maxRadius . ' km (jarak terhitung: ' . round($calculatedDist, 1) . ' km). Silakan pilih perawat lain yang lebih dekat.',
-                    ], 422);
-                }
-
-                $distanceKm = $calculatedDist;
+                $distanceKm = $profile->distanceTo($patientLat, $patientLng);
             }
         }
 
         $breakdown = Order::calculatePriceBreakdown((float) $service->price, $distanceKm);
 
+        $scheduledTimeDisplay = $validated['scheduled_time'];
+        if (! str_contains(strtoupper($scheduledTimeDisplay), 'WIB')) {
+            $scheduledTimeDisplay .= ' WIB';
+        }
+
         $order = Order::create([
             'order_number' => Order::generateOrderNumber(),
+            'booking_type' => $bookingType,
             'patient_id' => $userId,
             'service_catalog_id' => $service->id,
             'nurse_id' => $selectedNurseId,
             'scheduled_date' => $validated['scheduled_date'],
-            'scheduled_time' => $validated['scheduled_time'],
+            'scheduled_time' => $scheduledTimeDisplay,
             'patient_name' => $validated['patient_name'],
             'patient_phone' => $validated['patient_phone'],
             'address' => $validated['address'],
@@ -199,6 +240,7 @@ class OrderApiController extends Controller
             'data' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
+                'booking_type' => $order->booking_type,
                 'status' => $order->status,
                 'status_label' => $order->status_label,
                 'scheduled_date' => $order->scheduled_date->format('Y-m-d'),
@@ -208,14 +250,13 @@ class OrderApiController extends Controller
                 'address' => $order->address,
                 'distance_km' => $order->distance_km,
                 'price_breakdown' => $breakdown,
-                'created_at' => $order->created_at->toISOString(),
+                'created_at' => $order->created_at->timezone('Asia/Jakarta')->format('d M Y, H:i') . ' WIB',
             ],
         ], 201);
     }
 
     /**
      * Tampilkan detail pesanan berdasarkan Order Number atau ID.
-     * Endpoint: GET /api/v1/orders/{orderNumberOrId}
      */
     public function show(string $orderNumberOrId): JsonResponse
     {
@@ -224,7 +265,7 @@ class OrderApiController extends Controller
             ->orWhere('id', $orderNumberOrId)
             ->first();
 
-        if (!$order) {
+        if (! $order) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Pesanan tidak ditemukan.',
@@ -236,6 +277,7 @@ class OrderApiController extends Controller
             'data' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
+                'booking_type' => $order->booking_type ?? 'scheduled',
                 'status' => $order->status,
                 'status_label' => $order->status_label,
                 'payment_status' => $order->payment_status,
@@ -268,14 +310,13 @@ class OrderApiController extends Controller
                     'formatted_platform_fee' => 'Rp ' . number_format($order->platform_fee, 0, ',', '.'),
                     'formatted_total_amount' => 'Rp ' . number_format($order->total_amount, 0, ',', '.'),
                 ],
-                'created_at' => $order->created_at->format('d M Y H:i'),
+                'created_at' => $order->created_at->timezone('Asia/Jakarta')->format('d M Y H:i') . ' WIB',
             ],
         ]);
     }
 
     /**
      * Daftar pesanan milik pasien.
-     * Endpoint: GET /api/v1/orders
      */
     public function index(Request $request): JsonResponse
     {
@@ -295,8 +336,7 @@ class OrderApiController extends Controller
     }
 
     /**
-     * Pembatalan Pesanan & Refund Escrow API.
-     * Endpoint: POST /api/v1/orders/{orderNumberOrId}/cancel
+     * Pembatalan Pesanan & Refund API.
      */
     public function cancel(Request $request, string $orderNumberOrId, \App\Services\MidtransPaymentService $paymentService): JsonResponse
     {
@@ -304,17 +344,17 @@ class OrderApiController extends Controller
             ->orWhere('id', $orderNumberOrId)
             ->first();
 
-        if (!$order) {
+        if (! $order) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Pesanan tidak ditemukan.',
             ], 404);
         }
 
-        if (!$order->isCancellable()) {
+        if (! $order->isCancellable()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pesanan tidak dapat dibatalkan karena nakes telah dalam perjalanan atau tindakan sedang berlangsung.',
+                'message' => 'Pesanan tidak dapat dibatalkan karena tindakan telah selesai atau dibatalkan sebelumnya.',
             ], 422);
         }
 
@@ -346,13 +386,13 @@ class OrderApiController extends Controller
 
         $order->status = 'dibatalkan';
         $order->cancellation_reason = $reason;
-        $order->cancelled_at = now();
+        $order->cancelled_at = now('Asia/Jakarta');
         $order->save();
 
         return response()->json([
             'status' => 'success',
-            'message' => $refundAmount > 0 
-                ? 'Pesanan berhasil dibatalkan. Pengembalian dana Escrow 100% senilai Rp ' . number_format($refundAmount, 0, ',', '.') . ' telah diproses.'
+            'message' => $refundAmount > 0
+                ? 'Pesanan berhasil dibatalkan. Pengembalian dana 100% senilai Rp ' . number_format($refundAmount, 0, ',', '.') . ' telah diproses.'
                 : 'Pesanan berhasil dibatalkan.',
             'data' => [
                 'order_number' => $order->order_number,

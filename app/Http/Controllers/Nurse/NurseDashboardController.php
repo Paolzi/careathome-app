@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Nurse;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\NurseProfile;
+use App\Models\NurseSchedule;
 use App\Models\NurseWallet;
 use App\Models\Order;
 use App\Models\PayoutRequest;
@@ -97,6 +98,10 @@ class NurseDashboardController extends Controller
             return (bool) $ord->eReport;
         });
 
+        $schedules = NurseSchedule::ensureDefaultSchedulesForNurse($user->id);
+        $todayDayOfWeek = (int) now('Asia/Jakarta')->dayOfWeekIso;
+        $todaySchedule = $schedules->firstWhere('day_of_week', $todayDayOfWeek);
+
         return view('pages.nurse.dashboard', [
             'user' => $user,
             'profile' => $profile,
@@ -113,7 +118,59 @@ class NurseDashboardController extends Controller
             'assignedOrders' => $assignedOrders,
             'ordersNeedingReport' => $ordersNeedingReport,
             'completedOrdersWithReport' => $completedOrdersWithReport,
+            'schedules' => $schedules,
+            'todaySchedule' => $todaySchedule,
         ]);
+    }
+
+    /**
+     * Simpan pengaturan jadwal operasional harian perawat (Senin - Minggu dalam WIB).
+     */
+    public function updateSchedules(Request $request)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'schedules' => ['required', 'array'],
+            'schedules.*.day_of_week' => ['required', 'integer', 'between:1,7'],
+            'schedules.*.is_active' => ['nullable'],
+            'schedules.*.start_time' => ['required', 'string'],
+            'schedules.*.end_time' => ['required', 'string'],
+        ]);
+
+        DB::transaction(function () use ($user, $validated) {
+            foreach ($validated['schedules'] as $item) {
+                $dayNum = (int) $item['day_of_week'];
+                $dayName = NurseSchedule::DAYS[$dayNum] ?? 'Senin';
+                $isActive = filter_var($item['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                $startTime = substr(trim($item['start_time']), 0, 5);
+                $endTime = substr(trim($item['end_time']), 0, 5);
+
+                NurseSchedule::updateOrCreate(
+                    [
+                        'nurse_id' => $user->id,
+                        'day_of_week' => $dayNum,
+                    ],
+                    [
+                        'day_name' => $dayName,
+                        'start_time' => $startTime,
+                        'end_time' => $endTime,
+                        'is_active' => $isActive,
+                    ]
+                );
+            }
+        });
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Jadwal operasional harian (WIB) berhasil diperbarui.',
+                'schedules' => NurseSchedule::ensureDefaultSchedulesForNurse($user->id),
+            ]);
+        }
+
+        return back()->with('status', 'Jadwal operasional harian Anda (WIB) berhasil disimpan.');
     }
 
     /**
@@ -241,7 +298,8 @@ class NurseDashboardController extends Controller
     }
 
     /**
-     * Permintaan penarikan saldo (Tarik Saldo) oleh perawat.
+     * Penarikan saldo langsung (Payout) oleh perawat cukup dengan menginputkan nominal penarikan.
+     * Saldo aktif perawat langsung terpotong otomatis dan tercatat di riwayat transaksi & panel Admin.
      */
     public function requestPayout(Request $request)
     {
@@ -250,73 +308,75 @@ class NurseDashboardController extends Controller
 
         $validated = $request->validate([
             'amount' => ['required', 'integer', 'min:10000'],
-            'bank_name' => ['required', 'string', 'max:50'],
-            'account_number' => ['required', 'string', 'max:50'],
-            'account_holder' => ['required', 'string', 'max:100'],
         ], [
+            'amount.required' => 'Nominal penarikan saldo wajib diisi.',
             'amount.min' => 'Nominal penarikan saldo minimal Rp 10.000.',
-            'bank_name.required' => 'Nama bank tujuan wajib diisi.',
-            'account_number.required' => 'Nomor rekening tujuan wajib diisi.',
-            'account_holder.required' => 'Nama pemilik rekening wajib diisi.',
         ]);
 
         $amount = (int) $validated['amount'];
 
         try {
-            DB::transaction(function () use ($user, $validated, $amount) {
+            DB::transaction(function () use ($user, $request, $amount) {
                 /** @var Wallet $wallet */
                 $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->firstOrFail();
                 $nurseWallet = NurseWallet::getOrCreateForNurse($user->id);
 
-                if ($wallet->balance < $amount && $nurseWallet->balance < $amount) {
-                    throw new \DomainException('Saldo tersedia Anda (Rp ' . number_format($wallet->balance, 0, ',', '.') . ') tidak mencukupi untuk penarikan sebesar Rp ' . number_format($amount, 0, ',', '.') . '.');
+                $activeBalance = max((int) $wallet->balance, (int) $nurseWallet->balance);
+
+                if ($activeBalance < $amount) {
+                    throw new \DomainException('Saldo aktif Anda (Rp ' . number_format($activeBalance, 0, ',', '.') . ') tidak mencukupi untuk penarikan sebesar Rp ' . number_format($amount, 0, ',', '.') . '.');
                 }
 
-                // Kurangi saldo pada dompet
-                $wallet->balance = max(0, $wallet->balance - $amount);
+                $newBalance = max(0, $activeBalance - $amount);
+
+                // Potong langsung saldo aktif perawat
+                $wallet->balance = $newBalance;
                 $wallet->save();
 
-                $nurseWallet->balance = max(0, $nurseWallet->balance - $amount);
-                $nurseWallet->pending_balance += $amount;
+                $nurseWallet->balance = $newBalance;
                 $nurseWallet->save();
 
                 $profile = NurseProfile::where('user_id', $user->id)->first();
                 if ($profile) {
-                    $profile->balance = $nurseWallet->balance;
+                    $profile->balance = $newBalance;
                     $profile->save();
                 }
 
-                // Buat record payout_request
+                $nowWibStr = now('Asia/Jakarta')->format('d M Y, H:i') . ' WIB';
+
+                // Catat langsung sebagai penarikan berhasil (transferred)
                 $payout = PayoutRequest::create([
                     'nurse_user_id' => $user->id,
                     'amount' => $amount,
-                    'bank_name' => $validated['bank_name'],
-                    'account_number' => $validated['account_number'],
-                    'account_holder' => $validated['account_holder'],
-                    'status' => 'pending',
+                    'bank_name' => $request->input('bank_name') ?: 'Penarikan Saldo Langsung',
+                    'account_number' => $request->input('account_number') ?: '-',
+                    'account_holder' => $request->input('account_holder') ?: $user->name,
+                    'status' => 'transferred',
+                    'processed_at' => now('Asia/Jakarta'),
+                    'reference_number' => 'WD-' . now('Asia/Jakarta')->format('YmdHis') . '-' . $user->id,
                 ]);
 
-                // Catat transaksi wallet_transactions dengan tipe withdrawal (hold)
+                // Catat transaksi wallet_transactions dengan status completed
                 WalletTransaction::create([
                     'wallet_id' => $wallet->id,
                     'nurse_wallet_id' => $nurseWallet->id,
                     'type' => 'withdrawal',
                     'amount' => -$amount,
                     'net_amount' => $amount,
-                    'status' => 'pending',
-                    'balance_after' => $wallet->balance,
+                    'status' => 'completed',
+                    'balance_after' => $newBalance,
                     'payout_request_id' => $payout->id,
-                    'description' => "Penarikan saldo (Hold) ke rekening {$payout->bank_name} {$payout->account_number} a.n {$payout->account_holder}",
+                    'description' => 'Penarikan saldo langsung sebesar Rp ' . number_format($amount, 0, ',', '.') . " ({$nowWibStr})",
                 ]);
 
-                AuditLog::log('nurse_payout_requested', $payout, null, [
+                AuditLog::log('nurse_payout_withdrawn', $payout, null, [
                     'amount' => $amount,
-                    'bank' => $payout->bank_name,
-                    'account' => $payout->account_number,
+                    'balance_after' => $newBalance,
+                    'withdrawn_at_wib' => $nowWibStr,
                 ]);
             });
 
-            return back()->with('status', 'Pengajuan penarikan dana sebesar Rp ' . number_format($amount, 0, ',', '.') . ' berhasil diajukan dan sedang menunggu otorisasi transfer admin.');
+            return back()->with('status', 'Penarikan saldo sebesar Rp ' . number_format($amount, 0, ',', '.') . ' berhasil diproses! Saldo aktif Anda telah terpotong otomatis.');
         } catch (\DomainException $e) {
             return back()->with('error', $e->getMessage())->withInput();
         } catch (\Throwable $e) {

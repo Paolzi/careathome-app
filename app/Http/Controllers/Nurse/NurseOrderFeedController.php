@@ -52,18 +52,17 @@ class NurseOrderFeedController extends Controller
             ->latest()
             ->get();
 
-        // Hitung jarak dinamis jika koordinat perawat dan pesanan tersedia
+        // Hitung jarak rute jalan raya sebenarnya (OSRM) jika koordinat perawat dan pesanan tersedia
         $feedOrders = $availableOrders->map(function ($order) use ($nurseLat, $nurseLng) {
             $distance = (float) ($order->distance_km ?? 0.0);
 
             if ($nurseLat && $nurseLng && $order->latitude && $order->longitude) {
-                $calculated = $this->calculateHaversineDistance(
+                $distance = \App\Services\OsrmRoutingService::getDrivingDistanceKm(
                     $nurseLat,
                     $nurseLng,
                     (float) $order->latitude,
                     (float) $order->longitude
                 );
-                $distance = round($calculated, 1);
             }
 
             // Hitung estimasi komisi bersih perawat: 85% tindakan + 100% transport
@@ -314,6 +313,19 @@ class NurseOrderFeedController extends Controller
         $status = $request->input('status');
         if (!in_array($status, ['dalam_perjalanan', 'tiba', 'tindakan_berlangsung', 'diterima'])) {
             return response()->json(['status' => 'error', 'message' => 'Status tidak valid.'], 422);
+        }
+
+        // Validasi 30 menit sebelum jam perawatan dimulai (WIB) untuk aksi perjalanan/perawatan
+        if (in_array($status, ['dalam_perjalanan', 'tiba', 'tindakan_berlangsung'])) {
+            $actionCheck = $order->canNursePerformAction();
+            if (! $actionCheck['allowed']) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $actionCheck['message'],
+                    'unlock_time_wib' => $actionCheck['unlock_time_wib'],
+                    'minutes_until_unlock' => $actionCheck['minutes_until_unlock'],
+                ], 422);
+            }
         }
 
         $order->status = $status;

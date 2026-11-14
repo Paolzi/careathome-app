@@ -38,6 +38,7 @@ Route::middleware(['auth'])->group(function () {
     // Portal Perawat (Role: perawat atau admin)
     Route::middleware(['role:perawat|admin'])->group(function () {
         Route::get('perawat/dashboard', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'index'])->name('perawat.dashboard');
+        Route::post('perawat/jadwal', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'updateSchedules'])->name('perawat.jadwal.update');
         Route::post('perawat/toggle-online', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'toggleOnline'])->name('perawat.toggle-online');
         Route::post('perawat/lokasi', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'updateLocation'])->name('perawat.lokasi');
         Route::post('perawat/layanan', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'updateServices'])->name('perawat.layanan.update');
@@ -50,11 +51,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('perawat/documents/{document}/preview', [\App\Http\Controllers\NurseDocumentController::class, 'preview'])->name('perawat.documents.preview');
         Route::post('perawat/notifications/{id}/read', [\App\Http\Controllers\NurseDocumentController::class, 'markNotificationAsRead'])->name('perawat.notifications.read');
         Route::post('perawat/notifications/read-all', [\App\Http\Controllers\NurseDocumentController::class, 'markAllNotificationsAsRead'])->name('perawat.notifications.read-all');
-        // Pengisian E-Report Klinis & Penyelesaian Pesanan (KF-10)
+        // Pengisian E-Report Klinis & Penyelesaian Pesanan
         Route::get('perawat/orders/{order}/ereport', [\App\Http\Controllers\Nurse\NurseEReportController::class, 'show'])->name('perawat.ereport.show');
         Route::post('perawat/orders/{order}/ereport', [\App\Http\Controllers\Nurse\NurseEReportController::class, 'store'])->name('perawat.ereport.store');
 
-        // Feed Order Kunjungan Masuk & Riwayat Finansial (Marketplace Job Board)
+        // Feed Order Kunjungan Masuk & Riwayat Finansial
         Route::get('perawat/feed', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'index'])->name('perawat.feed');
         Route::post('perawat/orders/{order}/accept', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'accept'])->name('perawat.orders.accept');
         Route::post('perawat/orders/{order}/decline', [\App\Http\Controllers\Nurse\NurseOrderFeedController::class, 'decline'])->name('perawat.orders.decline');
@@ -72,7 +73,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('pasien/pesanan/{order}/bayar', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'pay'])->name('pasien.pesanan.pay');
         Route::post('pasien/pesanan/{order}/batal', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancel'])->name('pasien.pesanan.cancel');
 
-        // Lembar E-Report Klinis & Ulasan/Rating Pasien (KF-11 & KF-12)
+        // Lembar E-Report Klinis & Ulasan/Rating Pasien
         Route::get('pasien/orders/{order}/ereport', [\App\Http\Controllers\Patient\PatientReviewReportController::class, 'showReport'])->name('pasien.ereport.show');
         Route::post('pasien/orders/{order}/review', [\App\Http\Controllers\Patient\PatientReviewReportController::class, 'storeReview'])->name('pasien.review.store');
     });
@@ -90,19 +91,19 @@ Route::middleware(['auth'])->group(function () {
         Route::post('nurses/{nurseProfile}/verify-ktki', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'verifyKtki'])->name('nurses.verify-ktki');
         Route::get('documents/{document}/preview', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'previewDocument'])->name('documents.preview');
 
-        // SCRUM-57: Master Data Layanan & Tarif
+        // Master Data Layanan & Tarif
         Route::resource('services', \App\Http\Controllers\Admin\AdminServiceCatalogController::class)->names('services');
 
-        // SCRUM-58: Monitoring Escrow & Audit Saldo
+        // Monitoring Transaksi & Audit Saldo
         Route::get('escrow', [\App\Http\Controllers\Admin\AdminEscrowMonitoringController::class, 'index'])->name('escrow.index');
         Route::get('escrow/export', [\App\Http\Controllers\Admin\AdminEscrowMonitoringController::class, 'exportCsv'])->name('escrow.export');
 
-        // SCRUM-59: Otorisasi Payout & Input Bukti Transfer
+        // Riwayat Penarikan Saldo (Payout) Perawat
         Route::get('payouts', [\App\Http\Controllers\Admin\AdminPayoutController::class, 'index'])->name('payouts.index');
         Route::post('payouts/{payout}/transfer', [\App\Http\Controllers\Admin\AdminPayoutController::class, 'transfer'])->name('payouts.transfer');
         Route::post('payouts/{payout}/reject', [\App\Http\Controllers\Admin\AdminPayoutController::class, 'reject'])->name('payouts.reject');
 
-        // SCRUM-60: Manajemen Pengguna
+        // Manajemen Pengguna
         Route::get('users', [\App\Http\Controllers\Admin\AdminUserController::class, 'index'])->name('users.index');
         Route::post('users/{user}/toggle-status', [\App\Http\Controllers\Admin\AdminUserController::class, 'toggleStatus'])->name('users.toggleStatus');
     });

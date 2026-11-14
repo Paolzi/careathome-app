@@ -105,88 +105,47 @@ class NurseProfile extends Model
     }
 
     /**
-     * Scope untuk perawat yang benar-benar aktif:
-     * 1. verification_status == 'verified'
-     * 2. is_online == true
-     * 3. location_updated_at tidak lebih tua dari batas timeout (mis. 15 menit)
-     * 4. User tidak dalam status suspended
+     * Scope untuk perawat yang terverifikasi dan akunnya aktif (tidak disuspend).
      */
     public function scopeActive(Builder $query): Builder
     {
-        $defaultTimeout = config('nursing.location_timeout_minutes', 15);
-        $timeoutMinutes = (int) Setting::getInt('location_timeout_minutes', $defaultTimeout);
-        $thresholdTime = now()->subMinutes($timeoutMinutes);
-
         return $query->where(function ($q) {
                 $q->where('status_verifikasi', 'verified')
                   ->orWhere('verification_status', 'verified')
                   ->orWhere('status_legalitas', 'verified');
             })
-            ->where('is_online', true)
-            ->whereNotNull('location_updated_at')
-            ->where('location_updated_at', '>=', $thresholdTime)
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
             ->whereHas('user', function ($q) {
                 $q->where('status', '!=', 'suspended');
             });
     }
 
     /**
-     * Scope untuk mencari perawat aktif dalam radius tertentu (default 10 km).
-     * Menggunakan Bounding Box awal untuk performa indeks, lalu rumus Haversine presisi.
+     * Scope untuk mengurutkan perawat dari jarak terdekat tanpa membatasi radius 10 km.
      */
     public function scopeNearby(Builder $query, float $latitude, float $longitude, ?float $radiusKm = null): Builder
     {
-        $defaultRadius = config('nursing.max_radius_km', 10.0);
-        $radius = $radiusKm ?? (float) Setting::getFloat('max_radius_km', $defaultRadius);
-
-        // Derajat perkiraan bounding box
-        // 1 deg lat ~ 111.045 km
-        $latDelta = $radius / 111.045;
-        // 1 deg lng ~ 111.045 * cos(lat) km
-        $lngDelta = $radius / (111.045 * max(cos(deg2rad($latitude)), 0.0001));
-
-        $minLat = $latitude - $latDelta;
-        $maxLat = $latitude + $latDelta;
-        $minLng = $longitude - $lngDelta;
-        $maxLng = $longitude + $lngDelta;
-
-        // Bounding box filter (memanfaatkan index nurse_profiles_lat_lng_idx)
-        $query->whereBetween('latitude', [$minLat, $maxLat])
-            ->whereBetween('longitude', [$minLng, $maxLng]);
-
-        // Haversine SQL formula (radius bumi ~ 6371 km)
-        $haversine = "(6371 * acos(least(1.0, greatest(-1.0, cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))))";
+        $haversine = "(6371 * acos(least(1.0, greatest(-1.0, cos(radians(?)) * cos(radians(coalesce(latitude, -7.3144))) * cos(radians(coalesce(longitude, 112.7304)) - radians(?)) + sin(radians(?)) * sin(radians(coalesce(latitude, -7.3144)))))))";
 
         $query->select('nurse_profiles.*')
-            ->selectRaw("round({$haversine}, 2) AS distance", [$latitude, $longitude, $latitude])
-            ->selectRaw("round({$haversine}, 2) AS distance_km", [$latitude, $longitude, $latitude])
-            ->having('distance', '<=', $radius)
+            ->selectRaw("round({$haversine} * 1.35, 2) AS distance", [$latitude, $longitude, $latitude])
+            ->selectRaw("round({$haversine} * 1.35, 2) AS distance_km", [$latitude, $longitude, $latitude])
             ->orderBy('distance', 'asc');
+
+        if ($radiusKm !== null && $radiusKm > 0) {
+            $query->having('distance', '<=', $radiusKm);
+        }
 
         return $query;
     }
 
     /**
-     * Hitung jarak langsung (Haversine) dari koordinat perawat ini ke koordinat tujuan.
+     * Hitung jarak rute jalan raya sebenarnya (via OSRM Public API) dari koordinat perawat ini ke koordinat tujuan.
      */
     public function distanceTo(float $targetLat, float $targetLng): float
     {
-        if ($this->latitude === null || $this->longitude === null) {
-            return 999999.0;
-        }
+        $lat = $this->latitude !== null ? (float) $this->latitude : -7.3144;
+        $lng = $this->longitude !== null ? (float) $this->longitude : 112.7304;
 
-        $earthRadius = 6371.0; // km
-        $dLat = deg2rad($targetLat - $this->latitude);
-        $dLon = deg2rad($targetLng - $this->longitude);
-
-        $a = sin($dLat / 2) * sin($dLat / 2) +
-            cos(deg2rad($this->latitude)) * cos(deg2rad($targetLat)) *
-            sin($dLon / 2) * sin($dLon / 2);
-
-        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-
-        return round($earthRadius * $c, 2);
+        return \App\Services\OsrmRoutingService::getDrivingDistanceKm($lat, $lng, $targetLat, $targetLng);
     }
 }

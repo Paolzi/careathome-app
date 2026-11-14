@@ -66,6 +66,11 @@ class User extends Authenticatable
         return $this->hasOne(NurseProfile::class);
     }
 
+    public function nurseSchedules(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(NurseSchedule::class, 'nurse_id')->orderBy('day_of_week');
+    }
+
     public function wallet(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Wallet::class);

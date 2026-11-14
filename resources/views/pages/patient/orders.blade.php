@@ -344,9 +344,9 @@
                             <div class="p-5 space-y-3.5 text-xs">
                                 <div class="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-100">
                                     <div>
-                                        <span class="text-[10px] uppercase font-bold text-slate-400 block">Jadwal Kunjungan</span>
+                                        <span class="text-[10px] uppercase font-bold text-slate-400 block">Jadwal Kunjungan (WIB)</span>
                                         <span class="font-bold text-slate-900">{{ $order->scheduled_date->format('d M Y') }}</span>
-                                        <span class="text-[11px] text-emerald-700 font-semibold block">{{ $order->scheduled_time }}</span>
+                                        <span class="text-[11px] text-emerald-700 font-semibold block">{{ str_contains(strtoupper($order->scheduled_time), 'WIB') ? $order->scheduled_time : $order->scheduled_time . ' WIB' }}</span>
                                     </div>
                                     <div>
                                         <span class="text-[10px] uppercase font-bold text-slate-400 block">Penerima Layanan</span>
@@ -375,7 +375,7 @@
                                     <span class="text-[10px] uppercase font-bold text-slate-400 block">Alamat Kunjungan</span>
                                     <p class="text-slate-700 line-clamp-2 mt-0.5 leading-relaxed">{{ $order->address }}</p>
                                     <span class="text-[11px] text-slate-400 font-medium mt-1 block">
-                                        📍 Jarak estimasi: <strong class="text-slate-700">{{ $order->distance_km }} km</strong> (Radius Operasional GPS 10 km)
+                                        🛣️ Jarak rute jalan raya: <strong class="text-slate-700">{{ $order->distance_km }} km</strong> (OSRM Live Routing)
                                     </span>
                                 </div>
                             </div>
@@ -1375,7 +1375,7 @@
                 patientMarker: null,
                 nurseMarker: null,
                 routeLine: null,
-                radiusCircle: null,
+                routeCoordinates: [],
                 isTrackingAnimating: false,
                 trackingInterval: null,
                 liveDistanceKm: null,
@@ -1593,7 +1593,7 @@
                     this.trackingModalOpen = false;
                 },
 
-                initTrackingMap(order) {
+                async initTrackingMap(order) {
                     if (this.trackingInterval) {
                         clearInterval(this.trackingInterval);
                         this.trackingInterval = null;
@@ -1617,10 +1617,11 @@
                         nLng = patLng + 0.012;
                     }
                     this.originNurseCoords = [nLat, nLng];
+                    this.routeCoordinates = [this.originNurseCoords, this.patientCoords];
 
                     const baseDist = parseFloat(order.distance_km) || 2.8;
                     this.liveDistanceKm = baseDist.toFixed(1);
-                    this.liveEtaMin = Math.max(8, Math.round(baseDist * 3));
+                    this.liveEtaMin = Math.max(5, Math.round(baseDist * 3));
                     this.liveStatusText = order.status === 'dalam_perjalanan' ? '🛵 Nakes Menuju Rumah Anda' : (order.status_label || 'Siap Berangkat');
 
                     const mapContainer = document.getElementById('tracking-map');
@@ -1638,7 +1639,6 @@
                         attribution: '&copy; OpenStreetMap contributors'
                     }).addTo(this.trackingMap);
 
-                    // Custom HTML Icon: Rumah Pasien (Denyut Merah)
                     const patientIcon = L.divIcon({
                         className: 'patient-div-icon',
                         html: `
@@ -1658,14 +1658,13 @@
                         .bindPopup(`<strong>Titik Alamat Pasien</strong><br>${order.patient_name || 'Rumah Pasien'}`)
                         .openPopup();
 
-                    // Custom HTML Icon: Nakes Motor Bergerak
-                    const nurseName = order.nurse?.name || 'Ns. Dinda';
+                    const nurseName = order.nurse?.name || 'Mitra Perawat';
                     const nurseIcon = L.divIcon({
                         className: 'nurse-div-icon',
                         html: `
                             <div style="position:relative; display:inline-flex; align-items:center; justify-content:center;">
                                 <div style="position:absolute; width:100%; height:100%; border-radius:9999px; background:rgba(16,185,129,0.35); animation:pulseGlow 1.4s infinite;"></div>
-                                <div style="padding:4px 10px; border-radius:9999px; background:#059669; color:white; display:flex; align-items:center; gap:5px; font-size:11px; font-weight:800; box-shadow:0 10px 15px -3px rgba(0,0,0,0.3); border:2px solid #ffffff; white-space:nowrap;">
+                                <div style="padding:4px 10px; border-radius:9999px; background:#064e3b; color:white; display:flex; align-items:center; gap:5px; font-size:11px; font-weight:800; box-shadow:0 10px 15px -3px rgba(0,0,0,0.3); border:2px solid #10b981; white-space:nowrap;">
                                     <span>🛵</span>
                                     <span>${nurseName}</span>
                                 </div>
@@ -1677,30 +1676,40 @@
 
                     this.nurseMarker = L.marker([nLat, nLng], { icon: nurseIcon })
                         .addTo(this.trackingMap)
-                        .bindPopup(`<strong>Posisi Mitra Nakes</strong><br>${nurseName} (Sedang Siaga / Bergerak)`);
+                        .bindPopup(`<strong>Posisi Mitra Nakes</strong><br>${nurseName} (Rute Jalan OSRM Aktif)`);
 
-                    // Garis Rute Perjalanan Beranimasi
-                    this.routeLine = L.polyline([this.originNurseCoords, this.patientCoords], {
-                        color: '#059669',
+                    // Ambil geometri rute jalan raya sebenarnya dari OSRM Public API
+                    try {
+                        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${nLng},${nLat};${patLng},${patLat}?overview=full&geometries=geojson`;
+                        const res = await fetch(osrmUrl);
+                        const json = await res.json();
+                        if (json && json.routes && json.routes[0] && json.routes[0].geometry && Array.isArray(json.routes[0].geometry.coordinates)) {
+                            const route = json.routes[0];
+                            const roadCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                            if (roadCoords.length >= 2) {
+                                this.routeCoordinates = roadCoords;
+                            }
+                            if (route.distance) {
+                                const km = Math.max(0.1, Math.round((route.distance / 1000) * 100) / 100);
+                                this.liveDistanceKm = km.toFixed(1);
+                            }
+                            if (route.duration) {
+                                this.liveEtaMin = Math.max(2, Math.ceil(route.duration / 60));
+                            }
+                        }
+                    } catch (e) {
+                        // Fallback ke polyline 2 titik jika OSRM tidak terjangkau
+                    }
+
+                    // Garis Rute Jalan Raya (mengikuti belokan jalan OSRM)
+                    this.routeLine = L.polyline(this.routeCoordinates, {
+                        color: '#10b981',
                         weight: 5,
                         opacity: 0.9,
                         className: 'animated-route-polyline',
                     }).addTo(this.trackingMap);
 
-                    // Lingkaran Radius 10 KM
-                    this.radiusCircle = L.circle([patLat, patLng], {
-                        radius: 10000,
-                        color: '#10b981',
-                        fillColor: '#10b981',
-                        fillOpacity: 0.04,
-                        weight: 1
-                    }).addTo(this.trackingMap);
-
-                    // Auto-fit kedua titik
-                    this.trackingMap.fitBounds([
-                        this.patientCoords,
-                        this.originNurseCoords
-                    ], { padding: [50, 50] });
+                    this.trackingMap.fitBounds(this.routeLine.getBounds(), { padding: [45, 45] });
 
                     setTimeout(() => {
                         if (this.trackingMap) {
@@ -1710,39 +1719,61 @@
                 },
 
                 startNurseMovementSimulation() {
-                    if (this.isTrackingAnimating || !this.nurseMarker || !this.patientCoords || !this.originNurseCoords) {
+                    if (this.isTrackingAnimating || !this.nurseMarker || !this.routeCoordinates || this.routeCoordinates.length < 2) {
                         return;
                     }
 
                     this.isTrackingAnimating = true;
-                    this.liveStatusText = '🛵 Nakes Meluncur ke Lokasi...';
+                    this.liveStatusText = '🛵 Nakes Meluncur Mengikuti Rute Jalan...';
 
-                    const [startLat, startLng] = this.originNurseCoords;
-                    const [destLat, destLng] = this.patientCoords;
-                    const totalDist = parseFloat(this.selectedOrder?.distance_km) || 2.8;
-                    const totalEta = Math.max(8, Math.round(totalDist * 3));
+                    const totalDist = parseFloat(this.liveDistanceKm) || parseFloat(this.selectedOrder?.distance_km) || 2.8;
+                    const totalEta = Math.max(4, Math.round(totalDist * 3));
 
-                    const totalSteps = 60;
+                    // Bangun titik-titik halus di sepanjang polyline rute jalan OSRM
+                    const coords = this.routeCoordinates;
+                    const smoothPath = [];
+                    const targetSteps = 75;
+
+                    for (let i = 0; i < targetSteps; i++) {
+                        const t = i / (targetSteps - 1);
+                        const exactIdx = t * (coords.length - 1);
+                        const idx = Math.floor(exactIdx);
+                        const frac = exactIdx - idx;
+                        if (idx >= coords.length - 1) {
+                            smoothPath.push(coords[coords.length - 1]);
+                        } else {
+                            const p1 = coords[idx];
+                            const p2 = coords[idx + 1];
+                            smoothPath.push([
+                                p1[0] + (p2[0] - p1[0]) * frac,
+                                p1[1] + (p2[1] - p1[1]) * frac,
+                            ]);
+                        }
+                    }
+
                     let currentStep = 0;
-                    const stepInterval = 140;
+                    const stepInterval = 110;
 
                     if (this.trackingInterval) {
                         clearInterval(this.trackingInterval);
                     }
 
                     this.trackingInterval = setInterval(() => {
-                        currentStep++;
-                        const progress = Math.min(1.0, currentStep / totalSteps);
+                        if (currentStep >= smoothPath.length) {
+                            clearInterval(this.trackingInterval);
+                            this.trackingInterval = null;
+                            this.isTrackingAnimating = false;
+                            return;
+                        }
 
-                        // Interpolasi koordinat
-                        const curLat = startLat + (destLat - startLat) * progress;
-                        const curLng = startLng + (destLng - startLng) * progress;
+                        const [curLat, curLng] = smoothPath[currentStep];
+                        currentStep++;
+                        const progress = Math.min(1.0, currentStep / smoothPath.length);
 
                         if (this.nurseMarker) {
                             this.nurseMarker.setLatLng([curLat, curLng]);
                         }
 
-                        // Update jarak dan ETA live
                         const remainingDist = Math.max(0, totalDist * (1.0 - progress));
                         const remainingEta = Math.max(1, Math.round(totalEta * (1.0 - progress)));
 

@@ -66,6 +66,12 @@ class NurseEReportController extends Controller
             return back()->with('error', 'E-Report untuk pesanan ini sudah pernah diisi sebelumnya.');
         }
 
+        // Validasi waktu aksi perawat (maksimal 30 menit sebelum jadwal perawatan dimulai dalam WIB)
+        $actionCheck = $order->canNursePerformAction();
+        if (! $actionCheck['allowed'] && ! $user->hasRole('admin')) {
+            return back()->with('error', $actionCheck['message']);
+        }
+
         $validated = $request->validate([
             'systolic' => ['required', 'integer', 'between:50,300'],
             'diastolic' => ['required', 'integer', 'between:30,200'],

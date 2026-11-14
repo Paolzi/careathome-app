@@ -156,32 +156,30 @@
                             <span class="text-emerald-400">✓</span> E-Report Rekam Medis Digital
                         </div>
                         <div class="bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
-                            <span class="text-emerald-400">✓</span> Perawat Terdekat Radius GPS 10 KM
+                            <span class="text-emerald-400">✓</span> Jangkauan Bebas Radius &amp; Rute Jalan Akurat (OSRM)
+                        </div>
+                        <div class="bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
+                            <span class="text-emerald-400">🕒</span> Waktu Real-Time: <strong x-text="currentWibClock">{{ now('Asia/Jakarta')->format('H:i') }} WIB</strong>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 2.5 SECTION PERAWAT TERDEKAT RADIUS 10 KM (BAGIAN 3) -->
+        <!-- 2.5 SECTION MITRA PERAWAT TERVERIFIKASI & PENJADWALAN (WIB) -->
         <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-sm space-y-5">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div class="space-y-1">
                     <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
-                        <span>📍</span>
-                        <span x-text="hasPatientLocation ? 'Radius Layanan Presisi: Maksimal 10 KM' : 'Jangkauan: Seluruh Mitra Online'"></span>
+                        <span>🗓️</span>
+                        <span>Penjadwalan Fleksibel Tanpa Batas Radius • Zona Waktu WIB</span>
                     </div>
-                    <h2 class="text-lg font-bold text-slate-900 tracking-tight">Mitra Perawat Aktif</h2>
+                    <h2 class="text-lg font-bold text-slate-900 tracking-tight">Mitra Perawat Terverifikasi &amp; Ketersediaan Jadwal</h2>
                     <p class="text-xs text-slate-500">
-                        <span x-show="hasPatientLocation" x-cloak>
-                            Menampilkan perawat yang berstatus <strong>Online (Sedang Bekerja)</strong>, terverifikasi STR/SIP, dan berjarak maksimal 10 km dari posisi GPS Anda.
-                        </span>
-                        <span x-show="!hasPatientLocation">
-                            Menampilkan seluruh mitra perawat terverifikasi yang sedang berstatus <strong>Online &amp; Siap Melayani</strong> di wilayah jangkauan Anda.
-                        </span>
+                        Pilih mode <strong>Pesan Sekarang</strong> atau <strong>Pesan Untuk Nanti</strong>. Seluruh perawat terverifikasi dapat dipilih dari jarak manapun dengan estimasi jarak rute jalan raya sebenarnya.
                     </p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <button id="btn-detect-gps" type="button" @click="requestBrowserLocation()"
                         :disabled="loadingNurses"
                         class="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer">
@@ -202,48 +200,70 @@
                             class="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-50 text-xs space-y-1.5">
                             <p class="font-bold text-slate-800 px-1 text-[11px] uppercase tracking-wider text-slate-400">PILIH TITIK ACUAN:</p>
                             <button type="button"
-                                data-lat="-7.3144" data-lng="112.7304" data-label="Surabaya Selatan (Pos Dinda)"
+                                data-lat="-7.3144" data-lng="112.7304" data-label="Surabaya Selatan"
                                 @click="selectPresetLocation($el); locDropdown = false"
                                 class="btn-location-preset w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 hover:text-emerald-800 font-medium transition flex items-center justify-between cursor-pointer">
-                                <span>Surabaya Selatan (Pos Dinda)</span>
-                                <span class="text-[10px] text-emerald-600 font-bold">&lt; 1 km</span>
+                                <span>Surabaya Selatan</span>
+                                <span class="text-[10px] text-emerald-600 font-bold">Rute Dekat</span>
                             </button>
                             <button type="button"
                                 data-lat="-7.2575" data-lng="112.7521" data-label="Surabaya Pusat (Gubeng)"
                                 @click="selectPresetLocation($el); locDropdown = false"
                                 class="btn-location-preset w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 hover:text-emerald-800 font-medium transition flex items-center justify-between cursor-pointer">
                                 <span>Surabaya Pusat (Gubeng)</span>
-                                <span class="text-[10px] text-slate-500 font-semibold">~7 km</span>
+                                <span class="text-[10px] text-slate-500 font-semibold">Pusat Kota</span>
                             </button>
                             <button type="button"
                                 data-lat="-7.2891" data-lng="112.7344" data-label="Surabaya Selatan (Wonokromo)"
                                 @click="selectPresetLocation($el); locDropdown = false"
                                 class="btn-location-preset w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-50 hover:text-emerald-800 font-medium transition flex items-center justify-between cursor-pointer">
                                 <span>Surabaya Selatan (Wonokromo)</span>
-                                <span class="text-[10px] text-emerald-600 font-bold">~3 km</span>
+                                <span class="text-[10px] text-emerald-600 font-bold">Wonokromo</span>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Banner Alert bagi Pasien jika Lokasi GPS Belum Aktif -->
-            <div x-show="!hasPatientLocation" x-cloak
-                class="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                <div class="flex items-center gap-3">
-                    <span class="text-2xl">⚠️</span>
-                    <div class="space-y-0.5 text-xs">
-                        <strong class="font-bold text-amber-950 block">Aktifkan Lokasi untuk Hasil Presisi</strong>
-                        <p class="text-amber-800 text-[11px] leading-relaxed">
-                            Lokasi GPS Anda belum diizinkan atau belum terdeteksi. Sistem menampilkan perawat online terdaftar secara umum. Aktifkan lokasi untuk menyaring perawat terdekat dalam radius maksimal 10 km dari rumah Anda.
-                        </p>
+            <!-- Bar Pilihan Waktu Pemesanan ("Pesan Sekarang" vs "Pesan Untuk Nanti") -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-extrabold text-slate-700 mr-1">Waktu Perawatan:</span>
+                    <button type="button"
+                        @click="setBookingMode('now')"
+                        :class="bookingForm.booking_type === 'now' ? 'bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-600/20' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'"
+                        class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                        <span>⚡</span>
+                        <span>Pesan Sekarang (<span x-text="currentWibClock">{{ now('Asia/Jakarta')->format('H:i') }} WIB</span>)</span>
+                    </button>
+                    <button type="button"
+                        @click="setBookingMode('scheduled')"
+                        :class="bookingForm.booking_type === 'scheduled' ? 'bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-600/20' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'"
+                        class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                        <span>📅</span>
+                        <span>Pesan Untuk Nanti (Terjadwal)</span>
+                    </button>
+                </div>
+
+                <!-- Pemilih Tanggal & Jam saat mode "Pesan Untuk Nanti" -->
+                <div x-show="bookingForm.booking_type === 'scheduled'" x-cloak class="flex flex-wrap items-center gap-2.5">
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-[11px] font-bold text-slate-600">Tanggal:</label>
+                        <input type="date" x-model="bookingForm.scheduled_date" :min="todayDate" @change="fetchNearbyNurses(true)"
+                            class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-[11px] font-bold text-slate-600">Jam (WIB):</label>
+                        <select x-model="bookingForm.scheduled_time" @change="fetchNearbyNurses(true)"
+                            class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500">
+                            <option value="08:00 - 10:00">08:00 - 10:00 WIB (Pagi)</option>
+                            <option value="10:00 - 12:00">10:00 - 12:00 WIB (Menjelang Siang)</option>
+                            <option value="13:00 - 15:00">13:00 - 15:00 WIB (Siang)</option>
+                            <option value="15:00 - 17:00">15:00 - 17:00 WIB (Sore)</option>
+                            <option value="19:00 - 21:00">19:00 - 21:00 WIB (Malam)</option>
+                        </select>
                     </div>
                 </div>
-                <button type="button" @click="requestBrowserLocation()"
-                    class="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition whitespace-nowrap self-start sm:self-auto flex items-center gap-1.5 cursor-pointer">
-                    <span>📍</span>
-                    <span>Aktifkan GPS Presisi</span>
-                </button>
             </div>
 
             <!-- Loading State Indicator -->
@@ -265,6 +285,123 @@
             <!-- Target Container for Nurse Cards (#nurse-cards-container & #nurse-list-container) -->
             <div id="nurse-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 <!-- Kartu perawat aktif di-render dinamis oleh JavaScript renderNurseCards() -->
+            </div>
+
+            <!-- KOMPONEN REKOMENDASI CERDAS (Muncul saat tidak ada perawat tersedia pada waktu yang dipilih atau saat dibuka) -->
+            <div x-show="availableNursesCount === 0 || showSmartRecommendations" x-cloak
+                class="mt-4 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/60 p-5 sm:p-6 space-y-5 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-100 pb-3.5">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-700 text-white flex items-center justify-center text-lg shadow-sm shrink-0">
+                            💡
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                Rekomendasi Cerdas Penjadwalan (WIB)
+                            </span>
+                            <h3 class="text-sm sm:text-base font-extrabold text-slate-900 mt-1">
+                                <span x-show="availableNursesCount === 0">Belum Ada Perawat Tersedia di Jam Tersebut — Berikut Alternatif Terbaik:</span>
+                                <span x-show="availableNursesCount > 0">Rekomendasi Jadwal &amp; Jam Praktik Mitra Perawat:</span>
+                            </h3>
+                            <p class="text-xs text-slate-600">
+                                Pilih salah satu rekomendasi jam terdekat, hari berikutnya, atau lihat jadwal rutin perawat di bawah ini untuk langsung menyesuaikan waktu booking Anda.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <!-- 1. Rekomendasi Jam Terdekat Hari Ini -->
+                    <div class="p-4 rounded-2xl bg-white border border-slate-200/90 space-y-3 shadow-2xs">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🕒</span>
+                            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Rekomendasi Jam Terdekat (Hari Ini)</h4>
+                        </div>
+                        <template x-if="recommendations?.nearest_times_today && recommendations.nearest_times_today.length > 0">
+                            <div class="space-y-2">
+                                <template x-for="slotItem in recommendations.nearest_times_today" :key="slotItem.slot">
+                                    <button type="button"
+                                        @click="applyRecommendedSlot(slotItem.date, slotItem.slot)"
+                                        class="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/60 transition flex items-center justify-between gap-2 group cursor-pointer">
+                                        <div>
+                                            <span class="text-xs font-bold text-slate-900 group-hover:text-emerald-800 block" x-text="slotItem.label"></span>
+                                            <span class="text-[10px] text-slate-500" x-text="'Perawat: ' + (slotItem.nurse_names || []).join(', ')"></span>
+                                        </div>
+                                        <span class="px-2 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[10px] font-extrabold shrink-0"
+                                            x-text="slotItem.available_nurses_count + ' Ready →'"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!recommendations?.nearest_times_today || recommendations.nearest_times_today.length === 0">
+                            <p class="text-xs text-slate-500 italic py-2">Tidak ada slot tersisa untuk hari ini. Silakan pilih rekomendasi hari berikutnya di samping.</p>
+                        </template>
+                    </div>
+
+                    <!-- 2. Rekomendasi Hari Berikutnya -->
+                    <div class="p-4 rounded-2xl bg-white border border-slate-200/90 space-y-3 shadow-2xs">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">📅</span>
+                            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Rekomendasi Hari Berikutnya</h4>
+                        </div>
+                        <template x-if="recommendations?.next_days && recommendations.next_days.length > 0">
+                            <div class="space-y-2">
+                                <template x-for="dayRec in recommendations.next_days" :key="dayRec.date">
+                                    <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs font-extrabold text-slate-900" x-text="dayRec.formatted_date"></span>
+                                            <span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold"
+                                                x-text="dayRec.available_nurses_count + ' Perawat Siap'"></span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-1.5 pt-1">
+                                            <button type="button"
+                                                @click="applyRecommendedSlot(dayRec.date, '08:00 - 10:00')"
+                                                class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition cursor-pointer">
+                                                Pilih Pagi (08:00 WIB)
+                                            </button>
+                                            <button type="button"
+                                                @click="applyRecommendedSlot(dayRec.date, '13:00 - 15:00')"
+                                                class="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-bold transition cursor-pointer">
+                                                Pilih Siang (13:00 WIB)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!recommendations?.next_days || recommendations.next_days.length === 0">
+                            <p class="text-xs text-slate-500 italic py-2">Jadwal hari berikutnya akan segera tersedia setelah perawat diverifikasi.</p>
+                        </template>
+                    </div>
+
+                    <!-- 3. Daftar Perawat Populer / Aktif & Tombol "Lihat Jadwal Perawat Ini" -->
+                    <div class="p-4 rounded-2xl bg-white border border-slate-200/90 space-y-3 shadow-2xs">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">👩‍⚕️</span>
+                            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Daftar Perawat Aktif &amp; Jadwalnya</h4>
+                        </div>
+                        <template x-if="recommendations?.popular_nurses && recommendations.popular_nurses.length > 0">
+                            <div class="space-y-2">
+                                <template x-for="popNurse in recommendations.popular_nurses" :key="popNurse.nurse_id">
+                                    <div class="p-2.5 rounded-xl border border-slate-200 flex items-center justify-between gap-2 bg-slate-50/50">
+                                        <div class="min-w-0">
+                                            <span class="text-xs font-bold text-slate-900 block truncate" x-text="popNurse.name"></span>
+                                            <span class="text-[10px] text-slate-500 block" x-text="popNurse.formatted_distance_short + ' • ⭐ ' + Number(popNurse.rating || 5).toFixed(1)"></span>
+                                        </div>
+                                        <button type="button"
+                                            @click="openNurseScheduleModal(popNurse)"
+                                            class="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-bold whitespace-nowrap transition cursor-pointer">
+                                            📅 Lihat Jadwal Perawat Ini
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!recommendations?.popular_nurses || recommendations.popular_nurses.length === 0">
+                            <p class="text-xs text-slate-500 italic py-2">Belum ada akun perawat terverifikasi di database. Perawat baru dapat mendaftar melalui registrasi manual.</p>
+                        </template>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -849,7 +986,36 @@
                         </div>
                     </template>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Pilihan Tipe Waktu Pemesanan di Modal Step 1 -->
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                        <label class="block text-xs font-extrabold text-slate-800">
+                            Pilih Tipe Waktu Pemesanan <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <button type="button"
+                                @click="bookingForm.booking_type = 'now'; bookingForm.scheduled_date = todayDate; bookingForm.scheduled_time = currentWibClock"
+                                :class="bookingForm.booking_type === 'now' ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'"
+                                class="p-3 rounded-xl border text-left transition flex items-start gap-2.5 cursor-pointer">
+                                <span class="text-base">⚡</span>
+                                <div>
+                                    <span class="text-xs font-extrabold block">Pesan Sekarang (WIB)</span>
+                                    <span class="text-[10px] opacity-85 block">Perawat langsung dipanggil untuk jam saat ini (<span x-text="currentWibClock"></span>)</span>
+                                </div>
+                            </button>
+                            <button type="button"
+                                @click="bookingForm.booking_type = 'scheduled'; if (bookingForm.scheduled_time.includes('WIB')) bookingForm.scheduled_time = '08:00 - 10:00'"
+                                :class="bookingForm.booking_type === 'scheduled' ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'"
+                                class="p-3 rounded-xl border text-left transition flex items-start gap-2.5 cursor-pointer">
+                                <span class="text-base">📅</span>
+                                <div>
+                                    <span class="text-xs font-extrabold block">Pesan Untuk Nanti</span>
+                                    <span class="text-[10px] opacity-85 block">Pilih tanggal &amp; sesi jam kunjungan sesuai jadwal perawat</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div x-show="bookingForm.booking_type === 'scheduled'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <!-- Tanggal Kunjungan -->
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">
@@ -862,20 +1028,20 @@
                             <p class="text-[10px] text-slate-400 mt-1">Dapat dijadwalkan mulai hari ini atau hari berikutnya.</p>
                         </div>
 
-                        <!-- Sesi Waktu Kunjungan -->
+                        <!-- Sesi Waktu Kunjungan (WIB) -->
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                                Sesi Waktu Kunjungan <span class="text-rose-500">*</span>
+                                Jam Perawatan (WIB) <span class="text-rose-500">*</span>
                             </label>
                             <select x-model="bookingForm.scheduled_time"
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs">
                                 <option value="08:00 - 10:00">Pagi (08:00 - 10:00 WIB)</option>
-                                <option value="10:30 - 12:30">Siang (10:30 - 12:30 WIB)</option>
-                                <option value="13:30 - 15:30">Siang-Sore (13:30 - 15:30 WIB)</option>
-                                <option value="16:00 - 18:00">Sore (16:00 - 18:00 WIB)</option>
+                                <option value="10:00 - 12:00">Menjelang Siang (10:00 - 12:00 WIB)</option>
+                                <option value="13:00 - 15:00">Siang (13:00 - 15:00 WIB)</option>
+                                <option value="15:00 - 17:00">Sore (15:00 - 17:00 WIB)</option>
                                 <option value="19:00 - 21:00">Malam (19:00 - 21:00 WIB)</option>
                             </select>
-                            <p class="text-[10px] text-slate-400 mt-1">Estimasi kedatangan perawat di awal rentang sesi.</p>
+                            <p class="text-[10px] text-slate-400 mt-1">Seluruh jadwal menggunakan Zona Waktu Indonesia Barat (WIB).</p>
                         </div>
                     </div>
 
@@ -972,22 +1138,20 @@
                         </p>
                     </div>
 
-                    <!-- Jarak & Radius Operasional Box -->
-                    <div class="p-3.5 rounded-2xl border flex items-center justify-between"
-                        :class="bookingForm.distance_km <= 10.0 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'">
+                    <!-- Jarak Rute Jalan Raya Sebenarnya (OSRM) Tanpa Batas Radius 10 KM -->
+                    <div class="p-3.5 rounded-2xl border bg-emerald-50/80 border-emerald-200 text-emerald-900 flex items-center justify-between">
                         <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
-                                :class="bookingForm.distance_km <= 10.0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'">
-                                <span x-show="bookingForm.distance_km <= 10.0">🛵</span>
-                                <span x-show="bookingForm.distance_km > 10.0">⚠️</span>
+                            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">
+                                <span>🛵</span>
                             </div>
                             <div>
                                 <div class="text-xs font-bold">
-                                    <span x-text="selectedNurse ? ('Estimasi Jarak dari Ns. ' + selectedNurse.name + ':') : 'Estimasi Jarak dari Pusat Nakes:'"></span>
-                                    <span class="text-sm font-black text-emerald-800" x-text="(bookingForm.distance_km === 0 ? '0 km (Sangat Dekat)' : bookingForm.distance_km + ' km')"></span>
+                                    <span x-text="selectedNurse ? ('Jarak Rute Jalan dari ' + selectedNurse.name + ':') : 'Jarak Rute Jalan Raya (OSRM):'"></span>
+                                    <span class="text-sm font-black text-emerald-800" x-text="(bookingForm.distance_km === 0 ? '0.1 km' : bookingForm.distance_km + ' km')"></span>
                                 </div>
-                                <div class="text-[11px]"
-                                    x-text="bookingForm.distance_km <= 10.0 ? '✓ Lokasi berada di dalam radius operasional layanan homecare (Maks. 10 km)' : 'Lokasi melebihi radius operasional maksimal (10 km).'"></div>
+                                <div class="text-[11px] text-emerald-700">
+                                    ✓ Dihitung akurat berdasarkan rute jalan raya (OSRM) tanpa batasan radius 10 km.
+                                </div>
                             </div>
                         </div>
                         <div class="text-right">
@@ -1165,8 +1329,8 @@
                     <button type="button"
                         x-show="bookingStep === 3 && !orderSuccess"
                         @click="submitOrder()"
-                        :disabled="submittingOrder || bookingForm.distance_km > 10.0"
-                        class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition flex items-center gap-2">
+                        :disabled="submittingOrder"
+                        class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-600/30 transition flex items-center gap-2 cursor-pointer">
                         <span x-show="submittingOrder" class="animate-spin text-sm">⏳</span>
                         <span x-text="submittingOrder ? 'Memproses Pesanan...' : 'Konfirmasi &amp; Buat Pesanan'"></span>
                         <svg x-show="!submittingOrder" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1440,17 +1604,71 @@
         </div>
     </div>
 
+    <!-- 9C. MODAL: LIHAT JADWAL HARIAN PERAWAT (SENIN - MINGGU WIB) -->
+    <div x-show="scheduleModalOpen" x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+        <div @click.away="scheduleModalOpen = false"
+            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800">
+            <div class="px-6 py-5 bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-700 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center font-extrabold text-sm"
+                        x-text="scheduleModalNurse?.name ? scheduleModalNurse.name.substring(0, 2).toUpperCase() : 'NS'"></div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-400/30 text-emerald-100">
+                            Jadwal Operasional Harian (WIB)
+                        </span>
+                        <h3 class="text-base sm:text-lg font-extrabold mt-0.5" x-text="scheduleModalNurse?.name"></h3>
+                        <p class="text-xs text-emerald-100" x-text="(scheduleModalNurse?.specialization || 'Perawat Homecare') + ' • ' + (scheduleModalNurse?.formatted_distance_short || '')"></p>
+                    </div>
+                </div>
+                <button type="button" @click="scheduleModalOpen = false" class="text-emerald-200 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition">✕</button>
+            </div>
+
+            <div class="p-6 space-y-3 max-h-[65vh] overflow-y-auto">
+                <p class="text-xs text-slate-600">
+                    Berikut adalah jam operasional praktik mingguan perawat ini dalam Zona Waktu Indonesia Barat (WIB):
+                </p>
+                <div class="divide-y divide-slate-100 rounded-2xl border border-slate-200 overflow-hidden">
+                    <template x-for="sch in (scheduleModalNurse?.schedules || [])" :key="sch.day_of_week">
+                        <div class="px-4 py-3 flex items-center justify-between text-xs bg-white hover:bg-slate-50">
+                            <span class="font-bold text-slate-800" x-text="sch.day_name"></span>
+                            <div class="flex items-center gap-2">
+                                <span x-show="sch.is_active" class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold"
+                                    x-text="sch.start_time + ' - ' + sch.end_time + ' WIB'"></span>
+                                <span x-show="!sch.is_active" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 font-semibold">
+                                    Libur / Tidak Praktik
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+                <button type="button" @click="scheduleModalOpen = false"
+                    class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition">
+                    Tutup
+                </button>
+                <button type="button"
+                    @click="scheduleModalOpen = false; openNurseServicePicker(scheduleModalNurse)"
+                    class="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition cursor-pointer">
+                    Pilih &amp; Pesan Perawat Ini &rarr;
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 9. FOOTER -->
     <footer class="mt-auto border-t border-slate-200 bg-white py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
-            CareAtHome Health-Tech Platform &copy; 2026. Platform Layanan Keperawatan On-Demand Terstandar Kemenkes RI.
+            CareAtHome Health-Tech Platform &copy; 2026. Platform Layanan Keperawatan On-Demand Terstandar Kemenkes RI (Zona Waktu WIB).
         </div>
     </footer>
 
     <!-- Alpine App Logic for Instant Filtering, Search, and Multi-Step Booking -->
     <script>
         function patientCatalogApp() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = @json(now('Asia/Jakarta')->toDateString());
 
             return {
                 rawServices: @json($services),
@@ -1464,9 +1682,12 @@
                 bookingModalOpen: false,
                 compareModalOpen: false,
                 nurseServicePickerOpen: false,
+                scheduleModalOpen: false,
+                scheduleModalNurse: null,
                 pickerNurse: null,
                 compareList: [],
                 activeService: null,
+                currentWibClock: @json(now('Asia/Jakarta')->format('H:i') . ' WIB'),
 
                 // State Booking & Penjadwalan
                 bookingStep: 1,
@@ -1478,17 +1699,21 @@
                 detectingLocation: false,
                 uploadedPhotoFile: null,
 
-                // Nearby Nurses State (BAGIAN 3)
+                // Mitra Perawat & Rekomendasi Cerdas State
                 patientLat: {{ $userLat ? (float) $userLat : 'null' }},
                 patientLng: {{ $userLng ? (float) $userLng : 'null' }},
                 hasPatientLocation: {{ $hasPatientCoords ? 'true' : 'false' }},
                 nearbyNurses: @json($onlineNurses ?? []),
+                recommendations: @json($recommendations ?? ['nearest_times_today' => [], 'next_days' => [], 'popular_nurses' => []]),
+                availableNursesCount: {{ (int) ($availableNursesCount ?? count($onlineNurses ?? [])) }},
+                showSmartRecommendations: false,
                 loadingNurses: false,
                 nurseError: false,
                 nurseErrorMessage: '',
                 selectedNurse: null,
 
                 bookingForm: {
+                    booking_type: 'now',
                     nurse_id: null,
                     scheduled_date: today,
                     scheduled_time: '08:00 - 10:00',
@@ -1521,6 +1746,8 @@
                 initData() {
                     window.catalogAppInstance = this;
                     this.filterServices();
+                    this.updateWibClock();
+                    setInterval(() => this.updateWibClock(), 15000);
 
                     // Cek lokasi tersimpan di localStorage browser
                     const savedLat = localStorage.getItem('careathome_patient_lat');
@@ -1534,7 +1761,7 @@
                     }
 
                     // Render langsung kartu awal jika sudah ada dari SSR
-                    if (Array.isArray(this.nearbyNurses) && this.nearbyNurses.length > 0) {
+                    if (Array.isArray(this.nearbyNurses)) {
                         window.__nearbyNursesCache = this.nearbyNurses;
                         renderNurseCards(this.nearbyNurses);
                     }
@@ -1542,36 +1769,47 @@
                     // Muat perawat terdekat via AJAX
                     this.fetchNearbyNurses(this.nearbyNurses.length === 0);
 
-                    // Polling real-time background setiap 60 detik untuk sinkronisasi status nakes
+                    // Polling real-time background setiap 60 detik
                     setInterval(() => {
                         if (!this.loadingNurses && !this.bookingModalOpen) {
                             this.fetchNearbyNurses(false);
                         }
                     }, 60000);
+                },
 
-                    // Deteksi lokasi presisi pengguna di browser jika didukung dan belum tersimpan
-                    if (this.patientLat !== null && this.patientLng !== null) {
-                        this.hasPatientLocation = true;
-                    } else if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(
-                            (pos) => {
-                                this.patientLat = parseFloat(pos.coords.latitude.toFixed(6));
-                                this.patientLng = parseFloat(pos.coords.longitude.toFixed(6));
-                                this.hasPatientLocation = true;
-                                if (this.bookingForm.latitude === null || this.bookingForm.latitude === -6.2088) {
-                                    this.bookingForm.latitude = this.patientLat;
-                                    this.bookingForm.longitude = this.patientLng;
-                                }
-                                localStorage.setItem('careathome_patient_lat', this.patientLat);
-                                localStorage.setItem('careathome_patient_lng', this.patientLng);
-                                this.fetchNearbyNurses(false);
-                            },
-                            (err) => {
-                                console.info('Geolokasi browser belum diizinkan, menggunakan fallback Surabaya default.');
-                            },
-                            { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
-                        );
+                updateWibClock() {
+                    try {
+                        const fmt = new Intl.DateTimeFormat('id-ID', {
+                            timeZone: 'Asia/Jakarta',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                        }).format(new Date()).replace('.', ':');
+                        this.currentWibClock = `${fmt} WIB`;
+                    } catch (e) {}
+                },
+
+                setBookingMode(mode) {
+                    this.bookingForm.booking_type = mode;
+                    if (mode === 'now') {
+                        this.bookingForm.scheduled_date = this.todayDate;
+                    } else if (!this.bookingForm.scheduled_time || this.bookingForm.scheduled_time.includes('WIB')) {
+                        this.bookingForm.scheduled_time = '08:00 - 10:00';
                     }
+                    this.fetchNearbyNurses(true);
+                },
+
+                applyRecommendedSlot(dateStr, slotStr) {
+                    this.bookingForm.booking_type = 'scheduled';
+                    this.bookingForm.scheduled_date = dateStr;
+                    this.bookingForm.scheduled_time = slotStr;
+                    showLocationToast(`📅 Jadwal disesuaikan ke ${dateStr} (${slotStr} WIB)`, 'success');
+                    this.fetchNearbyNurses(true);
+                },
+
+                openNurseScheduleModal(nurse) {
+                    this.scheduleModalNurse = nurse;
+                    this.scheduleModalOpen = true;
                 },
 
                 selectPresetLocation(el) {
@@ -1617,9 +1855,11 @@
                     try {
                         const effectiveLat = this.patientLat !== null ? this.patientLat : -7.3144;
                         const effectiveLng = this.patientLng !== null ? this.patientLng : 112.7304;
+                        const bType = this.bookingForm.booking_type || 'now';
+                        const sDate = this.bookingForm.scheduled_date || this.todayDate;
+                        const sTime = this.bookingForm.scheduled_time || '08:00 - 10:00';
 
-                        // Mendukung ?lat=...&lng=... serta ?latitude=...&longitude=...
-                        const url = `/api/v1/perawat/terdekat?lat=${encodeURIComponent(effectiveLat)}&lng=${encodeURIComponent(effectiveLng)}&latitude=${encodeURIComponent(effectiveLat)}&longitude=${encodeURIComponent(effectiveLng)}`;
+                        const url = `/api/v1/perawat/terdekat?lat=${encodeURIComponent(effectiveLat)}&lng=${encodeURIComponent(effectiveLng)}&booking_type=${encodeURIComponent(bType)}&scheduled_date=${encodeURIComponent(sDate)}&scheduled_time=${encodeURIComponent(sTime)}`;
 
                         const res = await fetch(url, {
                             headers: {
@@ -1632,15 +1872,23 @@
                             const list = json.data || [];
                             this.nearbyNurses = list;
                             window.__nearbyNursesCache = list;
-                            if (json.meta && typeof json.meta.has_patient_location !== 'undefined') {
-                                this.hasPatientLocation = Boolean(json.meta.has_patient_location);
+                            if (json.recommendations) {
+                                this.recommendations = json.recommendations;
+                            }
+                            if (json.meta) {
+                                this.availableNursesCount = typeof json.meta.available_count === 'number'
+                                    ? json.meta.available_count
+                                    : list.filter(n => n.is_available_for_slot !== false).length;
+                                if (typeof json.meta.has_patient_location !== 'undefined') {
+                                    this.hasPatientLocation = Boolean(json.meta.has_patient_location);
+                                }
                             }
                             renderNurseCards(list);
                         } else {
                             throw new Error(json.message || 'Gagal memuat mitra perawat.');
                         }
                     } catch (e) {
-                        console.warn('Gagal memuat perawat terdekat:', e);
+                        console.warn('Gagal memuat perawat:', e);
                         this.nurseError = true;
                         this.nurseErrorMessage = e.message || 'Koneksi terputus saat memuat mitra perawat.';
                         if (errorState) {
@@ -1665,8 +1913,8 @@
                     }
 
                     if (!navigator.geolocation) {
-                        showLocationToast('⚠️ Browser tidak mendukung GPS. Menggunakan acuan Surabaya Selatan (Pos Dinda).', 'warning');
-                        this.setManualLocation(-7.3144, 112.7304, 'Surabaya Selatan (Pos Dinda)');
+                        showLocationToast('⚠️ Browser tidak mendukung GPS. Menggunakan titik acuan Surabaya Selatan.', 'warning');
+                        this.setManualLocation(-7.3144, 112.7304, 'Surabaya Selatan');
                         if (detectBtn) detectBtn.classList.remove('opacity-75');
                         return;
                     }
@@ -1681,8 +1929,8 @@
                         },
                         (err) => {
                             console.warn('GPS browser ditolak/timeout di localhost:', err.message);
-                            showLocationToast('📍 Izin GPS tidak aktif / diblokir. Menggunakan acuan Surabaya Selatan (Pos Dinda).', 'info');
-                            this.setManualLocation(-7.3144, 112.7304, 'Surabaya Selatan (Pos Dinda)');
+                            showLocationToast('📍 Izin GPS tidak aktif / diblokir. Menggunakan acuan Surabaya Selatan.', 'info');
+                            this.setManualLocation(-7.3144, 112.7304, 'Surabaya Selatan');
                             if (detectBtn) detectBtn.classList.remove('opacity-75');
                         },
                         { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
@@ -1853,13 +2101,18 @@
 
                     // Validasi Step 1
                     if (this.bookingStep === 1) {
-                        if (!this.bookingForm.scheduled_date) {
-                            this.errorMessage = 'Silakan pilih tanggal kunjungan terlebih dahulu.';
-                            return;
-                        }
-                        if (!this.bookingForm.scheduled_time) {
-                            this.errorMessage = 'Silakan pilih sesi waktu kunjungan.';
-                            return;
+                        if (this.bookingForm.booking_type === 'now') {
+                            this.bookingForm.scheduled_date = this.todayDate;
+                            this.bookingForm.scheduled_time = this.currentWibClock;
+                        } else {
+                            if (!this.bookingForm.scheduled_date) {
+                                this.errorMessage = 'Silakan pilih tanggal kunjungan terlebih dahulu.';
+                                return;
+                            }
+                            if (!this.bookingForm.scheduled_time) {
+                                this.errorMessage = 'Silakan pilih jam kunjungan (WIB).';
+                                return;
+                            }
                         }
                         if (!this.bookingForm.patient_name || this.bookingForm.patient_name.trim().length === 0) {
                             this.errorMessage = 'Nama lengkap pasien wajib diisi.';
@@ -1875,14 +2128,10 @@
                         return;
                     }
 
-                    // Validasi Step 2
+                    // Validasi Step 2 (Tanpa batasan radius 10 km)
                     if (this.bookingStep === 2) {
                         if (!this.bookingForm.address || this.bookingForm.address.trim().length < 5) {
                             this.errorMessage = 'Silakan masukkan alamat lengkap rumah atau patokan lokasi kunjungan.';
-                            return;
-                        }
-                        if (this.bookingForm.distance_km > 10.0) {
-                            this.errorMessage = 'Lokasi di luar radius operasional maksimal (10 km). Silakan pilih lokasi terdekat.';
                             return;
                         }
 
@@ -1910,7 +2159,6 @@
                         let lat = this.bookingForm.latitude;
                         let lng = this.bookingForm.longitude;
 
-                        // Tentukan koordinat peta awal
                         if (lat === null || lat === -6.2088) {
                             if (this.patientLat !== null && this.patientLat !== -6.2088) {
                                 lat = this.patientLat;
@@ -1952,7 +2200,6 @@
                             }, 100);
                         }
 
-                        // Sinkronkan jarak aktual saat map diinisialisasi
                         this.updateLocation(lat, lng);
                     });
                 },
@@ -1987,39 +2234,47 @@
                     );
                 },
 
-                updateLocation(lat, lng) {
-                    this.bookingForm.latitude = parseFloat(Number(lat).toFixed(6));
-                    this.bookingForm.longitude = parseFloat(Number(lng).toFixed(6));
+                async updateLocation(lat, lng) {
+                    const pLat = parseFloat(Number(lat).toFixed(6));
+                    const pLng = parseFloat(Number(lng).toFixed(6));
+                    this.bookingForm.latitude = pLat;
+                    this.bookingForm.longitude = pLng;
 
-                    // Titik acuan jarak: prioritaskan distance_km yang telah dihitung server Haversine
-                    let dist = 0.5;
-
-                    if (this.selectedNurse && this.selectedNurse.distance_km !== undefined && this.selectedNurse.distance_km !== null) {
-                        dist = parseFloat(this.selectedNurse.distance_km);
+                    let nLat = -7.3144;
+                    let nLng = 112.7304;
+                    if (this.selectedNurse && this.selectedNurse.latitude && this.selectedNurse.longitude) {
+                        nLat = parseFloat(this.selectedNurse.latitude);
+                        nLng = parseFloat(this.selectedNurse.longitude);
                     } else if (this.nearbyNurses && this.nearbyNurses.length > 0) {
-                        const matchedNurse = this.nearbyNurses.find(n => 
-                            !this.activeService || (n.services && n.services.some(s => s.id === this.activeService.id))
-                        ) || this.nearbyNurses[0];
-
-                        if (matchedNurse && matchedNurse.distance_km !== undefined && matchedNurse.distance_km !== null) {
-                            dist = parseFloat(matchedNurse.distance_km);
+                        const first = this.nearbyNurses[0];
+                        if (first.latitude && first.longitude) {
+                            nLat = parseFloat(first.latitude);
+                            nLng = parseFloat(first.longitude);
                         }
                     }
 
-                    // Format jarak 1 desimal. Jika kurang dari 0.1 km (sama persis), tetapkan 0 km
-                    const rounded = Math.round(dist * 10) / 10;
-                    this.bookingForm.distance_km = rounded < 0.1 ? 0 : rounded;
-
-                    // Hilangkan pesan error radius jika sekarang sudah berada dalam radius aman
-                    if (this.bookingForm.distance_km <= 10.0 && this.errorMessage.includes('radius')) {
-                        this.errorMessage = '';
+                    // Hitung jarak rute jalan raya sebenarnya via OSRM Public API
+                    try {
+                        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${nLng},${nLat};${pLng},${pLat}?overview=false`;
+                        const res = await fetch(osrmUrl);
+                        const json = await res.json();
+                        if (json && json.routes && json.routes[0]) {
+                            const meters = parseFloat(json.routes[0].distance || 500);
+                            this.bookingForm.distance_km = Math.max(0.1, Math.round((meters / 1000) * 100) / 100);
+                        } else {
+                            const straight = this.haversineDistance(nLat, nLng, pLat, pLng);
+                            this.bookingForm.distance_km = Math.max(0.2, Math.round(straight * 1.35 * 100) / 100);
+                        }
+                    } catch (e) {
+                        const straight = this.haversineDistance(nLat, nLng, pLat, pLng);
+                        this.bookingForm.distance_km = Math.max(0.2, Math.round(straight * 1.35 * 100) / 100);
                     }
 
                     this.fetchPriceBreakdown();
                 },
 
                 haversineDistance(lat1, lon1, lat2, lon2) {
-                    const R = 6371; // km
+                    const R = 6371;
                     const dLat = (lat2 - lat1) * Math.PI / 180;
                     const dLon = (lon2 - lon1) * Math.PI / 180;
                     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -2033,9 +2288,8 @@
                     if (!this.activeService) return;
 
                     const servicePrice = parseFloat(this.activeService.price);
-                    const distance = typeof this.bookingForm.distance_km === 'number' ? this.bookingForm.distance_km : 0;
+                    const distance = typeof this.bookingForm.distance_km === 'number' ? this.bookingForm.distance_km : 0.5;
 
-                    // Hitung lokal instan: 3 km pertama Rp 10.000, berikutnya +Rp 2.500/km
                     let transport = 10000;
                     if (distance > 3.0) {
                         transport = 10000 + (Math.ceil(distance - 3.0) * 2500);
@@ -2057,7 +2311,6 @@
                         }
                     };
 
-                    // Sinkronisasi via API kalkulasi harga resmi
                     fetch('{{ route("api.orders.calculate-price") }}', {
                         method: 'POST',
                         headers: {
@@ -2068,17 +2321,21 @@
                         body: JSON.stringify({
                             service_catalog_id: this.activeService.id,
                             distance_km: distance,
+                            nurse_id: this.bookingForm.nurse_id || (this.selectedNurse?.nurse_id || null),
+                            latitude: this.bookingForm.latitude,
+                            longitude: this.bookingForm.longitude,
                         })
                     })
                     .then(res => res.json())
                     .then(res => {
                         if (res.status === 'success' && res.data) {
                             this.breakdown = res.data;
+                            if (res.data.distance_km) {
+                                this.bookingForm.distance_km = parseFloat(res.data.distance_km);
+                            }
                         }
                     })
-                    .catch(() => {
-                        // Fallback ke hitungan lokal jika offline
-                    });
+                    .catch(() => {});
                 },
 
                 handlePhotoUpload(event) {
@@ -2101,6 +2358,7 @@
                     const formData = new FormData();
                     formData.append('patient_id', '{{ auth()->id() }}');
                     formData.append('service_catalog_id', this.activeService.id);
+                    formData.append('booking_type', this.bookingForm.booking_type || 'scheduled');
                     formData.append('scheduled_date', this.bookingForm.scheduled_date);
                     formData.append('scheduled_time', this.bookingForm.scheduled_time);
                     formData.append('patient_name', this.bookingForm.patient_name);
@@ -2158,14 +2416,13 @@
                     return dateStr;
                 },
 
-                // ===== COMPARE SERVICES FEATURE =====
                 toggleCompare(service) {
                     const idx = this.compareList.findIndex(s => s.id === service.id);
                     if (idx !== -1) {
                         this.compareList.splice(idx, 1);
                     } else {
                         if (this.compareList.length >= 3) {
-                            alert('Maksimal 3 layanan dapat dibandingkan secara bersamaan. Hapus salah satu layanan terlebih dahulu.');
+                            alert('Maksimal 3 layanan dapat dibandingkan secara bersamaan.');
                             return;
                         }
                         this.compareList.push(service);
@@ -2213,9 +2470,6 @@
             };
         }
 
-        /**
-         * Toast Notifikasi Lokasi & Status Nakes
-         */
         function showLocationToast(message, type = 'info') {
             let toast = document.getElementById('location-toast');
             if (!toast) {
@@ -2245,37 +2499,20 @@
             }, 4500);
         }
 
-        /**
-         * Render Kartu Mitra Perawat Aktif ke DOM (#nurse-cards-container / #nurse-list-container)
-         */
         function renderNurseCards(nurses) {
             const container = document.getElementById('nurse-cards-container') || document.getElementById('nurse-list-container');
             if (!container) return;
 
-            // Kosongkan container sebelum mengisi data baru
             container.innerHTML = '';
 
             if (!Array.isArray(nurses) || nurses.length === 0) {
-                showLocationToast('⚠️ Tidak ada perawat aktif ditemukan di sekitar lokasi ini.', 'warning');
                 container.innerHTML = `
-                    <div class="col-span-full py-10 px-6 text-center rounded-3xl bg-amber-50/70 border border-dashed border-amber-300 space-y-3">
-                        <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-3xl mx-auto shadow-xs">🛵</div>
-                        <div class="space-y-1">
-                            <h4 class="text-sm font-bold text-slate-800">Tidak ada perawat aktif ditemukan di sekitar titik lokasi ini</h4>
-                            <p class="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                                Saat ini belum ada mitra perawat yang berstatus online dalam radius maksimal 10 km dari lokasi yang dipilih.
-                            </p>
-                        </div>
-                        <div class="pt-2 flex flex-wrap items-center justify-center gap-2">
-                            <button type="button" onclick="window.catalogAppInstance && window.catalogAppInstance.setManualLocation(-7.3144, 112.7304, 'Surabaya Selatan (Pos Dinda)')"
-                                class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm cursor-pointer">
-                                📍 Pilih Acuan Surabaya Selatan (Pos Dinda)
-                            </button>
-                            <button type="button" onclick="window.catalogAppInstance && window.catalogAppInstance.setManualLocation(-7.2575, 112.7521, 'Surabaya Pusat (Gubeng)')"
-                                class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold transition shadow-2xs cursor-pointer">
-                                📍 Surabaya Pusat (Gubeng)
-                            </button>
-                        </div>
+                    <div class="col-span-full py-8 px-6 text-center rounded-3xl bg-slate-50 border border-dashed border-slate-300 space-y-2">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl mx-auto">👩‍⚕️</div>
+                        <h4 class="text-sm font-bold text-slate-800">Belum Ada Mitra Perawat Terverifikasi untuk Kriteria Ini</h4>
+                        <p class="text-xs text-slate-500 max-w-md mx-auto">
+                            Silakan gunakan panel <strong>Rekomendasi Cerdas</strong> di bawah untuk melihat jam terdekat, jadwal hari berikutnya, atau mendaftarkan akun perawat secara manual.
+                        </p>
                     </div>
                 `;
                 return;
@@ -2284,11 +2521,14 @@
             nurses.forEach(nurse => {
                 const name = nurse.name || nurse.nama || 'Ns. Mitra Perawat';
                 const initials = name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'NS';
-                const spec = nurse.specialization || nurse.spesialisasi || 'Perawat Umum Homecare';
-                const rating = (nurse.rating_avg !== undefined && nurse.rating_avg !== null) ? Number(nurse.rating_avg).toFixed(1) : (nurse.rating ? Number(nurse.rating).toFixed(1) : '5.0');
+                const spec = nurse.specialization || nurse.spesialisasi || 'Perawat Homecare Terverifikasi';
+                const rating = (nurse.rating_avg !== undefined && nurse.rating_avg !== null) ? Number(nurse.rating_avg).toFixed(1) : '5.0';
                 const reviews = nurse.total_reviews || 0;
-                const distanceStr = nurse.formatted_distance || (nurse.distance_km !== null && nurse.distance_km !== undefined ? `${nurse.distance_km} km dari lokasi Anda` : (nurse.distance || 'Aktif Online'));
+                const distanceStr = nurse.formatted_distance || (nurse.distance_km !== null && nurse.distance_km !== undefined ? `${nurse.distance_km} km (Rute Jalan)` : 'Tersedia');
                 const photo = nurse.profile_photo || nurse.foto;
+                const isAvailable = nurse.is_available_for_slot !== false;
+                const scheduleWindow = nurse.schedule_window || '08:00 - 21:00 WIB';
+                const availabilityReason = nurse.availability_reason || `Jadwal: ${scheduleWindow}`;
 
                 let servicesHtml = '';
                 if (Array.isArray(nurse.services) && nurse.services.length > 0) {
@@ -2304,6 +2544,16 @@
                     servicesHtml = '<span class="text-[10px] text-slate-400 italic">Semua layanan standar homecare</span>';
                 }
 
+                const statusBadgeHtml = isAvailable
+                    ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>Tersedia Sesuai Jadwal</span>
+                       </span>`
+                    : `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                            <span>🕒</span>
+                            <span>Di Luar Jam / Terjadwal</span>
+                       </span>`;
+
                 const card = document.createElement('div');
                 card.className = 'bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md transition p-5 flex flex-col justify-between space-y-4';
                 card.innerHTML = `
@@ -2311,7 +2561,7 @@
                         <div class="flex items-center gap-3">
                             ${photo
                                 ? `<img src="${photo}" alt="${name}" class="w-11 h-11 rounded-2xl object-cover shadow-sm border border-slate-200">`
-                                : `<div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center shadow-sm">${initials}</div>`
+                                : `<div class="w-11 h-11 rounded-2xl bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center shadow-sm">${initials}</div>`
                             }
                             <div>
                                 <div class="flex items-center gap-1.5">
@@ -2328,14 +2578,20 @@
                         </div>
                         <div class="flex flex-col items-end gap-1">
                             <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                                <span>📍</span>
+                                <span>🛣️</span>
                                 <span>${distanceStr}</span>
                             </span>
-                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span>Online</span>
-                            </span>
+                            ${statusBadgeHtml}
                         </div>
+                    </div>
+
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] flex items-center justify-between gap-2">
+                        <span class="text-slate-600 truncate">🗓️ ${availabilityReason}</span>
+                        <button type="button"
+                            onclick="window.openScheduleModalById(${nurse.nurse_id || nurse.id})"
+                            class="text-[10px] font-extrabold text-emerald-700 hover:underline whitespace-nowrap cursor-pointer">
+                            Lihat Jadwal &rarr;
+                        </button>
                     </div>
 
                     <div class="space-y-1.5 text-xs">
@@ -2348,10 +2604,15 @@
                         </div>
                     </div>
 
-                    <div class="pt-2 border-t border-slate-100">
+                    <div class="pt-2 border-t border-slate-100 grid grid-cols-3 gap-2">
+                        <button type="button"
+                            onclick="window.openScheduleModalById(${nurse.nurse_id || nurse.id})"
+                            class="col-span-1 py-2.5 px-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition cursor-pointer">
+                            📅 Jadwal
+                        </button>
                         <button type="button" 
                             onclick="window.openBookingWithNurse(${nurse.nurse_id || nurse.id})"
-                            class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 hover:-translate-y-0.5 cursor-pointer">
+                            class="col-span-2 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
                             <span>Pilih Perawat / Pesan</span>
                             <span>&rarr;</span>
                         </button>
@@ -2361,6 +2622,14 @@
                 container.appendChild(card);
             });
         }
+
+        window.openScheduleModalById = function(nurseId) {
+            const list = window.__nearbyNursesCache || (window.catalogAppInstance ? window.catalogAppInstance.nearbyNurses : []);
+            const nurse = list.find(n => (n.nurse_id == nurseId || n.id == nurseId));
+            if (nurse && window.catalogAppInstance) {
+                window.catalogAppInstance.openNurseScheduleModal(nurse);
+            }
+        };
 
         window.openBookingWithNurse = function(nurseId) {
             const list = window.__nearbyNursesCache || (window.catalogAppInstance ? window.catalogAppInstance.nearbyNurses : []);
@@ -2383,10 +2652,9 @@
             }
         };
 
-        // Render awal saat dokumen siap
         document.addEventListener('DOMContentLoaded', function() {
             const initialNurses = @json($onlineNurses ?? []);
-            if (Array.isArray(initialNurses) && initialNurses.length > 0) {
+            if (Array.isArray(initialNurses)) {
                 window.__nearbyNursesCache = initialNurses;
                 renderNurseCards(initialNurses);
             }
