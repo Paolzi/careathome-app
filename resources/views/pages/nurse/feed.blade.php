@@ -10,16 +10,16 @@
                         Feed Order Masuk (Job Board Kunjungan)
                     </h2>
                     <p class="text-xs text-slate-500">
-                        Marketplace pesanan tindakan keperawatan di sekitar lokasi Anda (Radius &le; 10 km).
+                        Marketplace pesanan tindakan keperawatan berdasarkan Jadwal Operasional Harian (WIB) &amp; rute jalan OSRM.
                     </p>
                 </div>
             </div>
 
-            <!-- Status Online & GPS Indicator -->
+            <!-- Status Jadwal & Zona Waktu WIB -->
             <div class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border {{ $profile->is_online ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200' }}">
-                    <span class="w-2 h-2 rounded-full {{ $profile->is_online ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400' }}"></span>
-                    <span>{{ $profile->is_online ? 'Status: Siap Terima Order' : 'Status: Offline' }}</span>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-emerald-50 text-[#064e3b] border-emerald-200">
+                    <span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
+                    <span>🕒 {{ now('Asia/Jakarta')->format('H:i') }} WIB • Jadwal Aktif</span>
                 </span>
             </div>
         </div>
@@ -118,14 +118,14 @@
                             </span>
                         </div>
                         <div class="space-y-1">
-                            <h4 class="text-base font-bold text-slate-900">Belum Ada Order Kunjungan Baru di Sekitar Anda</h4>
+                            <h4 class="text-base font-bold text-slate-900">Belum Ada Order Kunjungan Baru Saat Ini</h4>
                             <p class="text-xs text-slate-500 max-w-md mx-auto">
-                                Radar kami aktif memantau pesanan masuk dalam radius 10 km. Pastikan GPS dan status "Sedang Bekerja" Anda tetap aktif di dashboard.
+                                Sistem memantau pesanan masuk secara real-time tanpa batasan radius jarak. Pastikan Jadwal Operasional Harian (WIB) Anda aktif di dashboard.
                             </p>
                         </div>
                         <div class="pt-2">
-                            <a href="{{ route('perawat.dashboard') }}" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition inline-flex items-center gap-2">
-                                <span>Periksa Status Lokasi &amp; Layanan &rarr;</span>
+                            <a href="{{ route('perawat.dashboard') }}" class="px-5 py-2.5 rounded-xl bg-[#064e3b] hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition inline-flex items-center gap-2">
+                                <span>Atur Jadwal &amp; Layanan di Dashboard &rarr;</span>
                             </a>
                         </div>
                     </div>
@@ -167,7 +167,7 @@
                                         <div class="flex items-center justify-between">
                                             <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Jadwal:</span>
                                             <span class="font-bold text-slate-800">
-                                                📅 {{ $ord->scheduled_date ? $ord->scheduled_date->format('d M Y') : '-' }} &bull; {{ $ord->scheduled_time ?? '09:00' }}
+                                                📅 {{ $ord->scheduled_date ? $ord->scheduled_date->format('d M Y') : '-' }} &bull; {{ str_contains($ord->scheduled_time ?? '', 'WIB') ? $ord->scheduled_time : (($ord->scheduled_time ?? '09:00') . ' WIB') }}
                                             </span>
                                         </div>
 
@@ -265,36 +265,53 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach ($activeOrders as $act)
-                            <div class="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/20 space-y-3">
+                            @php
+                                $actCheck = $act->canNursePerformAction();
+                                $canActFeed = $actCheck['allowed'] ?? true;
+                            @endphp
+                            <div class="p-4 rounded-2xl border {{ $canActFeed ? 'border-emerald-200 bg-emerald-50/20' : 'border-amber-200 bg-amber-50/30' }} space-y-3">
                                 <div class="flex items-center justify-between">
                                     <span class="font-mono text-[10px] font-bold text-slate-400">{{ $act->order_number }}</span>
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                        {{ ucfirst($act->status) }}
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-[#064e3b]">
+                                        {{ $act->status_label }}
                                     </span>
                                 </div>
                                 <div>
                                     <h5 class="font-bold text-xs text-slate-900">{{ $act->serviceCatalog->name ?? 'Layanan Medis' }}</h5>
                                     <p class="text-[11px] text-slate-500">Pasien: {{ $act->patient_name }} ({{ $act->patient_phone }})</p>
+                                    <p class="text-[11px] font-semibold text-[#064e3b] mt-0.5">
+                                        Jadwal: {{ $act->scheduled_date?->format('d M Y') }} • {{ str_contains($act->scheduled_time ?? '', 'WIB') ? $act->scheduled_time : ($act->scheduled_time . ' WIB') }}
+                                    </p>
                                 </div>
+
+                                @if (!$canActFeed)
+                                    <div class="p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-[10px] text-amber-950 font-semibold">
+                                        🔒 {{ $actCheck['message'] }}
+                                    </div>
+                                @endif
+
                                 <div class="pt-2 border-t border-slate-200/60 space-y-2">
                                     @if ($act->status === 'diterima')
-                                        <button type="button" @click="updateOrderStatus({{ $act->id }}, 'dalam_perjalanan')"
-                                            class="w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
-                                            <span>🛵 Berangkat Menuju Pasien</span>
+                                        <button type="button"
+                                            @if($canActFeed) @click="updateOrderStatus({{ $act->id }}, 'dalam_perjalanan')" @else disabled @endif
+                                            class="w-full py-2 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 {{ $canActFeed ? 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-75' }}">
+                                            <span>🛵 Mulai Perjalanan</span>
                                         </button>
                                     @elseif ($act->status === 'dalam_perjalanan')
-                                        <button type="button" @click="updateOrderStatus({{ $act->id }}, 'tiba')"
-                                            class="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
-                                            <span>📍 Tiba di Lokasi Pasien</span>
+                                        <button type="button"
+                                            @if($canActFeed) @click="updateOrderStatus({{ $act->id }}, 'tiba')" @else disabled @endif
+                                            class="w-full py-2 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 {{ $canActFeed ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-75' }}">
+                                            <span>📍 Sampai di Lokasi</span>
                                         </button>
                                     @elseif ($act->status === 'tiba')
-                                        <button type="button" @click="updateOrderStatus({{ $act->id }}, 'tindakan_berlangsung')"
-                                            class="w-full py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
-                                            <span>🩺 Mulai Tindakan Keperawatan</span>
+                                        <button type="button"
+                                            @if($canActFeed) @click="updateOrderStatus({{ $act->id }}, 'tindakan_berlangsung')" @else disabled @endif
+                                            class="w-full py-2 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 {{ $canActFeed ? 'bg-teal-600 hover:bg-teal-700 text-white cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-75' }}">
+                                            <span>🩺 Mulai Perawatan</span>
                                         </button>
                                     @endif
-                                    <a href="{{ route('perawat.dashboard') }}" class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
-                                        <span>📝 Isi E-Report di Panel Kerja &rarr;</span>
+                                    <a href="{{ route('perawat.dashboard') }}" class="w-full py-2 px-3 rounded-xl bg-[#064e3b] hover:bg-emerald-900 text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
+                                        <span>📝 Selesai Perawatan &amp; Isi E-Report &rarr;</span>
                                     </a>
                                 </div>
                             </div>

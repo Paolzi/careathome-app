@@ -77,10 +77,27 @@ class AdminNurseVerificationController extends Controller
         DB::transaction(function () use ($nurseProfile, $admin, $oldStatus) {
             $nurseProfile->update([
                 'verification_status' => 'verified',
+                'is_available' => true,
+                'latitude' => $nurseProfile->latitude ?? -7.3144,
+                'longitude' => $nurseProfile->longitude ?? 112.7304,
+                'location_updated_at' => $nurseProfile->location_updated_at ?? now(),
                 'rejection_reason' => null,
                 'reviewed_by' => $admin->id,
                 'reviewed_at' => now(),
             ]);
+
+            // Pastikan jadwal harian 7 hari (Senin - Minggu) otomatis tersedia untuk perawat ini
+            if ($nurseProfile->user_id) {
+                \App\Models\NurseSchedule::ensureDefaultSchedulesForNurse((int) $nurseProfile->user_id);
+            }
+
+            // Jika perawat belum memilih layanan tindakan, kaitkan dengan katalog layanan aktif
+            if ($nurseProfile->services()->count() === 0) {
+                $defaultServiceIds = \App\Models\ServiceCatalog::where('is_active', true)->pluck('id')->toArray();
+                if (! empty($defaultServiceIds)) {
+                    $nurseProfile->services()->sync($defaultServiceIds);
+                }
+            }
 
             // Catat ke riwayat nurse_verifications
             NurseVerification::create([

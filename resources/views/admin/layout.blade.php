@@ -14,8 +14,9 @@
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- Alpine.js -->
+    <!-- Alpine.js & Chart.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <style>
         [x-cloak] { display: none !important; }
@@ -25,10 +26,10 @@
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
 
     <!-- Top Announcement Bar -->
-    <div class="bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white text-xs py-2 px-4 text-center font-medium border-b border-emerald-700/50">
+    <div class="bg-gradient-to-r from-[#064e3b] via-emerald-900 to-teal-950 text-white text-xs py-2 px-4 text-center font-medium border-b border-emerald-700/50">
         <span class="inline-flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            PORTAL ADMINISTRATOR UTAMA &bull; Sistem Informasi &amp; Manajemen Layanan Medis CareAtHome
+            <span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
+            PORTAL ADMINISTRATOR UTAMA &bull; Sistem Informasi &amp; Manajemen Layanan Medis CareAtHome ({{ now('Asia/Jakarta')->format('H:i') }} WIB)
         </span>
     </div>
 

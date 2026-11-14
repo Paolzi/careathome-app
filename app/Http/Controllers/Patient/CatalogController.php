@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Patient;
 
+use App\Http\Controllers\Api\NurseApiController;
 use App\Http\Controllers\Controller;
-use App\Models\NurseProfile;
 use App\Models\ServiceCatalog;
-use App\Models\Setting;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\View\View;
@@ -16,7 +16,7 @@ class CatalogController extends Controller
     public const DEFAULT_FALLBACK_LNG = 112.7304;
 
     /**
-     * Tampilkan katalog layanan medis untuk pasien.
+     * Tampilkan katalog layanan medis dan daftar mitra perawat terverifikasi untuk pasien.
      */
     public function index(Request $request): View
     {
@@ -46,7 +46,6 @@ class CatalogController extends Controller
         $query->sort($sortBy);
         $services = $query->get();
 
-        // Kategori dinamis dari database untuk filter pills (mendukung category & name)
         $categories = ServiceCatalog::active()
             ->selectRaw('category, category as name, count(*) as count')
             ->groupBy('category')
@@ -55,11 +54,9 @@ class CatalogController extends Controller
 
         $totalActiveServices = ServiceCatalog::active()->count();
 
-        // Kueri Mitra Perawat Aktif & Terdekat (Radius 10 KM dengan Fallback Graceful)
         $rawLat = $request->input('latitude') ?? $request->input('lat');
         $rawLng = $request->input('longitude') ?? $request->input('lng');
 
-        // Normalisasi null / undefined
         if (in_array(strtolower((string) $rawLat), ['null', 'undefined', ''], true)) {
             $rawLat = null;
         }
@@ -67,7 +64,6 @@ class CatalogController extends Controller
             $rawLng = null;
         }
 
-        // Ambil dari session jika request kosong
         if ($rawLat === null && Session::has('patient_last_lat')) {
             $rawLat = Session::get('patient_last_lat');
             $rawLng = Session::get('patient_last_lng');
@@ -79,99 +75,17 @@ class CatalogController extends Controller
         $effectiveLat = $hasPatientCoords ? (float) $rawLat : $defaultLat;
         $effectiveLng = $hasPatientCoords ? (float) $rawLng : $defaultLng;
 
-        $defaultRadius = (float) config('nursing.max_radius_km', 10.0);
-        $radiusKm = (float) Setting::getFloat('max_radius_km', $defaultRadius);
+        $bookingType = $request->query('booking_type', 'now');
+        $scheduledDate = $request->query('scheduled_date', Carbon::now('Asia/Jakarta')->toDateString());
+        $scheduledTime = $request->query('scheduled_time', Carbon::now('Asia/Jakarta')->format('H:i'));
 
-        $defaultTimeout = config('nursing.location_timeout_minutes', app()->isLocal() ? 120 : 15);
-        $timeoutMinutes = (int) Setting::getInt('location_timeout_minutes', $defaultTimeout);
-        $thresholdTime = now()->subMinutes($timeoutMinutes);
-
-        // Rumus Haversine SQL
-        $haversine = "(6371 * acos(least(1.0, greatest(-1.0, cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))))";
-
-        $nurseBaseQuery = NurseProfile::with(['user', 'services'])
-            ->where('is_online', true)
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->where(function ($q) {
-                $q->where('status_verifikasi', 'verified')
-                  ->orWhere('status_legalitas', 'verified')
-                  ->orWhere('verification_status', 'verified')
-                  ->orWhere('is_online', true);
-            })
-            ->whereHas('user', function ($q) {
-                $q->where('status', '!=', 'suspended');
-            })
-            ->select('nurse_profiles.*')
-            ->selectRaw("round({$haversine}, 2) AS distance", [$effectiveLat, $effectiveLng, $effectiveLat])
-            ->selectRaw("round({$haversine}, 2) AS distance_km", [$effectiveLat, $effectiveLng, $effectiveLat])
-            ->orderBy('distance', 'asc');
-
-        $isLocalOrTesting = app()->environment('local', 'testing') || app()->isLocal();
-        if (!$isLocalOrTesting) {
-            $nurseBaseQuery->where(function ($q) use ($thresholdTime) {
-                $q->whereNull('location_updated_at')
-                  ->orWhere('location_updated_at', '>=', $thresholdTime);
-            });
-        }
-
-        if ($hasPatientCoords) {
-            $latDelta = $radiusKm / 111.045;
-            $lngDelta = $radiusKm / (111.045 * max(cos(deg2rad($effectiveLat)), 0.0001));
-
-            $nursesCollection = (clone $nurseBaseQuery)
-                ->whereBetween('latitude', [$effectiveLat - $latDelta, $effectiveLat + $latDelta])
-                ->whereBetween('longitude', [$effectiveLng - $lngDelta, $effectiveLng + $lngDelta])
-                ->having('distance', '<=', $radiusKm)
-                ->get();
-
-            // Fallback jika tidak ada dalam radius 10 km
-            if ($nursesCollection->isEmpty()) {
-                $nursesCollection = $nurseBaseQuery->get();
-            }
-        } else {
-            // Jika koordinat null di localhost, ambil seluruh perawat online diurutkan dari terdekat
-            $nursesCollection = $nurseBaseQuery->get();
-        }
-
-        $onlineNurses = $nursesCollection->map(function (NurseProfile $profile) {
-            $dist = isset($profile->distance) ? round((float) $profile->distance, 1) : null;
-            $formattedDistance = $dist !== null ? "{$dist} km dari lokasi Anda" : 'Aktif Online';
-            $shortDistance = $dist !== null ? "{$dist} km" : 'Aktif Online';
-
-            return [
-                'id' => $profile->id,
-                'nurse_id' => $profile->user_id,
-                'name' => $profile->user?->name ?? 'Ns. CareAtHome',
-                'nama' => $profile->user?->name ?? 'Ns. CareAtHome',
-                'profile_photo' => null,
-                'foto' => null,
-                'specialization' => $profile->specialization ?? 'Perawat Umum Homecare',
-                'spesialisasi' => $profile->specialization ?? 'Perawat Umum Homecare',
-                'rating' => (float) $profile->rating_avg,
-                'rating_avg' => (float) $profile->rating_avg,
-                'total_reviews' => (int) $profile->total_reviews,
-                'distance' => $formattedDistance,
-                'distance_km' => $dist,
-                'formatted_distance' => $formattedDistance,
-                'formatted_distance_short' => $shortDistance,
-                'latitude' => $profile->latitude !== null ? (float) $profile->latitude : null,
-                'longitude' => $profile->longitude !== null ? (float) $profile->longitude : null,
-                'is_online' => (bool) $profile->is_online,
-                'verification_status' => $profile->status_verifikasi ?? $profile->verification_status ?? 'verified',
-                'status_verifikasi' => $profile->status_verifikasi ?? $profile->verification_status ?? 'verified',
-                'services' => $profile->services->map(function ($s) {
-                    return [
-                        'id' => $s->id,
-                        'name' => $s->name,
-                        'category' => $s->category,
-                        'image_emoji' => $s->image_emoji,
-                        'price' => (float) $s->price,
-                        'formatted_price' => $s->formatted_price,
-                    ];
-                }),
-            ];
-        });
+        $payload = NurseApiController::buildNursesAndRecommendations(
+            $effectiveLat,
+            $effectiveLng,
+            $bookingType,
+            $scheduledDate,
+            $scheduledTime
+        );
 
         return view('pages.patient.catalog', [
             'services' => $services,
@@ -181,18 +95,17 @@ class CatalogController extends Controller
             'currentCategory' => $category,
             'currentSort' => $sortBy,
             'currentPriceBracket' => $priceBracket,
-            'onlineNurses' => $onlineNurses,
+            'onlineNurses' => $payload['nurses'],
+            'recommendations' => $payload['recommendations'],
+            'availableNursesCount' => $payload['available_count'],
             'userLat' => $rawLat,
             'userLng' => $rawLng,
             'hasPatientCoords' => $hasPatientCoords,
         ]);
     }
 
-    /**
-     * Endpoint API JSON alias getNearbyNakes
-     */
     public function getNearbyNakes(Request $request): \Illuminate\Http\JsonResponse
     {
-        return app(\App\Http\Controllers\Api\NurseApiController::class)->nearby($request);
+        return app(NurseApiController::class)->nearby($request);
     }
 }

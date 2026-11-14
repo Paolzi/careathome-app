@@ -314,36 +314,55 @@
                 <button @click="toastMessage = ''" class="text-white/80 hover:text-white px-2 py-0.5">Tutup</button>
             </div>
 
-            <!-- 1. HERO BANNER & TOGGLE ON/OFF "SEDANG BEKERJA" -->
-            <div class="bg-gradient-to-r from-slate-900 via-teal-950 to-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-emerald-800/40">
-                <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <!-- 1. HERO BANNER & JADWAL OPERASIONAL HARIAN (WIB) -->
+            @php
+                $nowWib = now('Asia/Jakarta');
+                $currentTimeHi = $nowWib->format('H:i');
+                $isOperatingNow = false;
+                if (isset($todaySchedule) && $todaySchedule && $todaySchedule->is_active) {
+                    $st = substr($todaySchedule->start_time, 0, 5);
+                    $et = substr($todaySchedule->end_time, 0, 5);
+                    $isOperatingNow = ($currentTimeHi >= $st && $currentTimeHi <= $et);
+                }
+            @endphp
+            <div class="bg-gradient-to-r from-[#064e3b] via-emerald-900 to-teal-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-emerald-700/50">
+                <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-[#10b981]/15 rounded-full blur-3xl pointer-events-none"></div>
 
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                     <div class="space-y-3 max-w-xl">
-                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
-                            <span class="w-2 h-2 rounded-full" :class="isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'"></span>
-                            <span x-text="isOnline ? 'SEDANG BEKERJA (ON)' : 'OFFLINE (TIDAK BEKERJA)'"></span>
-                        </span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full {{ $isOperatingNow ? 'bg-[#10b981]/25 border-[#10b981]/40 text-emerald-200' : 'bg-amber-500/20 border-amber-400/30 text-amber-200' }} border text-xs font-bold">
+                                <span class="w-2 h-2 rounded-full {{ $isOperatingNow ? 'bg-[#10b981] animate-pulse' : 'bg-amber-400' }}"></span>
+                                <span>{{ $isOperatingNow ? 'JAM OPERASIONAL AKTIF (WIB)' : 'DI LUAR JAM OPERASIONAL / LIBUR' }}</span>
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-emerald-100 text-xs font-mono font-bold">
+                                <span>🕒</span>
+                                <span x-text="currentWibClock">{{ $nowWib->format('H:i') }} WIB</span>
+                            </span>
+                        </div>
 
                         <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
                             Halo, {{ $user->name }}
                         </h1>
-                        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                            Aktifkan toggle <strong>"Sedang Bekerja"</strong> agar Anda dapat ditemukan oleh pasien yang berada dalam <strong>radius 10 km</strong> dari lokasi GPS Anda.
+                        <p class="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+                            Ketersediaan Anda diatur otomatis berdasarkan <strong>Jadwal Operasional Harian (WIB)</strong> tanpa batasan radius jarak. Pasien dari lokasi manapun dapat memesan layanan Anda sesuai jadwal aktif Anda.
                         </p>
 
-                        <div class="text-[11px] text-slate-400 flex items-center gap-3 pt-1">
-                            <span>🛰️ Koordinat: <strong x-text="lat && lng ? (lat.toFixed(4) + ', ' + lng.toFixed(4)) : 'Belum terlacak'"></strong></span>
+                        <div class="text-[11px] text-emerald-200/80 flex flex-wrap items-center gap-3 pt-1">
+                            <span>🛰️ Titik Koordinat Rute OSRM: <strong x-text="lat && lng ? (lat.toFixed(4) + ', ' + lng.toFixed(4)) : 'Surabaya Default'"></strong></span>
                             <span>•</span>
-                            <span>⏱️ Terakhir Update: <strong x-text="lastUpdatedText || '{{ $profile->location_updated_at ? $profile->location_updated_at->diffForHumans() : 'Belum ada' }}'"></strong></span>
+                            <span>⏱️ Sinkronisasi GPS: <strong x-text="lastUpdatedText || '{{ $profile->location_updated_at ? $profile->location_updated_at->diffForHumans() : 'Siap' }}'"></strong></span>
                         </div>
 
-                        <div class="pt-2 flex flex-wrap items-center gap-2">
-                            <a href="{{ route('perawat.feed') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 transition transform active:scale-95">
-                                <span>📡 Buka Feed Order Masuk (Job Board) &rarr;</span>
+                        <div class="pt-2 flex flex-wrap items-center gap-2.5">
+                            <a href="{{ route('perawat.feed') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#10b981] hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 transition transform active:scale-95">
+                                <span>📡 Buka Feed Order Masuk &rarr;</span>
                             </a>
-                            <button type="button" @click="saveManualLocation()" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 font-bold text-xs border border-emerald-400/30 transition cursor-pointer">
-                                <span>📍 Simpan / Sinkron Lokasi GPS</span>
+                            <button type="button" @click="scheduleModalOpen = true" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white text-[#064e3b] hover:bg-emerald-50 font-extrabold text-xs shadow-sm transition cursor-pointer">
+                                <span>🗓️ Atur Jadwal Harian (WIB)</span>
+                            </button>
+                            <button type="button" @click="saveManualLocation()" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 font-bold text-xs border border-emerald-400/30 transition cursor-pointer">
+                                <span>📍 Perbarui Titik GPS Saya</span>
                             </button>
                             <a href="{{ route('perawat.finansial') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition">
                                 <span>💳 Riwayat Finansial</span>
@@ -351,34 +370,36 @@
                         </div>
                     </div>
 
-                    <!-- TOGGLE SWITCH INTERAKTIF -->
-                    <div class="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10 text-center min-w-[240px] space-y-3">
-                        <span class="text-xs uppercase font-extrabold text-slate-200 tracking-wider block">Status Ketersediaan</span>
-                        
-                        <div class="flex items-center justify-center gap-3">
-                            <span class="text-xs font-bold" :class="!isOnline ? 'text-white' : 'text-slate-400'">Offline</span>
-                            
-                            <!-- Toggle Button -->
-                            <button type="button" 
-                                @click="handleToggleOnline()"
-                                :disabled="togglingStatus"
-                                class="w-16 h-8 rounded-full p-1 transition-colors duration-200 ease-in-out focus:outline-none relative"
-                                :class="isOnline ? 'bg-emerald-500' : 'bg-slate-700'">
-                                <div class="w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out"
-                                    :class="isOnline ? 'translate-x-8' : 'translate-x-0'"></div>
-                            </button>
-                            
-                            <span class="text-xs font-bold" :class="isOnline ? 'text-emerald-400' : 'text-slate-400'">Bekerja</span>
+                    <!-- KARTU RINGKASAN JADWAL HARI INI -->
+                    <div class="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/15 text-left min-w-[260px] space-y-3">
+                        <div class="flex items-center justify-between border-b border-white/10 pb-2">
+                            <span class="text-[11px] uppercase font-extrabold text-emerald-200 tracking-wider">Jadwal Hari Ini</span>
+                            <span class="px-2 py-0.5 rounded-lg bg-[#10b981]/20 text-emerald-200 text-[10px] font-bold">
+                                {{ $todaySchedule->day_name ?? 'Hari Ini' }}
+                            </span>
                         </div>
 
-                        <p class="text-[10px] text-slate-300">
-                            <template x-if="verificationStatus !== 'verified'">
-                                <span class="text-amber-300 font-semibold block">⚠️ Syarat: Dokumen STR/SIP harus berstatus Terverifikasi sebelum bisa ON.</span>
-                            </template>
-                            <template x-if="verificationStatus === 'verified'">
-                                <span x-text="isOnline ? 'Lokasi dikirim berkala (maks. tiap 30 detik).' : 'Klik toggle untuk mulai menerima pesanan.'"></span>
-                            </template>
-                        </p>
+                        @if (isset($todaySchedule) && $todaySchedule && $todaySchedule->is_active)
+                            <div class="space-y-1">
+                                <span class="text-xs text-emerald-100 block">Jam Praktik Kunjungan:</span>
+                                <span class="text-xl font-black text-white font-mono block">
+                                    {{ substr($todaySchedule->start_time, 0, 5) }} - {{ substr($todaySchedule->end_time, 0, 5) }} WIB
+                                </span>
+                                <span class="inline-flex items-center gap-1 text-[11px] text-emerald-300 font-semibold">
+                                    ✓ Menerima Pesan Sekarang &amp; Terjadwal
+                                </span>
+                            </div>
+                        @else
+                            <div class="space-y-1">
+                                <span class="text-base font-extrabold text-amber-300 block">Libur / Tidak Aktif</span>
+                                <p class="text-[11px] text-emerald-100/80">Anda sedang mengatur hari ini sebagai libur. Pasien tetap dapat memesan untuk hari aktif lainnya.</p>
+                            </div>
+                        @endif
+
+                        <button type="button" @click="scheduleModalOpen = true"
+                            class="w-full py-2 px-3 rounded-xl bg-[#10b981] hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
+                            <span>⚙️ Ubah Jadwal Senin - Minggu</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -472,24 +493,81 @@
 
             </div>
 
-            <!-- 1.8 SECTION PENUGASAN MEDIS & E-REPORT KLINIS (KF-10) -->
+            <!-- 1.6 SECTION ATUR JADWAL OPERASIONAL HARIAN (SENIN - MINGGU WIB) -->
             <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-sm space-y-5">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                     <div class="space-y-1">
-                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#064e3b] text-[11px] font-bold border border-emerald-200">
+                            <span>🗓️</span>
+                            <span>Manajemen Jadwal Praktik Harian (Zona Waktu WIB)</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 tracking-tight">Atur Jadwal Ketersediaan Perawat (Senin – Minggu)</h3>
+                        <p class="text-xs text-slate-500">
+                            Tentukan jam buka praktik dan hari libur Anda. Pasien yang memilih <strong>Pesan Sekarang</strong> maupun <strong>Pesan Untuk Nanti</strong> akan divalidasi berdasarkan jadwal di bawah ini.
+                        </p>
+                    </div>
+                    <button type="button" @click="scheduleModalOpen = true"
+                        class="px-4 py-2.5 rounded-xl bg-[#064e3b] hover:bg-emerald-900 text-white font-extrabold text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer shrink-0">
+                        <span>⚙️ Edit Jadwal di Modal</span>
+                    </button>
+                </div>
+
+                @if (isset($schedules) && $schedules->isNotEmpty())
+                    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                        @foreach ($schedules as $sch)
+                            @php
+                                $isTodayCard = (int) now('Asia/Jakarta')->dayOfWeekIso === (int) $sch->day_of_week;
+                            @endphp
+                            <div class="p-3.5 rounded-2xl border {{ $isTodayCard ? 'border-[#10b981] bg-emerald-50/50 ring-2 ring-[#10b981]/20' : ($sch->is_active ? 'border-slate-200 bg-white' : 'border-slate-200 bg-slate-50 opacity-75') }} flex flex-col justify-between space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-extrabold text-slate-900">{{ $sch->day_name }}</span>
+                                    @if ($isTodayCard)
+                                        <span class="px-1.5 py-0.5 rounded bg-[#064e3b] text-white text-[9px] font-bold">Hari Ini</span>
+                                    @endif
+                                </div>
+
+                                @if ($sch->is_active)
+                                    <div>
+                                        <span class="inline-block px-2 py-0.5 rounded-full bg-emerald-100 text-[#064e3b] text-[10px] font-bold mb-1">
+                                            ✓ Aktif Praktik
+                                        </span>
+                                        <p class="text-xs font-mono font-bold text-slate-800">
+                                            {{ substr($sch->start_time, 0, 5) }} - {{ substr($sch->end_time, 0, 5) }}
+                                        </p>
+                                        <span class="text-[10px] text-slate-400">WIB</span>
+                                    </div>
+                                @else
+                                    <div>
+                                        <span class="inline-block px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold mb-1">
+                                            Libur / Off
+                                        </span>
+                                        <p class="text-[11px] text-slate-400">Tidak menerima kunjungan</p>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            <!-- 1.8 SECTION PENUGASAN MEDIS & E-REPORT KLINIS -->
+            <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-sm space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div class="space-y-1">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#064e3b] text-[11px] font-bold border border-emerald-200">
                             <span>🩺</span>
-                            <span>Asuhan Keperawatan Digital (E-Report)</span>
+                            <span>Asuhan Keperawatan Digital &amp; Validasi Waktu Kerja (WIB)</span>
                         </div>
                         <h3 class="text-lg font-bold text-slate-900 tracking-tight">Penugasan Medis &amp; E-Report Klinis Pasien</h3>
                         <p class="text-xs text-slate-500">
-                            Sebagai syarat resmi penyelesaian pesanan, perawat wajib menginput hasil pemeriksaan fisik (TTV) dan dokumentasi asuhan.
+                            Tombol aksi perjalanan dan perawatan aktif maksimal <strong>30 menit sebelum jadwal perawatan (WIB)</strong>. Wajib melengkapi E-Report untuk penyelesaian pesanan.
                         </p>
                     </div>
 
                     <div class="flex items-center gap-2">
                         <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1.5">
                             <span>📋</span>
-                            <span>{{ $ordersNeedingReport->count() }} Menunggu E-Report</span>
+                            <span>{{ $ordersNeedingReport->count() }} Penugasan Aktif</span>
                         </span>
                     </div>
                 </div>
@@ -500,11 +578,20 @@
                         <h4 class="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Tugas Kunjungan yang Perlu Diselesaikan:</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             @foreach ($ordersNeedingReport as $ord)
-                                <div class="p-5 rounded-2xl border-2 border-amber-200/90 bg-amber-50/30 space-y-4 hover:border-emerald-500 transition shadow-2xs">
+                                @php
+                                    $actionCheck = $ord->canNursePerformAction();
+                                    $canAct = $actionCheck['allowed'] ?? true;
+                                @endphp
+                                <div class="p-5 rounded-2xl border-2 {{ $canAct ? 'border-emerald-200 bg-emerald-50/20' : 'border-amber-200/90 bg-amber-50/30' }} space-y-4 hover:border-[#10b981] transition shadow-2xs">
                                     <div class="flex items-start justify-between gap-2">
                                         <div>
-                                            <span class="text-[10px] font-mono font-bold text-slate-400 block">{{ $ord->order_number }}</span>
-                                            <h5 class="font-extrabold text-sm text-slate-900 mt-0.5">{{ $ord->serviceCatalog?->name }}</h5>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-[10px] font-mono font-bold text-slate-400">{{ $ord->order_number }}</span>
+                                                <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold {{ ($ord->booking_type ?? 'now') === 'now' ? 'bg-emerald-100 text-[#064e3b]' : 'bg-indigo-100 text-indigo-800' }}">
+                                                    {{ ($ord->booking_type ?? 'now') === 'now' ? '⚡ Pesan Sekarang' : '🗓️ Terjadwal' }}
+                                                </span>
+                                            </div>
+                                            <h5 class="font-extrabold text-sm text-slate-900 mt-1">{{ $ord->serviceCatalog?->name }}</h5>
                                             <p class="text-xs text-slate-600 mt-0.5">Pasien: <strong>{{ $ord->patient_name }}</strong> ({{ $ord->patient_phone }})</p>
                                         </div>
                                         <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
@@ -512,47 +599,67 @@
                                         </span>
                                     </div>
 
-                                    <div class="text-xs text-slate-600 space-y-1 bg-white p-3 rounded-xl border border-amber-100">
+                                    <div class="text-xs text-slate-600 space-y-1.5 bg-white p-3.5 rounded-xl border border-slate-200/80">
                                         <div class="flex items-center justify-between">
-                                            <span class="text-slate-400">Jadwal:</span>
-                                            <span class="font-bold text-slate-800">{{ $ord->scheduled_date?->format('d M Y') }} • {{ $ord->scheduled_time }}</span>
+                                            <span class="text-slate-400">Jadwal Perawatan:</span>
+                                            <span class="font-bold text-slate-900">
+                                                {{ $ord->scheduled_date?->format('d M Y') }} • {{ str_contains($ord->scheduled_time ?? '', 'WIB') ? $ord->scheduled_time : ($ord->scheduled_time . ' WIB') }}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-slate-400">Jarak Rute Jalan (OSRM):</span>
+                                            <span class="font-bold text-[#064e3b]">{{ number_format((float) $ord->distance_km, 1, ',', '.') }} km</span>
                                         </div>
                                         <div class="flex items-start justify-between gap-2">
-                                            <span class="text-slate-400 shrink-0">Lokasi:</span>
-                                            <span class="text-right text-slate-700 truncate max-w-[200px]" title="{{ $ord->address }}">{{ $ord->address }}</span>
+                                            <span class="text-slate-400 shrink-0">Lokasi Pasien:</span>
+                                            <span class="text-right text-slate-700 truncate max-w-[220px]" title="{{ $ord->address }}">{{ $ord->address }}</span>
                                         </div>
-                                        <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-emerald-800 font-extrabold">
-                                            <span>Estimasi Pendapatan Nakes:</span>
+                                        <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[#064e3b] font-extrabold">
+                                            <span>Pendapatan Bersih Perawat:</span>
                                             <span>Rp {{ number_format($ord->nurse_earnings, 0, ',', '.') }}</span>
                                         </div>
                                     </div>
 
-                                    <!-- Aksi Tahapan Kunjungan Nakes -->
-                                    <div class="space-y-1.5">
+                                    @if (!$canAct)
+                                        <div class="p-3 rounded-xl bg-amber-100/90 border border-amber-300 text-[11px] text-amber-950 flex items-start gap-2">
+                                            <span class="text-sm shrink-0">🔒</span>
+                                            <div>
+                                                <strong class="font-extrabold block">Menunggu Jadwal Perawatan (WIB)</strong>
+                                                <span>{{ $actionCheck['message'] }}</span>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <!-- Aksi Tahapan Kunjungan Nakes (Validasi 30 Menit Sebelum Jam Perawatan) -->
+                                    <div class="space-y-2">
                                         @if ($ord->status === 'diterima')
-                                            <button type="button" @click="updateOrderStatus({{ $ord->id }}, 'dalam_perjalanan')"
-                                                class="w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <button type="button"
+                                                @if($canAct) @click="updateOrderStatus({{ $ord->id }}, 'dalam_perjalanan')" @else disabled @endif
+                                                class="w-full py-2.5 px-3 rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 {{ $canAct ? 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-75' }}">
                                                 <span>🛵</span>
-                                                <span>Berangkat Menuju Lokasi Pasien</span>
+                                                <span>Mulai Perjalanan</span>
                                             </button>
                                         @elseif ($ord->status === 'dalam_perjalanan')
-                                            <button type="button" @click="updateOrderStatus({{ $ord->id }}, 'tiba')"
-                                                class="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <button type="button"
+                                                @if($canAct) @click="updateOrderStatus({{ $ord->id }}, 'tiba')" @else disabled @endif
+                                                class="w-full py-2.5 px-3 rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 {{ $canAct ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-75' }}">
                                                 <span>📍</span>
-                                                <span>Tiba di Lokasi Pasien</span>
+                                                <span>Sampai di Lokasi</span>
                                             </button>
                                         @elseif ($ord->status === 'tiba')
-                                            <button type="button" @click="updateOrderStatus({{ $ord->id }}, 'tindakan_berlangsung')"
-                                                class="w-full py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <button type="button"
+                                                @if($canAct) @click="updateOrderStatus({{ $ord->id }}, 'tindakan_berlangsung')" @else disabled @endif
+                                                class="w-full py-2.5 px-3 rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 {{ $canAct ? 'bg-teal-600 hover:bg-teal-700 text-white cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-75' }}">
                                                 <span>🩺</span>
-                                                <span>Mulai Tindakan Keperawatan</span>
+                                                <span>Mulai Perawatan</span>
                                             </button>
                                         @endif
 
-                                        <button type="button" @click="openEReportModal(@js($ord))"
-                                            class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+                                        <button type="button"
+                                            @if($canAct) @click="openEReportModal(@js($ord))" @else disabled @endif
+                                            class="w-full py-2.5 px-4 rounded-xl font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 {{ $canAct ? 'bg-gradient-to-r from-[#064e3b] to-[#10b981] hover:from-emerald-900 hover:to-emerald-600 text-white shadow-emerald-600/20 cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-75' }}">
                                             <span>📝</span>
-                                            <span>Isi E-Report Klinis &amp; Selesaikan</span>
+                                            <span>Selesai Perawatan &amp; Isi E-Report</span>
                                         </button>
                                     </div>
                                 </div>
@@ -564,7 +671,7 @@
                         <span class="text-3xl block">🩺</span>
                         <h4 class="text-xs font-bold text-slate-700">Tidak Ada Tugas Kunjungan Tertunda</h4>
                         <p class="text-[11px] text-slate-400 max-w-md mx-auto">
-                            Semua tugas kunjungan medis Anda telah dilengkapi E-Report. Aktifkan toggle "Sedang Bekerja" di atas agar pasien dapat memesan layanan Anda kembali.
+                            Semua tugas kunjungan medis Anda telah dilengkapi E-Report. Pastikan jadwal harian Anda aktif agar pasien dapat memesan layanan Anda.
                         </p>
                     </div>
                 @endif
@@ -710,8 +817,8 @@
                                     <tbody class="divide-y divide-slate-100 font-medium">
                                         @foreach ($recentTransactions as $tx)
                                             <tr class="hover:bg-slate-50/80 transition">
-                                                <td class="py-3 px-3 whitespace-nowrap text-[11px] text-slate-500">
-                                                    {{ $tx->created_at->format('d M Y, H:i') }}
+                                                <td class="py-3 px-3 whitespace-nowrap text-[11px] text-slate-500 font-mono">
+                                                    {{ $tx->created_at->timezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB
                                                 </td>
                                                 <td class="py-3 px-3">
                                                     <span class="font-bold text-slate-800 block">{{ $tx->description }}</span>
@@ -746,7 +853,7 @@
         </div>
 
         <!-- ============================================================= -->
-        <!-- MODAL FORMULIR E-REPORT KLINIS PERAWAT (KF-10)                -->
+        <!-- MODAL FORMULIR E-REPORT KLINIS PERAWAT                        -->
         <!-- ============================================================= -->
         <div x-show="ereportModalOpen" x-cloak
             class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
@@ -978,7 +1085,104 @@
         </div>
 
         <!-- ============================================================= -->
-        <!-- MODAL FORMULIR TARIK SALDO / PAYOUT (WITHDRAWAL)             -->
+        <!-- MODAL ATUR JADWAL OPERASIONAL HARIAN (SENIN - MINGGU WIB)     -->
+        <!-- ============================================================= -->
+        <div x-show="scheduleModalOpen" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+            x-transition:enter="ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0">
+
+            <div @click.away="scheduleModalOpen = false"
+                class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 max-h-[92vh] flex flex-col"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100">
+
+                <div class="px-6 py-5 bg-gradient-to-r from-[#064e3b] via-emerald-900 to-teal-950 text-white flex items-center justify-between shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-xl">
+                            🗓️
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider font-extrabold text-emerald-300 block">Manajemen Ketersediaan Harian (WIB)</span>
+                            <h3 class="text-base font-extrabold leading-tight">Atur Jadwal Praktik Perawat (Senin – Minggu)</h3>
+                        </div>
+                    </div>
+                    <button type="button" @click="scheduleModalOpen = false" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs">
+                        ✕
+                    </button>
+                </div>
+
+                <form action="{{ route('perawat.jadwal.update') }}" method="POST" class="overflow-y-auto grow p-6 space-y-4">
+                    @csrf
+
+                    <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-[#064e3b] leading-relaxed">
+                        <strong>💡 Cara Kerja Jadwal (WIB):</strong> Pasien dapat memesan Anda untuk <strong>Pesan Sekarang</strong> maupun <strong>Pesan Untuk Nanti</strong> apabila waktu pemesanan berada di dalam rentang jam buka praktik yang Anda aktifkan di bawah ini.
+                    </div>
+
+                    <div class="space-y-2.5">
+                        @if (isset($schedules))
+                            @foreach ($schedules as $idx => $sch)
+                                <div x-data="{ activeDay: {{ $sch->is_active ? 'true' : 'false' }} }"
+                                    class="p-3.5 rounded-2xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                                    :class="activeDay ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-slate-50'">
+                                    
+                                    <div class="flex items-center gap-3">
+                                        <input type="hidden" name="schedules[{{ $idx }}][day_of_week]" value="{{ $sch->day_of_week }}">
+                                        <label class="inline-flex items-center gap-2.5 cursor-pointer">
+                                            <input type="checkbox" name="schedules[{{ $idx }}][is_active]" value="1"
+                                                {{ $sch->is_active ? 'checked' : '' }}
+                                                @change="activeDay = $event.target.checked"
+                                                class="w-4 h-4 rounded text-[#064e3b] focus:ring-[#10b981]">
+                                            <span class="font-extrabold text-xs text-slate-900 w-20">{{ $sch->day_name }}</span>
+                                        </label>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                            :class="activeDay ? 'bg-emerald-100 text-[#064e3b]' : 'bg-rose-100 text-rose-800'"
+                                            x-text="activeDay ? 'Buka Praktik' : 'Libur / Tidak Aktif'">
+                                        </span>
+                                    </div>
+
+                                    <div class="flex items-center gap-2" :class="!activeDay ? 'opacity-40 pointer-events-none' : ''">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-[10px] font-bold text-slate-500">Mulai:</span>
+                                            <input type="time" name="schedules[{{ $idx }}][start_time]"
+                                                value="{{ substr($sch->start_time, 0, 5) }}" required
+                                                class="text-xs font-mono rounded-xl border-slate-200 py-1.5 px-2.5 focus:border-[#10b981] focus:ring-[#10b981]">
+                                        </div>
+                                        <span class="text-slate-400 font-bold">-</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-[10px] font-bold text-slate-500">Selesai:</span>
+                                            <input type="time" name="schedules[{{ $idx }}][end_time]"
+                                                value="{{ substr($sch->end_time, 0, 5) }}" required
+                                                class="text-xs font-mono rounded-xl border-slate-200 py-1.5 px-2.5 focus:border-[#10b981] focus:ring-[#10b981]">
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-500">WIB</span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @endif
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                        <button type="button" @click="scheduleModalOpen = false"
+                            class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                            Batal
+                        </button>
+                        <button type="submit"
+                            class="px-5 py-2.5 rounded-xl bg-[#064e3b] hover:bg-emerald-900 text-white text-xs font-extrabold shadow transition cursor-pointer">
+                            ✓ Simpan Jadwal Operasional (WIB)
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- MODAL FORMULIR TARIK SALDO / PAYOUT INSTAN (TANPA REKENING)   -->
         <!-- ============================================================= -->
         <div x-show="payoutModalOpen" x-cloak
             class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
@@ -995,10 +1199,10 @@
                 x-transition:enter-start="opacity-0 scale-95"
                 x-transition:enter-end="opacity-100 scale-100">
 
-                <div class="px-6 py-5 bg-gradient-to-r from-slate-900 to-emerald-950 text-white flex items-center justify-between">
+                <div class="px-6 py-5 bg-gradient-to-r from-[#064e3b] to-emerald-950 text-white flex items-center justify-between">
                     <div>
-                        <span class="text-[10px] uppercase tracking-wider font-extrabold text-emerald-300 block">Pencairan Dana Nakes</span>
-                        <h3 class="text-base font-extrabold leading-tight">Pengajuan Penarikan Saldo</h3>
+                        <span class="text-[10px] uppercase tracking-wider font-extrabold text-emerald-300 block">Pencairan Saldo Instan Perawat</span>
+                        <h3 class="text-base font-extrabold leading-tight">Tarik Saldo Dompet</h3>
                     </div>
                     <button type="button" @click="payoutModalOpen = false" class="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs">
                         ✕
@@ -1009,64 +1213,49 @@
                     @csrf
 
                     <!-- Info Saldo Tersedia -->
-                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                        <span class="text-xs text-slate-500">Saldo Dompet Tersedia:</span>
-                        <strong class="text-base font-black text-slate-900">Rp {{ number_format($totalBalance, 0, ',', '.') }}</strong>
+                    <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between">
+                        <span class="text-xs font-semibold text-[#064e3b]">Saldo Aktif Tersedia:</span>
+                        <strong class="text-lg font-black text-[#064e3b]">Rp {{ number_format($totalBalance, 0, ',', '.') }}</strong>
                     </div>
 
                     <!-- Pilihan Nominal Cepat (Quick Chips) -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilihan Nominal Penarikan</label>
-                        <div class="grid grid-cols-3 gap-2">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilihan Nominal Cepat</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <button type="button" @click="setPayoutAmount(50000)"
+                                :class="payoutAmount === 50000 ? 'bg-[#064e3b] text-white border-[#064e3b] font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
+                                class="py-2 px-2 rounded-xl text-xs border text-center transition cursor-pointer">
+                                Rp 50rb
+                            </button>
                             <button type="button" @click="setPayoutAmount(100000)"
-                                :class="payoutAmount === 100000 ? 'bg-emerald-600 text-white border-emerald-600 font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
-                                class="py-2 px-2 rounded-xl text-xs border text-center transition">
-                                Rp 100.000
+                                :class="payoutAmount === 100000 ? 'bg-[#064e3b] text-white border-[#064e3b] font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
+                                class="py-2 px-2 rounded-xl text-xs border text-center transition cursor-pointer">
+                                Rp 100rb
                             </button>
                             <button type="button" @click="setPayoutAmount(250000)"
-                                :class="payoutAmount === 250000 ? 'bg-emerald-600 text-white border-emerald-600 font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
-                                class="py-2 px-2 rounded-xl text-xs border text-center transition">
-                                Rp 250.000
+                                :class="payoutAmount === 250000 ? 'bg-[#064e3b] text-white border-[#064e3b] font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
+                                class="py-2 px-2 rounded-xl text-xs border text-center transition cursor-pointer">
+                                Rp 250rb
                             </button>
-                            <button type="button" @click="setPayoutAmount(500000)"
-                                :class="payoutAmount === 500000 ? 'bg-emerald-600 text-white border-emerald-600 font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
-                                class="py-2 px-2 rounded-xl text-xs border text-center transition">
-                                Rp 500.000
+                            <button type="button" @click="setPayoutAmount({{ (int) $totalBalance }})"
+                                :class="payoutAmount === {{ (int) $totalBalance }} ? 'bg-[#064e3b] text-white border-[#064e3b] font-bold' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'"
+                                class="py-2 px-2 rounded-xl text-xs border text-center transition cursor-pointer">
+                                Semua
                             </button>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nominal Custom (Rp) <span class="text-rose-500">*</span></label>
-                        <input type="number" name="amount" x-model="payoutAmount" min="10000" max="{{ $totalBalance }}" required
-                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
-                        <span class="text-[10px] text-slate-400 mt-0.5 block">Minimal penarikan Rp 10.000</span>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Masukkan Nominal Penarikan (Rp) <span class="text-rose-500">*</span></label>
+                        <input type="number" name="amount" x-model.number="payoutAmount" min="10000" max="{{ max(10000, (int) $totalBalance) }}" required
+                            class="w-full text-sm font-bold rounded-xl border-slate-200 focus:border-[#10b981] focus:ring-[#10b981]">
+                        <span class="text-[10px] text-slate-500 mt-1 block">
+                            Minimal Rp 10.000 &amp; maksimal sesuai saldo aktif (Rp {{ number_format($totalBalance, 0, ',', '.') }}).
+                        </span>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Bank Tujuan <span class="text-rose-500">*</span></label>
-                        <select name="bank_name" required class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">-- Pilih Bank Rekening Anda --</option>
-                            <option value="BCA">BCA (Bank Central Asia)</option>
-                            <option value="Mandiri">Bank Mandiri</option>
-                            <option value="BRI">BRI (Bank Rakyat Indonesia)</option>
-                            <option value="BNI">BNI (Bank Negara Indonesia)</option>
-                            <option value="BSI">BSI (Bank Syariah Indonesia)</option>
-                            <option value="CIMB Niaga">CIMB Niaga</option>
-                            <option value="Permata">Bank Permata</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Rekening <span class="text-rose-500">*</span></label>
-                        <input type="text" name="account_number" placeholder="Nomor rekening tujuan" required
-                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Pemilik Rekening <span class="text-rose-500">*</span></label>
-                        <input type="text" name="account_holder" placeholder="Nama lengkap sesuai buku rekening" required
-                            class="w-full text-xs rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500">
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
+                        ⚡ <strong>Pencairan Otomatis Satu Klik:</strong> Anda cukup menginputkan nominal penarikan tanpa perlu mengisi rekening manual. Saldo aktif akan langsung terpotong otomatis dan tercatat di riwayat transaksi serta panel Admin.
                     </div>
 
                     <div class="pt-2 flex items-center justify-end gap-2">
@@ -1075,8 +1264,8 @@
                             Batal
                         </button>
                         <button type="submit"
-                            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow transition cursor-pointer">
-                            Konfirmasi Penarikan
+                            class="px-5 py-2.5 rounded-xl bg-[#10b981] hover:bg-emerald-600 text-slate-950 hover:text-white text-xs font-extrabold shadow transition cursor-pointer">
+                            💸 Tarik Saldo Sekarang
                         </button>
                     </div>
                 </form>
@@ -1098,14 +1287,16 @@
                 lastLocationSentAt: 0,
                 toastMessage: '',
                 toastType: 'success',
+                currentWibClock: '',
 
-                // E-Report & Payout State
+                // Modals State
+                scheduleModalOpen: false,
                 ereportModalOpen: false,
                 activeOrderForReport: null,
                 ereportFormAction: '',
                 photoPreviews: [],
                 payoutModalOpen: false,
-                payoutAmount: 100000,
+                payoutAmount: {{ $totalBalance >= 100000 ? 100000 : max(10000, (int) $totalBalance) }},
 
                 openEReportModal(order) {
                     this.activeOrderForReport = order;
@@ -1169,9 +1360,20 @@
                 },
 
                 init() {
-                    if (this.isOnline) {
-                        this.startLocationWatch();
-                    }
+                    this.updateClock();
+                    setInterval(() => this.updateClock(), 1000);
+                    this.startLocationWatch();
+                },
+
+                updateClock() {
+                    const fmt = new Intl.DateTimeFormat('id-ID', {
+                        timeZone: 'Asia/Jakarta',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                    this.currentWibClock = fmt.format(new Date()).replace(/\./g, ':') + ' WIB';
                 },
 
                 showToast(msg, type = 'success') {
