@@ -128,6 +128,7 @@ class NurseDashboardController extends Controller
 
     /**
      * Simpan pengaturan jadwal operasional harian perawat (Senin - Minggu dalam WIB).
+     * Mendukung penambahan multi-jam spesifik per hari menggunakan tombol (+).
      */
     public function updateSchedules(Request $request)
     {
@@ -138,8 +139,9 @@ class NurseDashboardController extends Controller
             'schedules' => ['required', 'array'],
             'schedules.*.day_of_week' => ['required', 'integer', 'between:1,7'],
             'schedules.*.is_active' => ['nullable'],
-            'schedules.*.start_time' => ['required', 'string'],
-            'schedules.*.end_time' => ['required', 'string'],
+            'schedules.*.time_slots' => ['nullable'],
+            'schedules.*.start_time' => ['nullable', 'string'],
+            'schedules.*.end_time' => ['nullable', 'string'],
         ]);
 
         DB::transaction(function () use ($user, $validated) {
@@ -147,8 +149,26 @@ class NurseDashboardController extends Controller
                 $dayNum = (int) $item['day_of_week'];
                 $dayName = NurseSchedule::DAYS[$dayNum] ?? 'Senin';
                 $isActive = filter_var($item['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
-                $startTime = substr(trim($item['start_time']), 0, 5);
-                $endTime = substr(trim($item['end_time']), 0, 5);
+
+                $slots = NurseSchedule::normalizeTimeSlots($item['time_slots'] ?? []);
+                if ($isActive && empty($slots)) {
+                    // Jika tidak ada time_slots yang dikirim tetapi start_time ada, gunakan start_time
+                    if (!empty($item['start_time'])) {
+                        $slots = NurseSchedule::normalizeTimeSlots([substr(trim($item['start_time']), 0, 5)]);
+                    } else {
+                        $slots = ['08:00'];
+                    }
+                }
+
+                if (empty($slots)) {
+                    $isActive = false;
+                }
+
+                $firstSlot = $slots[0] ?? '08:00';
+                $lastSlot = !empty($slots) ? $slots[count($slots) - 1] : '21:00';
+                $lastMin = NurseSchedule::parseHourMinuteToMinutes($lastSlot) ?? (19 * 60);
+                $endMin = min(23 * 60 + 59, $lastMin + NurseSchedule::SLOT_DURATION_MINUTES);
+                $computedEnd = sprintf('%02d:%02d', intdiv($endMin, 60), $endMin % 60);
 
                 NurseSchedule::updateOrCreate(
                     [
@@ -157,8 +177,9 @@ class NurseDashboardController extends Controller
                     ],
                     [
                         'day_name' => $dayName,
-                        'start_time' => $startTime,
-                        'end_time' => $endTime,
+                        'start_time' => $firstSlot,
+                        'end_time' => $computedEnd,
+                        'time_slots' => $slots,
                         'is_active' => $isActive,
                     ]
                 );
@@ -168,12 +189,12 @@ class NurseDashboardController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'status' => 'success',
-                'message' => 'Jadwal operasional harian (WIB) berhasil diperbarui.',
+                'message' => 'Jadwal jam kerja harian (WIB) berhasil diperbarui.',
                 'schedules' => NurseSchedule::ensureDefaultSchedulesForNurse($user->id),
             ]);
         }
 
-        return back()->with('status', 'Jadwal operasional harian Anda (WIB) berhasil disimpan.');
+        return back()->with('status', 'Jadwal jam kerja harian Anda (WIB) berhasil disimpan.');
     }
 
     /**

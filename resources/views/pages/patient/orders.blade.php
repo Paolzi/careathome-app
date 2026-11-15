@@ -1702,23 +1702,28 @@
                     const patLng = parseFloat(order.longitude || order.patient_longitude) || 112.7304;
                     this.patientCoords = [patLat, patLng];
 
-                    // Posisi Mitra Perawat (dari profil nyata atau offset Surabaya)
+                    // Posisi Mitra Perawat (sama dengan logika Katalog: fallback -7.3144, 112.7304)
                     let nLat = parseFloat(order.nurse?.nurse_profile?.latitude);
                     let nLng = parseFloat(order.nurse?.nurse_profile?.longitude);
 
                     if (isNaN(nLat) || isNaN(nLng)) {
-                        nLat = patLat - 0.016;
-                        nLng = patLng + 0.014;
-                    } else if (Math.abs(nLat - patLat) < 0.0008 && Math.abs(nLng - patLng) < 0.0008) {
-                        nLat = patLat - 0.015;
-                        nLng = patLng + 0.012;
+                        nLat = -7.3144;
+                        nLng = 112.7304;
+                    }
+
+                    const catalogDist = parseFloat(order.distance_km) || 0.1;
+
+                    // Jika jarak di katalog 0.1 km (atau titik sama), geser visual marker ~65 meter (0.1 km)
+                    // agar pin perawat & pasien berdampingan rapi dan jarak tetap akurat 0.1 km sesuai katalog!
+                    if ((Math.abs(nLat - patLat) < 0.0008 && Math.abs(nLng - patLng) < 0.0008) || catalogDist <= 0.2) {
+                        nLat = patLat - 0.0006;
+                        nLng = patLng + 0.0005;
                     }
                     this.originNurseCoords = [nLat, nLng];
                     this.routeCoordinates = [this.originNurseCoords, this.patientCoords];
 
-                    const baseDist = parseFloat(order.distance_km) || 2.8;
-                    this.liveDistanceKm = baseDist.toFixed(1);
-                    this.liveEtaMin = Math.max(5, Math.round(baseDist * 3));
+                    this.liveDistanceKm = catalogDist.toFixed(1);
+                    this.liveEtaMin = Math.max(1, Math.ceil(catalogDist * 3));
                     this.liveStatusText = order.status === 'dalam_perjalanan' ? '🛵 Nakes Menuju Rumah Anda' : (order.status_label || 'Siap Berangkat');
 
                     const mapContainer = document.getElementById('tracking-map');
@@ -1786,12 +1791,11 @@
                             if (roadCoords.length >= 2) {
                                 this.routeCoordinates = roadCoords;
                             }
-                            if (route.distance) {
+                            // Pertahankan jarak yang tersimpan sesuai katalog (order.distance_km)
+                            if (!order.distance_km && route.distance) {
                                 const km = Math.max(0.1, Math.round((route.distance / 1000) * 100) / 100);
                                 this.liveDistanceKm = km.toFixed(1);
-                            }
-                            if (route.duration) {
-                                this.liveEtaMin = Math.max(2, Math.ceil(route.duration / 60));
+                                this.liveEtaMin = Math.max(1, Math.ceil(km * 3));
                             }
                         }
                     } catch (e) {

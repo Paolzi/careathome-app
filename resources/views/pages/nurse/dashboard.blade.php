@@ -340,12 +340,11 @@
             @php
                 $nowWib = now('Asia/Jakarta');
                 $currentTimeHi = $nowWib->format('H:i');
-                $isOperatingNow = false;
-                if (isset($todaySchedule) && $todaySchedule && $todaySchedule->is_active) {
-                    $st = substr($todaySchedule->start_time, 0, 5);
-                    $et = substr($todaySchedule->end_time, 0, 5);
-                    $isOperatingNow = ($currentTimeHi >= $st && $currentTimeHi <= $et);
-                }
+                $todaySlots = (isset($todaySchedule) && $todaySchedule && $todaySchedule->is_active)
+                    ? $todaySchedule->getEffectiveTimeSlots()
+                    : [];
+                $nowAvailability = \App\Models\NurseSchedule::checkAvailability($user->id, 'now');
+                $isOperatingNow = $nowAvailability['available'] ?? false;
             @endphp
             <div class="bg-gradient-to-r from-[#064e3b] via-emerald-900 to-teal-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-emerald-700/50">
                 <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-[#10b981]/15 rounded-full blur-3xl pointer-events-none"></div>
@@ -355,7 +354,7 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full {{ $isOperatingNow ? 'bg-[#10b981]/25 border-[#10b981]/40 text-emerald-200' : 'bg-amber-500/20 border-amber-400/30 text-amber-200' }} border text-xs font-bold">
                                 <span class="w-2 h-2 rounded-full {{ $isOperatingNow ? 'bg-[#10b981] animate-pulse' : 'bg-amber-400' }}"></span>
-                                <span>{{ $isOperatingNow ? 'JAM OPERASIONAL AKTIF (WIB)' : 'DI LUAR JAM OPERASIONAL / LIBUR' }}</span>
+                                <span>{{ $isOperatingNow ? 'SIAP MENERIMA PESANAN SAAT INI (WIB)' : 'SEDANG TERJADWAL / DI LUAR JAM KERJA' }}</span>
                             </span>
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-emerald-100 text-xs font-mono font-bold">
                                 <span>🕒</span>
@@ -367,7 +366,7 @@
                             Halo, {{ $user->name }}
                         </h1>
                         <p class="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-                            Ketersediaan Anda diatur otomatis berdasarkan <strong>Jadwal Operasional Harian (WIB)</strong> tanpa batasan radius jarak. Pasien dari lokasi manapun dapat memesan layanan Anda sesuai jadwal aktif Anda.
+                            Ketersediaan Anda diatur berdasarkan <strong>Daftar Jam Kerja Harian (WIB)</strong> yang Anda tambahkan per hari. Pasien hanya dapat memesan pada jam kerja aktif yang belum dipesan pasien lain.
                         </p>
 
                         <div class="text-[11px] text-emerald-200/80 flex flex-wrap items-center gap-3 pt-1">
@@ -381,7 +380,7 @@
                                 <span>📡 Buka Feed Order Masuk &rarr;</span>
                             </a>
                             <button type="button" @click="scheduleModalOpen = true" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white text-[#064e3b] hover:bg-emerald-50 font-extrabold text-xs shadow-sm transition cursor-pointer">
-                                <span>🗓️ Atur Jadwal Harian (WIB)</span>
+                                <span>＋ Atur Jam Kerja Harian (WIB)</span>
                             </button>
                             <button type="button" @click="saveManualLocation()" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 font-bold text-xs border border-emerald-400/30 transition cursor-pointer">
                                 <span>📍 Perbarui Titik GPS Saya</span>
@@ -393,22 +392,26 @@
                     </div>
 
                     <!-- KARTU RINGKASAN JADWAL HARI INI -->
-                    <div class="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/15 text-left min-w-[260px] space-y-3">
+                    <div class="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/15 text-left min-w-[270px] max-w-xs space-y-3">
                         <div class="flex items-center justify-between border-b border-white/10 pb-2">
-                            <span class="text-[11px] uppercase font-extrabold text-emerald-200 tracking-wider">Jadwal Hari Ini</span>
+                            <span class="text-[11px] uppercase font-extrabold text-emerald-200 tracking-wider">Jam Kerja Hari Ini</span>
                             <span class="px-2 py-0.5 rounded-lg bg-[#10b981]/20 text-emerald-200 text-[10px] font-bold">
                                 {{ $todaySchedule->day_name ?? 'Hari Ini' }}
                             </span>
                         </div>
 
-                        @if (isset($todaySchedule) && $todaySchedule && $todaySchedule->is_active)
-                            <div class="space-y-1">
-                                <span class="text-xs text-emerald-100 block">Jam Praktik Kunjungan:</span>
-                                <span class="text-xl font-black text-white font-mono block">
-                                    {{ substr($todaySchedule->start_time, 0, 5) }} - {{ substr($todaySchedule->end_time, 0, 5) }} WIB
-                                </span>
+                        @if (!empty($todaySlots))
+                            <div class="space-y-2">
+                                <span class="text-xs text-emerald-100 block">Slot Jam Praktik Aktif (WIB):</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    @foreach ($todaySlots as $slot)
+                                        <span class="px-2 py-1 rounded-lg bg-white/15 border border-white/20 text-white font-mono text-xs font-extrabold">
+                                            {{ $slot }} WIB
+                                        </span>
+                                    @endforeach
+                                </div>
                                 <span class="inline-flex items-center gap-1 text-[11px] text-emerald-300 font-semibold">
-                                    ✓ Menerima Pesan Sekarang &amp; Terjadwal
+                                    ✓ {{ count($todaySlots) }} sesi jam kerja aktif hari ini
                                 </span>
                             </div>
                         @else
@@ -420,7 +423,7 @@
 
                         <button type="button" @click="scheduleModalOpen = true"
                             class="w-full py-2 px-3 rounded-xl bg-[#10b981] hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
-                            <span>⚙️ Ubah Jadwal Senin - Minggu</span>
+                            <span>＋ Tambah / Edit Jam Kerja</span>
                         </button>
                     </div>
                 </div>
@@ -521,51 +524,63 @@
                     <div class="space-y-1">
                         <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#064e3b] text-[11px] font-bold border border-emerald-200">
                             <span>🗓️</span>
-                            <span>Manajemen Jadwal Praktik Harian (Zona Waktu WIB)</span>
+                            <span>Manajemen Jam Kerja Harian Per Hari (Zona Waktu WIB)</span>
                         </div>
-                        <h3 class="text-lg font-bold text-slate-900 tracking-tight">Atur Jadwal Ketersediaan Perawat (Senin – Minggu)</h3>
+                        <h3 class="text-lg font-bold text-slate-900 tracking-tight">Daftar Jam Kerja Perawat per Hari (Senin – Minggu)</h3>
                         <p class="text-xs text-slate-500">
-                            Tentukan jam buka praktik dan hari libur Anda. Pasien yang memilih <strong>Pesan Sekarang</strong> maupun <strong>Pesan Untuk Nanti</strong> akan divalidasi berdasarkan jadwal di bawah ini.
+                            Tambahkan jam berapa saja Anda bisa bekerja pada masing-masing hari dengan tombol <strong>(+)</strong>. Pasien yang memilih <strong>Pesan Sekarang</strong> maupun <strong>Pesan Untuk Nanti</strong> hanya bisa memesan pada jam kerja yang Anda tambahkan dan belum terisi pesanan lain.
                         </p>
                     </div>
                     <button type="button" @click="scheduleModalOpen = true"
                         class="px-4 py-2.5 rounded-xl bg-[#064e3b] hover:bg-emerald-900 text-white font-extrabold text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer shrink-0">
-                        <span>⚙️ Edit Jadwal di Modal</span>
+                        <span>＋ Tambah / Atur Jam Kerja</span>
                     </button>
                 </div>
 
                 @if (isset($schedules) && $schedules->isNotEmpty())
-                    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
                         @foreach ($schedules as $sch)
                             @php
                                 $isTodayCard = (int) now('Asia/Jakarta')->dayOfWeekIso === (int) $sch->day_of_week;
+                                $daySlots = $sch->getEffectiveTimeSlots();
                             @endphp
-                            <div class="p-3.5 rounded-2xl border {{ $isTodayCard ? 'border-[#10b981] bg-emerald-50/50 ring-2 ring-[#10b981]/20' : ($sch->is_active ? 'border-slate-200 bg-white' : 'border-slate-200 bg-slate-50 opacity-75') }} flex flex-col justify-between space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-extrabold text-slate-900">{{ $sch->day_name }}</span>
-                                    @if ($isTodayCard)
-                                        <span class="px-1.5 py-0.5 rounded bg-[#064e3b] text-white text-[9px] font-bold">Hari Ini</span>
+                            <div class="p-3.5 rounded-2xl border {{ $isTodayCard ? 'border-[#10b981] bg-emerald-50/50 ring-2 ring-[#10b981]/20' : ($sch->is_active && !empty($daySlots) ? 'border-slate-200 bg-white' : 'border-slate-200 bg-slate-50 opacity-75') }} flex flex-col justify-between space-y-3">
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-extrabold text-slate-900">{{ $sch->day_name }}</span>
+                                        @if ($isTodayCard)
+                                            <span class="px-1.5 py-0.5 rounded bg-[#064e3b] text-white text-[9px] font-bold">Hari Ini</span>
+                                        @endif
+                                    </div>
+
+                                    @if ($sch->is_active && !empty($daySlots))
+                                        <div>
+                                            <span class="inline-block px-2 py-0.5 rounded-full bg-emerald-100 text-[#064e3b] text-[10px] font-bold mb-2">
+                                                ✓ {{ count($daySlots) }} Jam Kerja
+                                            </span>
+                                            <div class="flex flex-wrap gap-1">
+                                                @foreach ($daySlots as $slot)
+                                                    <span class="px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-mono font-bold">
+                                                        {{ $slot }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div>
+                                            <span class="inline-block px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold mb-1">
+                                                Libur / Off
+                                            </span>
+                                            <p class="text-[11px] text-slate-400">Tidak ada jam kerja</p>
+                                        </div>
                                     @endif
                                 </div>
 
-                                @if ($sch->is_active)
-                                    <div>
-                                        <span class="inline-block px-2 py-0.5 rounded-full bg-emerald-100 text-[#064e3b] text-[10px] font-bold mb-1">
-                                            ✓ Aktif Praktik
-                                        </span>
-                                        <p class="text-xs font-mono font-bold text-slate-800">
-                                            {{ substr($sch->start_time, 0, 5) }} - {{ substr($sch->end_time, 0, 5) }}
-                                        </p>
-                                        <span class="text-[10px] text-slate-400">WIB</span>
-                                    </div>
-                                @else
-                                    <div>
-                                        <span class="inline-block px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold mb-1">
-                                            Libur / Off
-                                        </span>
-                                        <p class="text-[11px] text-slate-400">Tidak menerima kunjungan</p>
-                                    </div>
-                                @endif
+                                <button type="button" @click="scheduleModalOpen = true"
+                                    class="w-full py-1.5 px-2 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-[#064e3b] text-[11px] font-extrabold transition flex items-center justify-center gap-1 cursor-pointer">
+                                    <span>＋</span>
+                                    <span>Atur Jam</span>
+                                </button>
                             </div>
                         @endforeach
                     </div>
@@ -1143,46 +1158,109 @@
                     @csrf
 
                     <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-[#064e3b] leading-relaxed">
-                        <strong>💡 Cara Kerja Jadwal (WIB):</strong> Pasien dapat memesan Anda untuk <strong>Pesan Sekarang</strong> maupun <strong>Pesan Untuk Nanti</strong> apabila waktu pemesanan berada di dalam rentang jam buka praktik yang Anda aktifkan di bawah ini.
+                        <strong>💡 Cara Kerja Jadwal Per Hari (WIB):</strong> Pada setiap hari, klik tombol <strong>(＋ Tambah Jam)</strong> untuk menambahkan jam berapa saja Anda bisa bekerja. Pasien hanya dapat memesan <strong>Pesan Sekarang</strong> maupun <strong>Pesan Untuk Nanti</strong> sesuai daftar jam yang Anda tambahkan, dan jam yang sudah dipesan pasien lain otomatis terkunci.
                     </div>
 
-                    <div class="space-y-2.5">
+                    <div class="space-y-3">
                         @if (isset($schedules))
                             @foreach ($schedules as $idx => $sch)
-                                <div x-data="{ activeDay: {{ $sch->is_active ? 'true' : 'false' }} }"
-                                    class="p-3.5 rounded-2xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                                @php
+                                    $initialSlots = $sch->getEffectiveTimeSlots();
+                                    if (empty($initialSlots)) {
+                                        $initialSlots = \App\Models\NurseSchedule::normalizeTimeSlots($sch->time_slots ?? []);
+                                    }
+                                @endphp
+                                <div x-data="{
+                                        activeDay: {{ ($sch->is_active && !empty($initialSlots)) ? 'true' : 'false' }},
+                                        slots: {{ json_encode(array_values($initialSlots)) }},
+                                        newTime: '09:00',
+                                        quickHours: ['08:00', '10:00', '13:00', '15:00', '17:00', '19:00', '21:00'],
+                                        addSlot(customVal = null) {
+                                            const val = String(customVal || this.newTime || '').trim().substring(0, 5);
+                                            if (!/^\d{2}:\d{2}$/.test(val)) return;
+                                            if (!this.slots.includes(val)) {
+                                                this.slots.push(val);
+                                                this.slots.sort();
+                                            }
+                                            this.activeDay = true;
+                                        },
+                                        removeSlot(sIdx) {
+                                            this.slots.splice(sIdx, 1);
+                                            if (this.slots.length === 0) {
+                                                this.activeDay = false;
+                                            }
+                                        },
+                                        toggleDay(checked) {
+                                            this.activeDay = checked;
+                                            if (checked && this.slots.length === 0) {
+                                                this.slots = ['08:00', '10:00', '13:00', '15:00', '19:00'];
+                                            }
+                                        }
+                                    }"
+                                    class="p-4 rounded-2xl border transition space-y-3"
                                     :class="activeDay ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-slate-50'">
                                     
-                                    <div class="flex items-center gap-3">
-                                        <input type="hidden" name="schedules[{{ $idx }}][day_of_week]" value="{{ $sch->day_of_week }}">
-                                        <label class="inline-flex items-center gap-2.5 cursor-pointer">
-                                            <input type="checkbox" name="schedules[{{ $idx }}][is_active]" value="1"
-                                                {{ $sch->is_active ? 'checked' : '' }}
-                                                @change="activeDay = $event.target.checked"
-                                                class="w-4 h-4 rounded text-[#064e3b] focus:ring-[#10b981]">
-                                            <span class="font-extrabold text-xs text-slate-900 w-20">{{ $sch->day_name }}</span>
-                                        </label>
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                                            :class="activeDay ? 'bg-emerald-100 text-[#064e3b]' : 'bg-rose-100 text-rose-800'"
-                                            x-text="activeDay ? 'Buka Praktik' : 'Libur / Tidak Aktif'">
-                                        </span>
+                                    <!-- Baris Atas: Nama Hari + Toggle + Input Tambah Jam (+) -->
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                        <div class="flex items-center gap-3">
+                                            <input type="hidden" name="schedules[{{ $idx }}][day_of_week]" value="{{ $sch->day_of_week }}">
+                                            <label class="inline-flex items-center gap-2.5 cursor-pointer">
+                                                <input type="checkbox" name="schedules[{{ $idx }}][is_active]" value="1"
+                                                    :checked="activeDay"
+                                                    @change="toggleDay($event.target.checked)"
+                                                    class="w-4 h-4 rounded text-[#064e3b] focus:ring-[#10b981]">
+                                                <span class="font-extrabold text-sm text-slate-900 w-20">{{ $sch->day_name }}</span>
+                                            </label>
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                                                :class="activeDay ? 'bg-emerald-100 text-[#064e3b]' : 'bg-rose-100 text-rose-800'"
+                                                x-text="activeDay ? ('Buka • ' + slots.length + ' Jam Kerja') : 'Libur / Tidak Aktif'">
+                                            </span>
+                                        </div>
+
+                                        <!-- Kontrol (+) Tambah Jam Berapa Saja -->
+                                        <div class="flex items-center gap-1.5" :class="!activeDay ? 'opacity-60' : ''">
+                                            <input type="time" x-model="newTime"
+                                                class="text-xs font-mono font-bold rounded-xl border-slate-300 bg-white py-1.5 px-2.5 focus:border-[#10b981] focus:ring-[#10b981]">
+                                            <button type="button" @click="addSlot()"
+                                                class="px-3 py-1.5 rounded-xl bg-[#064e3b] hover:bg-emerald-800 text-white text-xs font-extrabold shadow-xs transition flex items-center gap-1 cursor-pointer shrink-0">
+                                                <span class="text-sm leading-none">＋</span>
+                                                <span>Tambah Jam</span>
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    <div class="flex items-center gap-2" :class="!activeDay ? 'opacity-40 pointer-events-none' : ''">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="text-[10px] font-bold text-slate-500">Mulai:</span>
-                                            <input type="time" name="schedules[{{ $idx }}][start_time]"
-                                                value="{{ substr($sch->start_time, 0, 5) }}" required
-                                                class="text-xs font-mono rounded-xl border-slate-200 py-1.5 px-2.5 focus:border-[#10b981] focus:ring-[#10b981]">
+                                    <!-- Daftar Chip Jam Kerja Aktif Hari Ini -->
+                                    <div x-show="activeDay" class="space-y-2 pt-1 border-t border-emerald-200/60">
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <template x-for="(slot, sIdx) in slots" :key="slot">
+                                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border-2 border-[#10b981] text-[#064e3b] text-xs font-mono font-extrabold shadow-2xs">
+                                                    <span>🕒</span>
+                                                    <span x-text="slot + ' WIB'"></span>
+                                                    <input type="hidden" :name="'schedules[{{ $idx }}][time_slots][]'" :value="slot">
+                                                    <button type="button" @click="removeSlot(sIdx)"
+                                                        title="Hapus jam ini"
+                                                        class="ml-0.5 w-4 h-4 rounded-full bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white flex items-center justify-center text-[10px] font-black transition cursor-pointer">
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            </template>
+                                            <template x-if="slots.length === 0">
+                                                <span class="text-[11px] text-rose-600 font-semibold italic">Belum ada jam dipilih. Pilih jam lalu tekan ＋ Tambah Jam.</span>
+                                            </template>
                                         </div>
-                                        <span class="text-slate-400 font-bold">-</span>
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="text-[10px] font-bold text-slate-500">Selesai:</span>
-                                            <input type="time" name="schedules[{{ $idx }}][end_time]"
-                                                value="{{ substr($sch->end_time, 0, 5) }}" required
-                                                class="text-xs font-mono rounded-xl border-slate-200 py-1.5 px-2.5 focus:border-[#10b981] focus:ring-[#10b981]">
+
+                                        <!-- Pilihan Cepat (+) Jam Populer -->
+                                        <div class="flex flex-wrap items-center gap-1 pt-0.5">
+                                            <span class="text-[10px] font-bold text-slate-400 mr-1">Cepat tambah:</span>
+                                            <template x-for="qh in quickHours" :key="qh">
+                                                <button type="button"
+                                                    x-show="!slots.includes(qh)"
+                                                    @click="addSlot(qh)"
+                                                    class="px-2 py-0.5 rounded-lg border border-dashed border-emerald-400 bg-white hover:bg-emerald-100 text-[#064e3b] text-[10px] font-mono font-bold transition cursor-pointer">
+                                                    ＋ <span x-text="qh"></span>
+                                                </button>
+                                            </template>
                                         </div>
-                                        <span class="text-[10px] font-bold text-slate-500">WIB</span>
                                     </div>
                                 </div>
                             @endforeach
@@ -1196,7 +1274,7 @@
                         </button>
                         <button type="submit"
                             class="px-5 py-2.5 rounded-xl bg-[#064e3b] hover:bg-emerald-900 text-white text-xs font-extrabold shadow transition cursor-pointer">
-                            ✓ Simpan Jadwal Operasional (WIB)
+                            ✓ Simpan Jam Kerja Harian (WIB)
                         </button>
                     </div>
                 </form>
