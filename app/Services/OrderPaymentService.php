@@ -253,15 +253,17 @@ class OrderPaymentService
                                 $p->save();
                             }
 
+                            $reversalNurseAmount = abs((int) $payment->nurse_earning);
                             WalletTransaction::create([
                                 'wallet_id' => $nurseWallet->id,
                                 'nurse_wallet_id' => $nw->id,
                                 'order_id' => $order->id,
                                 'type' => 'refund_reversal',
-                                'amount' => -$payment->nurse_earning,
-                                'net_amount' => -$payment->nurse_earning,
+                                'amount' => -$reversalNurseAmount,
+                                'platform_fee' => 0,
+                                'net_amount' => $reversalNurseAmount,
                                 'status' => 'completed',
-                                'balance_after' => $nurseWallet->balance,
+                                'balance_after' => max(0, (int) $nurseWallet->balance),
                                 'payment_id' => $payment->id,
                                 'description' => "Reversal pendapatan pembatalan pesanan #{$order->order_number}",
                             ]);
@@ -277,11 +279,16 @@ class OrderPaymentService
                                 $adminWallet->balance = max(0, $adminWallet->balance - $payment->admin_fee);
                                 $adminWallet->save();
 
+                                $reversalAdminFee = abs((int) $payment->admin_fee);
                                 WalletTransaction::create([
                                     'wallet_id' => $adminWallet->id,
+                                    'order_id' => $order->id,
                                     'type' => 'refund_reversal',
-                                    'amount' => -$payment->admin_fee,
-                                    'balance_after' => $adminWallet->balance,
+                                    'amount' => -$reversalAdminFee,
+                                    'platform_fee' => $reversalAdminFee,
+                                    'net_amount' => $reversalAdminFee,
+                                    'status' => 'completed',
+                                    'balance_after' => max(0, (int) $adminWallet->balance),
                                     'payment_id' => $payment->id,
                                     'description' => "Reversal komisi platform pembatalan pesanan #{$order->order_number}",
                                 ]);
@@ -295,7 +302,7 @@ class OrderPaymentService
                         'status' => 'refunded',
                         'escrow_status' => 'refunded',
                         'refund_amount' => $payment->total_amount ?: $payment->gross_amount,
-                        'refunded_at' => now(),
+                        'refunded_at' => now('Asia/Jakarta'),
                         'refund_notes' => $reason,
                     ]);
                     $payment->save();
@@ -303,13 +310,17 @@ class OrderPaymentService
 
                 $order->refund_status = 'refunded';
                 $order->refund_amount = $order->total_amount;
-                $order->refunded_at = now();
+                $order->refunded_at = now('Asia/Jakarta');
+                $order->refund_notes = 'Pengembalian dana 100% senilai Rp ' . number_format($order->total_amount, 0, ',', '.') . ' telah selesai diproses.';
                 $order->payment_status = 'refunded';
+            } else {
+                $order->refund_status = 'none';
+                $order->refund_amount = 0;
             }
 
             $order->status = 'dibatalkan';
             $order->cancellation_reason = $reason;
-            $order->cancelled_at = now();
+            $order->cancelled_at = now('Asia/Jakarta');
             $order->save();
 
             AuditLog::log(

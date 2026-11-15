@@ -13,9 +13,19 @@
         openModal(nurse) {
             this.selectedNurse = nurse;
             this.rejectionOpen = false;
-            this.rejectionReason = '';
+            this.rejectionReason = nurse?.rejection_reason || '';
             this.ktkiResult = null;
             this.modalOpen = true;
+        },
+        openRejectPanel() {
+            this.rejectionOpen = true;
+            if (!this.rejectionReason) {
+                this.rejectionReason = '';
+            }
+            this.$nextTick(() => {
+                const input = document.getElementById('admin_rejection_reason_input');
+                if (input) input.focus();
+            });
         },
         async checkKtki() {
             if (!this.selectedNurse) return;
@@ -40,6 +50,20 @@
             }
         }
     }">
+
+        @if ($errors->any())
+            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1 shadow-xs">
+                <div class="font-bold flex items-center gap-1.5 text-rose-900">
+                    <span>⚠️</span>
+                    <span>Gagal memproses verifikasi perawat:</span>
+                </div>
+                <ul class="list-disc list-inside pl-4">
+                    @foreach ($errors->all() as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         <!-- Filter Tabs & Search Bar -->
         <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
@@ -136,10 +160,23 @@
                                     </span>
                                 </td>
                                 <td class="p-4">
-                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold 
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-flex items-center gap-1
                                         {{ $nurse->verification_status === 'verified' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : ($nurse->verification_status === 'rejected' ? 'bg-rose-50 text-rose-800 border border-rose-200' : ($nurse->verification_status === 'pending' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200')) }}">
-                                        {{ ucfirst($nurse->verification_status) }}
+                                        @if ($nurse->verification_status === 'verified')
+                                            <span>✓ Terverifikasi</span>
+                                        @elseif ($nurse->verification_status === 'rejected')
+                                            <span>✕ Ditolak (Perlu Revisi)</span>
+                                        @elseif ($nurse->verification_status === 'pending')
+                                            <span>⏳ Pending Review</span>
+                                        @else
+                                            <span>Draf</span>
+                                        @endif
                                     </span>
+                                    @if ($nurse->verification_status === 'rejected' && $nurse->rejection_reason)
+                                        <span class="block text-[10px] text-rose-600 mt-1 max-w-[180px] truncate" title="{{ $nurse->rejection_reason }}">
+                                            Alasan: {{ $nurse->rejection_reason }}
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="p-4 text-[11px]">
                                     @if ($nurse->reviewer)
@@ -220,7 +257,13 @@
                         </div>
                         <div>
                             <span class="text-[10px] uppercase font-bold text-slate-400 block">Status Saat Ini</span>
-                            <span class="font-extrabold uppercase text-emerald-800" x-text="selectedNurse?.verification_status"></span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase mt-0.5"
+                                  :class="selectedNurse?.verification_status === 'verified'
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                      : (selectedNurse?.verification_status === 'rejected'
+                                          ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                          : 'bg-amber-100 text-amber-800 border border-amber-300')"
+                                  x-text="selectedNurse?.verification_status === 'verified' ? '✓ TERVERIFIKASI' : (selectedNurse?.verification_status === 'rejected' ? '✕ DITOLAK (REVISI)' : '⏳ PENDING AUDIT')"></span>
                         </div>
                     </div>
 
@@ -318,56 +361,87 @@
                     </div>
 
                     <!-- Box Alasan Penolakan Jika Sebelumnya Ditolak -->
-                    <template x-if="selectedNurse?.rejection_reason">
+                    <template x-if="selectedNurse?.rejection_reason && !rejectionOpen">
                         <div class="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
-                            <strong>Catatan Penolakan Sebelumnya:</strong>
+                            <strong>Catatan Penolakan Saat Ini:</strong>
                             <p class="mt-1 italic" x-text="selectedNurse.rejection_reason"></p>
                         </div>
                     </template>
 
-                    <!-- Form Input Alasan Penolakan -->
-                    <div x-show="rejectionOpen" x-cloak class="p-4 rounded-2xl bg-rose-50 border border-rose-200 space-y-3">
-                        <label class="block font-bold text-rose-900 text-xs">
-                            Alasan Penolakan Dokumen <span class="text-rose-600">*</span>:
-                        </label>
-                        <form x-bind:action="'/admin/verifikasi-nakes/' + selectedNurse?.id + '/tolak'" method="POST" class="space-y-3">
-                            @csrf
-                            <textarea name="rejection_reason" rows="3" required
-                                placeholder="Jelaskan bagian berkas yang tidak valid (mis. Foto STR buram, masa berlaku STR telah kadaluarsa)..."
-                                class="w-full text-xs rounded-xl border-rose-200 focus:border-rose-500 focus:ring-rose-500"></textarea>
+                </div>
 
-                            <div class="flex items-center justify-end gap-2">
-                                <button type="button" @click="rejectionOpen = false" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-100">Batal</button>
-                                <button type="submit" class="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs">Kirim Penolakan</button>
-                            </div>
-                        </form>
+                <!-- Panel Form Penolakan Sticky di Atas Footer (Selalu Terlihat Tanpa Perlu Scroll) -->
+                <div x-show="rejectionOpen" x-cloak class="px-6 py-4 bg-rose-50 border-t-2 border-rose-200 space-y-3 shrink-0">
+                    <div class="flex items-center justify-between">
+                        <label for="admin_rejection_reason_input" class="block font-extrabold text-rose-900 text-xs flex items-center gap-1.5">
+                            <span>⚠️</span>
+                            <span>Alasan Penolakan &amp; Instruksi Revisi untuk Perawat:</span>
+                        </label>
+                        <span class="text-[10px] font-semibold text-rose-700">Klik alasan cepat atau ketik manual</span>
                     </div>
 
+                    <!-- Chip Pilihan Alasan Cepat -->
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" @click="rejectionReason = 'Foto berkas KTP/STR/SIP buram atau kurang jelas terbaca. Mohon unggah ulang dengan resolusi jelas.'"
+                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
+                            + Foto Berkas Buram
+                        </button>
+                        <button type="button" @click="rejectionReason = 'Nomor STR atau Nomor SIP yang diinput tidak sesuai dengan dokumen fisik yang diunggah.'"
+                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
+                            + Nomor STR/SIP Tidak Sesuai
+                        </button>
+                        <button type="button" @click="rejectionReason = 'Masa berlaku STR atau SIP telah habis (kadaluarsa). Mohon unggah dokumen yang masih aktif.'"
+                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
+                            + Masa Berlaku Habis
+                        </button>
+                        <button type="button" @click="rejectionReason = 'Berkas dokumen legalitas (KTP, STR, SIP, atau Ijazah) belum lengkap. Mohon lengkapi seluruh berkas.'"
+                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
+                            + Dokumen Belum Lengkap
+                        </button>
+                    </div>
+
+                    <form id="admin-reject-nurse-form" x-bind:action="'/admin/nurses/' + selectedNurse?.id + '/reject'" method="POST" class="space-y-2">
+                        @csrf
+                        <textarea id="admin_rejection_reason_input" name="rejection_reason" x-model="rejectionReason" rows="2"
+                            placeholder="Tuliskan alasan penolakan agar perawat dapat merevisi bagian yang salah..."
+                            class="w-full text-xs rounded-xl border-rose-300 bg-white focus:border-rose-500 focus:ring-rose-500 p-2.5 text-slate-800"></textarea>
+                    </form>
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-                    <button type="button" @click="modalOpen = false"
-                        class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700">
+                <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                    <button type="button" @click="modalOpen = false; rejectionOpen = false"
+                        class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer">
                         Tutup
                     </button>
 
-                    <div class="flex items-center gap-2">
-                        <!-- Tombol Tolak -->
-                        <button type="button" @click="rejectionOpen = true" x-show="!rejectionOpen"
-                            class="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold text-xs transition">
-                            Tolak Berkas
+                    <!-- Tombol Saat Mode Normal (!rejectionOpen) -->
+                    <div x-show="!rejectionOpen" class="flex items-center gap-2">
+                        <button type="button" @click="openRejectPanel()"
+                            class="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold text-xs transition cursor-pointer">
+                            ✕ Tolak Berkas
                         </button>
 
-                        <!-- Form Setujui -->
-                        <form x-bind:action="'/admin/verifikasi-nakes/' + selectedNurse?.id + '/setujui'" method="POST"
-                            onsubmit="return confirm('Apakah Anda yakin ingin menyetujui berkas nakes ini? Perawat akan diizinkan aktif bekerja.');">
+                        <form x-bind:action="'/admin/nurses/' + selectedNurse?.id + '/approve'" method="POST">
                             @csrf
                             <button type="submit"
-                                class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition">
+                                class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition cursor-pointer">
                                 ✓ Setujui Legalitas Nakes
                             </button>
                         </form>
+                    </div>
+
+                    <!-- Tombol Saat Mode Konfirmasi Penolakan (rejectionOpen) -->
+                    <div x-show="rejectionOpen" x-cloak class="flex items-center gap-2">
+                        <button type="button" @click="rejectionOpen = false"
+                            class="px-4 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
+                            Batal
+                        </button>
+                        <button type="button"
+                            @click="document.getElementById('admin-reject-nurse-form').submit()"
+                            class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition cursor-pointer flex items-center gap-1.5">
+                            <span>✕ Konfirmasi Tolak &amp; Minta Revisi Perawat</span>
+                        </button>
                     </div>
                 </div>
 

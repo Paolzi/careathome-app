@@ -24,6 +24,8 @@
 </head>
 @php
     $isLocked = in_array($nurseProfile->verification_status ?? '', ['pending', 'verified']);
+    $userNotifications = auth()->check() ? auth()->user()->notifications()->take(10)->get() : collect();
+    $unreadNotifCount = auth()->check() ? auth()->user()->unreadNotifications()->count() : 0;
 @endphp
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col" x-data="{
     draftSaved: false,
@@ -219,6 +221,79 @@
             </div>
 
             <div class="flex items-center gap-3 sm:gap-4">
+                <!-- Dropdown Notifikasi In-App -->
+                <div class="relative" x-data="{
+                    notifOpen: false,
+                    unreadCount: {{ $unreadNotifCount }},
+                    async markAllRead() {
+                        try {
+                            const res = await fetch('{{ route('perawat.notifications.read-all') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                    'Accept': 'application/json'
+                                }
+                            });
+                            if (res.ok) {
+                                this.unreadCount = 0;
+                                document.querySelectorAll('.verif-notif-dot').forEach(el => el.remove());
+                            }
+                        } catch (e) { console.error(e); }
+                    }
+                }">
+                    <button type="button" @click="notifOpen = !notifOpen"
+                        class="relative p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:text-emerald-700 hover:border-emerald-300 transition flex items-center justify-center cursor-pointer"
+                        title="Notifikasi Verifikasi & Sistem">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <template x-if="unreadCount > 0">
+                            <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white font-extrabold text-[10px] flex items-center justify-center shadow-xs animate-pulse"
+                                  x-text="unreadCount"></span>
+                        </template>
+                    </button>
+
+                    <div x-show="notifOpen" @click.away="notifOpen = false" x-cloak
+                        class="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 text-xs text-slate-800 z-50">
+                        <div class="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                            <span class="font-bold text-slate-900">🔔 Notifikasi Verifikasi Legalitas</span>
+                            <template x-if="unreadCount > 0">
+                                <button type="button" @click="markAllRead()" class="text-[10px] font-bold text-emerald-700 hover:underline cursor-pointer">
+                                    Tandai Semua Dibaca
+                                </button>
+                            </template>
+                        </div>
+                        <div class="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                            @forelse ($userNotifications as $n)
+                                @php
+                                    $nData = $n->data;
+                                    $isUnread = is_null($n->read_at);
+                                    $isAppr = ($nData['type'] ?? '') === 'document_approved';
+                                @endphp
+                                <div class="p-3.5 space-y-1 {{ $isUnread ? ($isAppr ? 'bg-emerald-50/60' : 'bg-rose-50/60') : 'hover:bg-slate-50' }}">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <span class="font-extrabold text-[11px] {{ $isAppr ? 'text-emerald-900' : 'text-rose-900' }}">
+                                            {{ $isAppr ? '🎉 ' : '⚠️ ' }}{{ $nData['title'] ?? 'Notifikasi Verifikasi' }}
+                                        </span>
+                                        @if ($isUnread)
+                                            <span class="verif-notif-dot w-2 h-2 rounded-full bg-rose-500 shrink-0 mt-1"></span>
+                                        @endif
+                                    </div>
+                                    <p class="text-[11px] text-slate-600 leading-relaxed">{{ $nData['message'] ?? '-' }}</p>
+                                    @if (!empty($nData['rejection_reason']))
+                                        <div class="p-2 rounded-lg bg-rose-100/80 border border-rose-200 text-[10px] text-rose-900">
+                                            <strong>Catatan Admin:</strong> {{ $nData['rejection_reason'] }}
+                                        </div>
+                                    @endif
+                                    <span class="block text-[10px] text-slate-400 pt-0.5">{{ $nData['formatted_time'] ?? $n->created_at->diffForHumans() }}</span>
+                                </div>
+                            @empty
+                                <div class="p-5 text-center text-slate-400 text-xs">Belum ada notifikasi.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
                 <!-- User Profile Info -->
                 <div class="flex items-center gap-2.5">
                     <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-bold flex items-center justify-center text-sm shadow">
@@ -411,39 +486,67 @@
                 </div>
             </div>
 
-            <!-- Banner Khusus Jika Akun Nakes Sudah Verified -->
+            <!-- Banner Khusus Berdasarkan Status Verifikasi Nakes -->
             @if(($nurseProfile->verification_status ?? '') === 'verified')
-                <div class="p-6 rounded-3xl bg-gradient-to-r from-emerald-800 to-teal-800 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border-2 border-emerald-500/80">
-                    <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shrink-0 border border-white/20">
-                            🎉
+                <div class="p-6 rounded-3xl bg-gradient-to-r from-[#064e3b] via-emerald-800 to-teal-900 text-white shadow-xl flex flex-col gap-5 border-2 border-emerald-400/80">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div class="flex items-start sm:items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shrink-0 border border-white/20">
+                                🎉
+                            </div>
+                            <div class="space-y-1">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-400/20 border border-emerald-300/40 text-emerald-200 text-[10px] font-black uppercase tracking-wider">
+                                    ✓ NOTIFIKASI RESMI: LEGALITAS DISETUJUI ADMIN
+                                </span>
+                                <h3 class="text-lg sm:text-xl font-black tracking-tight text-white">Selamat! STR &amp; SIP Anda Telah Diverifikasi &amp; Disetujui</h3>
+                                <p class="text-xs text-emerald-100 leading-relaxed max-w-2xl">
+                                    Seluruh fitur Mitra Perawat kini telah aktif sepenuhnya! Anda dapat langsung mengatur Jadwal Harian (WIB), menerima pesanan homecare di Feed Order, mengisi E-Report Klinis, dan mencairkan pendapatan di Dompet Nakes.
+                                </p>
+                            </div>
                         </div>
-                        <div class="space-y-1">
-                            <h3 class="text-lg font-black tracking-tight text-white">Selamat! STR &amp; SIP Anda Telah Diverifikasi &amp; Disetujui Admin</h3>
-                            <p class="text-xs text-emerald-100 leading-relaxed max-w-2xl">
-                                Akun Anda kini resmi aktif untuk melayani pasien. Buka Dashboard Mitra Perawat untuk mengaktifkan status "Sedang Bekerja (Online)" dan mulai menerima order homecare.
-                            </p>
-                        </div>
+                        <a href="{{ route('perawat.dashboard') }}" class="px-6 py-3.5 rounded-2xl bg-[#10b981] hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg transition transform hover:-translate-y-0.5 whitespace-nowrap flex items-center gap-2 shrink-0">
+                            <span>🚀 Masuk ke Dashboard &amp; Mulai Bekerja</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </a>
                     </div>
-                    <a href="{{ route('perawat.dashboard') }}" class="px-6 py-3.5 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 font-black text-xs shadow-md transition transform hover:-translate-y-0.5 whitespace-nowrap flex items-center gap-2 shrink-0">
-                        <span>Buka Dashboard &amp; Mulai Bekerja</span>
-                        <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                    </a>
+                    <div class="pt-3 border-t border-white/15 flex flex-wrap items-center gap-2.5 text-xs">
+                        <span class="text-emerald-200 font-bold text-[11px]">Akses Cepat Fitur Perawat:</span>
+                        <a href="{{ route('perawat.dashboard') }}" class="px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] transition">🗓️ Atur Jadwal &amp; Layanan</a>
+                        <a href="{{ route('perawat.feed') }}" class="px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] transition">📡 Buka Feed Order Masuk</a>
+                        <a href="{{ route('perawat.finansial') }}" class="px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] transition">💳 Dompet &amp; Pencairan Saldo</a>
+                    </div>
                 </div>
             @elseif(($nurseProfile->verification_status ?? '') === 'rejected')
-                <div class="p-6 rounded-3xl bg-gradient-to-r from-rose-800 to-red-900 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border-2 border-rose-500/80">
-                    <div class="flex items-center gap-4">
+                <div class="p-6 rounded-3xl bg-gradient-to-r from-rose-900 via-rose-800 to-red-900 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-2 border-rose-400/80">
+                    <div class="flex items-start gap-4">
                         <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shrink-0 border border-white/20">
                             ⚠️
                         </div>
-                        <div class="space-y-1">
-                            <h3 class="text-lg font-black tracking-tight text-white">Dokumen Legalitas Anda Perlu Perbaikan</h3>
-                            <p class="text-xs text-rose-100 leading-relaxed max-w-2xl">
-                                <strong>Catatan dari Administrator:</strong> &ldquo;{{ $nurseProfile->rejection_reason ?? 'Terdapat berkas yang tidak valid atau buram. Silakan periksa kembali berkas STR/SIP Anda.' }}&rdquo;
+                        <div class="space-y-2">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="px-2.5 py-0.5 rounded-full bg-rose-500/30 border border-rose-300/40 text-rose-100 text-[10px] font-black uppercase tracking-wider">
+                                    ✕ STATUS LEGALITAS: DITOLAK ADMIN &bull; PERLU REVISI
+                                </span>
+                                @if ($nurseProfile->reviewed_at)
+                                    <span class="text-[10px] text-rose-200">Direview {{ $nurseProfile->reviewed_at->diffForHumans() }}</span>
+                                @endif
+                            </div>
+                            <h3 class="text-lg sm:text-xl font-black tracking-tight text-white">Pengajuan Dokumen Legalitas Anda Ditolak — Silakan Revisi</h3>
+                            <div class="p-3.5 rounded-2xl bg-black/25 border border-rose-300/30 text-xs text-rose-50 leading-relaxed max-w-2xl">
+                                <strong class="text-rose-200 block mb-0.5">Catatan Alasan Penolakan dari Administrator:</strong>
+                                &ldquo;{{ $nurseProfile->rejection_reason ?? 'Terdapat berkas yang tidak valid atau buram. Silakan periksa kembali nomor dan berkas STR/SIP Anda.' }}&rdquo;
+                            </div>
+                            <p class="text-[11px] text-rose-100">
+                                Formulir di bawah ini telah <strong>dibuka kembali</strong>. Silakan perbaiki data NIK/STR/SIP atau ganti berkas dokumen yang diminta, lalu klik tombol <strong>&ldquo;Kirim Ulang Hasil Revisi ke Admin&rdquo;</strong> di bagian bawah.
                             </p>
-                            <p class="text-[11px] text-rose-200 pt-0.5">Silakan perbaiki data/unggah ulang dokumen di bawah ini, lalu klik &ldquo;Simpan dan Kirim Dokumen&rdquo; untuk diaudit ulang.</p>
                         </div>
                     </div>
+                    <button type="button"
+                        @click="document.getElementById('nurse-verification-form').scrollIntoView({ behavior: 'smooth' }); setTimeout(() => document.getElementById('input_nik')?.focus(), 400);"
+                        class="px-5 py-3.5 rounded-2xl bg-white text-rose-900 hover:bg-rose-50 font-black text-xs shadow-lg transition transform hover:-translate-y-0.5 whitespace-nowrap flex items-center gap-2 shrink-0 cursor-pointer">
+                        <span>✏️ Revisi Data &amp; Berkas Sekarang</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                    </button>
                 </div>
             @elseif(($nurseProfile->verification_status ?? '') === 'pending')
                 <div class="p-6 rounded-3xl bg-gradient-to-r from-amber-800 to-amber-950 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border-2 border-amber-500/80">
@@ -553,14 +656,14 @@
                         </div>
 
                         <!-- Step 4 -->
-                        <div class="p-3 rounded-xl {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'bg-emerald-600 text-white shadow-md' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'bg-amber-50 border border-amber-300' : 'bg-slate-50 border border-slate-200 opacity-60') }} flex items-center gap-3">
-                            <div class="w-7 h-7 rounded-full {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'bg-white text-emerald-800' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'bg-amber-500 text-white animate-pulse' : 'bg-slate-300 text-slate-700') }} flex items-center justify-center text-xs font-bold shrink-0">
-                                {{ ($nurseProfile->verification_status ?? '') === 'verified' ? '✓' : '4' }}
+                        <div class="p-3 rounded-xl {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'bg-emerald-600 text-white shadow-md' : (($nurseProfile->verification_status ?? '') === 'rejected' ? 'bg-rose-50 border-2 border-rose-300' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'bg-amber-50 border border-amber-300' : 'bg-slate-50 border border-slate-200 opacity-60')) }} flex items-center gap-3">
+                            <div class="w-7 h-7 rounded-full {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'bg-white text-emerald-800' : (($nurseProfile->verification_status ?? '') === 'rejected' ? 'bg-rose-600 text-white' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'bg-amber-500 text-white animate-pulse' : 'bg-slate-300 text-slate-700')) }} flex items-center justify-center text-xs font-bold shrink-0">
+                                {{ ($nurseProfile->verification_status ?? '') === 'verified' ? '✓' : (($nurseProfile->verification_status ?? '') === 'rejected' ? '✕' : '4') }}
                             </div>
                             <div>
-                                <p class="text-[10px] font-bold uppercase {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'text-emerald-100' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'text-amber-800' : 'text-slate-500') }}">Langkah 4</p>
-                                <p class="text-xs font-semibold {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'text-white font-extrabold' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'text-amber-900 font-bold' : 'text-slate-700') }}">
-                                    {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'Terverifikasi' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'Audit Admin' : 'Audit Admin') }}
+                                <p class="text-[10px] font-bold uppercase {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'text-emerald-100' : (($nurseProfile->verification_status ?? '') === 'rejected' ? 'text-rose-700' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'text-amber-800' : 'text-slate-500')) }}">Langkah 4</p>
+                                <p class="text-xs font-semibold {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'text-white font-extrabold' : (($nurseProfile->verification_status ?? '') === 'rejected' ? 'text-rose-900 font-extrabold' : (($nurseProfile->verification_status ?? '') === 'pending' ? 'text-amber-900 font-bold' : 'text-slate-700')) }}">
+                                    {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'Terverifikasi' : (($nurseProfile->verification_status ?? '') === 'rejected' ? 'Ditolak (Revisi)' : 'Audit Admin') }}
                                 </p>
                             </div>
                         </div>
@@ -636,9 +739,14 @@
                             Data Nomor Lisensi &amp; Izin Praktik
                         </h2>
                         @if($isLocked)
-                            <span class="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200 flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                Formulir Dikunci (Sedang Ditinjau Admin)
+                            <span class="text-xs font-bold {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'text-emerald-800 bg-emerald-50 border-emerald-200' : 'text-amber-800 bg-amber-50 border-amber-200' }} px-3 py-1 rounded-full border flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
+                                {{ ($nurseProfile->verification_status ?? '') === 'verified' ? 'Formulir Terverifikasi Resmi' : 'Formulir Dikunci (Sedang Ditinjau Admin)' }}
+                            </span>
+                        @elseif(($nurseProfile->verification_status ?? '') === 'rejected')
+                            <span class="text-xs font-bold text-rose-800 bg-rose-50 px-3 py-1 rounded-full border border-rose-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                                Mode Revisi Aktif — Silakan Perbaiki Data &amp; Berkas
                             </span>
                         @endif
                     </div>
@@ -1145,8 +1253,8 @@
                             <button 
                                 type="button"
                                 @click="handleSubmit"
-                                class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 hover:shadow-emerald-600/40 transform hover:-translate-y-0.5 active:translate-y-0 transition flex items-center justify-center gap-2">
-                                <span>Simpan dan Kirim Dokumen</span>
+                                class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 hover:shadow-emerald-600/40 transform hover:-translate-y-0.5 active:translate-y-0 transition flex items-center justify-center gap-2 cursor-pointer">
+                                <span>{{ ($nurseProfile->verification_status ?? '') === 'rejected' ? '🔄 Kirim Ulang Hasil Revisi ke Admin' : 'Simpan dan Kirim Dokumen' }}</span>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                                 </svg>

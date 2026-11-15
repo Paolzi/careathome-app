@@ -183,7 +183,7 @@
                                 <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
                                     <div class="flex justify-between text-slate-600">
                                         <span>Jadwal:</span>
-                                        <span class="font-bold text-slate-900">{{ $order->scheduled_date->format('d M Y') }} ({{ $order->scheduled_time }})</span>
+                                        <span class="font-bold text-slate-900">{{ $order->scheduled_date->format('d M Y') }} ({{ str_contains($order->scheduled_time ?? '', 'WIB') ? $order->scheduled_time : ($order->scheduled_time . ' WIB') }})</span>
                                     </div>
                                     <div class="flex justify-between text-slate-600">
                                         <span>Mitra Nakes:</span>
@@ -250,20 +250,20 @@
                             <div class="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/70 text-xs space-y-2">
                                 <div class="flex items-center justify-between">
                                     <span class="font-bold text-rose-900">Alasan Pembatalan:</span>
-                                    <span class="text-[10px] text-slate-500">{{ $order->cancelled_at?->format('d M Y, H:i') }} WIB</span>
+                                    <span class="text-[10px] text-slate-500">{{ $order->cancelled_at?->timezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB</span>
                                 </div>
                                 <p class="text-rose-800 italic">{{ $order->cancellation_reason ?: 'Dibatalkan oleh pasien.' }}</p>
 
-                                @if ($order->refund_status === 'refunded')
+                                @if ($order->refund_status === 'refunded' || $order->payment_status === 'refunded')
                                     <div class="pt-2 border-t border-rose-200 flex items-center justify-between text-emerald-800 font-bold">
                                         <span class="flex items-center gap-1.5">
                                             <span>🛡️</span>
-                                            <span>Refund Escrow 100% Berhasil</span>
+                                            <span>Refund 100% Berhasil</span>
                                         </span>
-                                        <span class="text-sm">Rp {{ number_format($order->refund_amount, 0, ',', '.') }}</span>
+                                        <span class="text-sm">Rp {{ number_format($order->refund_amount ?: $order->total_amount, 0, ',', '.') }}</span>
                                     </div>
                                     <span class="text-[10px] text-emerald-700 block mt-0.5">
-                                        {{ $order->refund_notes ?: 'Pengembalian dana dari rekening penampung telah selesai diproses.' }}
+                                        {{ $order->refund_notes ?: 'Pengembalian dana 100% telah selesai diproses.' }}
                                     </span>
                                 @else
                                     <div class="pt-1 text-[11px] text-slate-500">
@@ -295,16 +295,16 @@
         x-transition:leave-end="opacity-0">
 
         <div @click.away="if (!processingCancel) cancelModalOpen = false"
-            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800"
+            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 max-h-[90vh] flex flex-col"
             x-transition:enter="ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100">
 
             <!-- Modal Header -->
-            <div class="px-6 py-5 bg-gradient-to-r from-rose-700 to-rose-900 text-white flex items-center justify-between">
+            <div class="px-6 py-4 bg-gradient-to-r from-rose-700 to-rose-900 text-white flex items-center justify-between shrink-0">
                 <div>
                     <span class="text-[10px] uppercase font-bold tracking-wider text-rose-200">Konfirmasi Pembatalan &amp; Refund</span>
-                    <h3 class="text-lg font-bold mt-0.5">Batalkan Pesanan Kunjungan</h3>
+                    <h3 class="text-base font-bold mt-0.5" x-text="'Batalkan Pesanan #' + (selectedOrder?.order_number || '')"></h3>
                 </div>
                 <button type="button" @click="cancelModalOpen = false" :disabled="processingCancel" class="text-rose-200 hover:text-white p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,8 +313,8 @@
                 </button>
             </div>
 
-            <!-- Modal Body -->
-            <div class="p-6 space-y-4 text-xs">
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-6 space-y-4 text-xs overflow-y-auto grow">
 
                 <!-- Escrow Refund Assurance Notice -->
                 <div class="p-4 rounded-2xl border text-xs leading-relaxed"
@@ -397,7 +397,7 @@
             </div>
 
             <!-- Modal Footer -->
-            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0">
                 <button type="button" @click="cancelModalOpen = false" :disabled="processingCancel"
                     class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition">
                     Kembali

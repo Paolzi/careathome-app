@@ -55,6 +55,9 @@ class NurseDashboardController extends Controller
         }
 
         $services = ServiceCatalog::query()->where('is_active', true)->get();
+        if ($profile->verification_status === 'verified' && $profile->services()->count() === 0 && $services->isNotEmpty()) {
+            $profile->services()->sync($services->pluck('id')->toArray());
+        }
         $selectedServiceIds = $profile->services()->pluck('service_catalogs.id')->toArray();
 
         $recentTransactions = WalletTransaction::where(function ($q) use ($wallet, $nurseWallet) {
@@ -201,7 +204,12 @@ class NurseDashboardController extends Controller
 
         if ($desiredStatus) {
             if ($profile->verification_status !== 'verified') {
-                $profile->verification_status = 'verified';
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $profile->verification_status === 'rejected'
+                        ? 'Legalitas STR/SIP Anda ditolak Admin. Silakan revisi dokumen di halaman Verifikasi terlebih dahulu.'
+                        : 'Legalitas STR/SIP Anda masih menunggu verifikasi Admin (Status: ' . ucfirst($profile->verification_status) . ').',
+                ], 403);
             }
 
             // Validasi & Update Koordinat GPS Perawat (dengan fallback otomatis Surabaya Selatan jika GPS diblokir)
@@ -251,7 +259,7 @@ class NurseDashboardController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $profile = NurseProfile::firstOrCreate(['user_id' => $user->id], ['verification_status' => 'verified']);
+        $profile = NurseProfile::firstOrCreate(['user_id' => $user->id], ['verification_status' => 'draft']);
 
         $validated = $request->validate([
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],

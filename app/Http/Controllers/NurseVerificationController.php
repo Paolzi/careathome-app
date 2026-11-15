@@ -89,7 +89,7 @@ class NurseVerificationController extends Controller
             'sip_expired_at' => $sipExpiry ?: $nurseProfile->sip_expired_at,
             'sip_institution' => $request->input('sip_institution') ?: $nurseProfile->sip_institution,
             'specialization' => $request->input('specialization') ?: $nurseProfile->specialization,
-            'verification_status' => in_array($nurseProfile->verification_status, ['pending', 'verified']) ? $nurseProfile->verification_status : 'draft',
+            'verification_status' => in_array($nurseProfile->verification_status, ['pending', 'verified', 'rejected']) ? $nurseProfile->verification_status : 'draft',
         ]);
 
         // Simpan lampiran file fisik jika ada yang diunggah
@@ -189,8 +189,10 @@ class NurseVerificationController extends Controller
 
         // Jika sudah terverifikasi resmi oleh admin, cegah overwrite status
         if ($nurseProfile->verification_status === 'verified') {
-            return redirect()->back()->with('status', 'Profil Anda telah terverifikasi resmi.');
+            return redirect()->route('perawat.dashboard')->with('status', 'Profil Anda telah terverifikasi resmi dan siap mulai bekerja.');
         }
+
+        $wasRejected = ($nurseProfile->verification_status === 'rejected');
 
         // Update data profil perawat ke status pending (Menunggu Review)
         $nurseProfile->update([
@@ -204,6 +206,8 @@ class NurseVerificationController extends Controller
             'sip_institution' => $request->input('sip_institution') ?: ($nurseProfile->sip_institution ?: 'Praktik Mandiri'),
             'specialization' => $request->input('specialization') ?: ($nurseProfile->specialization ?: 'Perawat Umum'),
             'verification_status' => 'pending',
+            'status_verifikasi' => 'pending',
+            'status_legalitas' => 'pending',
             'rejection_reason' => null,
         ]);
 
@@ -271,7 +275,20 @@ class NurseVerificationController extends Controller
             'status' => 'pending',
         ]);
 
-        return redirect()->back()->with('submitted', 'Seluruh dokumen berhasil dikirim ke Admin CareAtHome untuk diaudit!');
+        // Tandai notifikasi penolakan lama sebagai sudah dibaca setelah perawat mengirim revisi
+        try {
+            $user->unreadNotifications()
+                ->where('data->type', 'document_rejected')
+                ->update(['read_at' => now()]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $submitMsg = $wasRejected
+            ? 'Revisi dokumen legalitas Anda berhasil dikirim ulang ke Admin CareAtHome untuk diaudit kembali!'
+            : 'Seluruh dokumen berhasil dikirim ke Admin CareAtHome untuk diaudit!';
+
+        return redirect()->back()->with('submitted', $submitMsg);
     }
 
     /**

@@ -220,7 +220,16 @@
 
                 <!-- Status Legalitas Badge -->
                 <span class="text-xs font-bold px-3 py-1.5 rounded-full {{ $profile->verification_status === 'verified' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs' : ($profile->verification_status === 'rejected' ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-amber-50 text-amber-800 border border-amber-200') }}">
-                    Status Legalitas: {{ ucfirst($profile->verification_status) }}
+                    Status Legalitas:
+                    @if ($profile->verification_status === 'verified')
+                        ✓ Terverifikasi Resmi
+                    @elseif ($profile->verification_status === 'rejected')
+                        ✕ Ditolak (Perlu Revisi)
+                    @elseif ($profile->verification_status === 'pending')
+                        ⏳ Menunggu Audit Admin
+                    @else
+                        Draf Belum Dikirim
+                    @endif
                 </span>
             </div>
         </div>
@@ -229,49 +238,62 @@
     <div class="py-8" x-data="nurseDashboardApp({{ $profile->is_online ? 'true' : 'false' }}, '{{ $profile->verification_status }}', {{ $profile->latitude ?? 'null' }}, {{ $profile->longitude ?? 'null' }})">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-            <!-- Banner Notifikasi Status Verifikasi (Approved / Rejected) -->
+            <!-- Banner Status Legalitas & Notifikasi Verifikasi (Approved / Rejected / Pending) -->
             @php
                 $latestAuditNotif = auth()->user() ? auth()->user()->notifications()->whereIn('data->type', ['document_approved', 'document_rejected'])->first() : null;
             @endphp
 
-            @if ($latestAuditNotif && is_null($latestAuditNotif->read_at))
-                @php $notifData = $latestAuditNotif->data; @endphp
-                @if (($notifData['type'] ?? '') === 'document_approved')
-                    <div id="notif-banner-{{ $latestAuditNotif->id }}" class="audit-notif-banner p-5 rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-800 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-emerald-500/80">
-                        <div class="flex items-center gap-3">
-                            <span class="text-3xl">🎉</span>
-                            <div class="space-y-0.5">
-                                <h4 class="font-extrabold text-sm text-white">Selamat! Berkas Legalitas STR &amp; SIP Anda Telah Diverifikasi Admin</h4>
-                                <p class="text-xs text-emerald-100">Dokumen Anda telah divalidasi keabsahannya. Anda sekarang dapat mengaktifkan status "Sedang Bekerja" di bawah.</p>
-                            </div>
-                        </div>
-                        <button type="button" 
-                            onclick="dismissAuditBanner(event, '{{ route('perawat.notifications.read', $latestAuditNotif->id) }}', '{{ $latestAuditNotif->id }}')"
-                            class="px-4 py-2 rounded-xl bg-white text-emerald-900 font-extrabold text-xs shadow-xs hover:bg-emerald-50 transition whitespace-nowrap">
-                            Mengerti &amp; Tutup
-                        </button>
-                    </div>
-                @elseif (($notifData['type'] ?? '') === 'document_rejected')
-                    <div id="notif-banner-{{ $latestAuditNotif->id }}" class="audit-notif-banner p-5 rounded-2xl bg-gradient-to-r from-rose-800 to-red-900 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-rose-500/80">
-                        <div class="flex items-center gap-3">
-                            <span class="text-3xl">⚠️</span>
-                            <div class="space-y-0.5">
-                                <h4 class="font-extrabold text-sm text-white">Pemberitahuan: Berkas Dokumen Anda Perlu Perbaikan</h4>
-                                <p class="text-xs text-rose-100">Alasan: <strong>{{ $notifData['rejection_reason'] ?? 'Dokumen belum lengkap' }}</strong></p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <a href="{{ route('perawat.verifikasi') }}" class="px-4 py-2 rounded-xl bg-white text-rose-900 font-extrabold text-xs shadow-xs hover:bg-rose-50 transition whitespace-nowrap">
-                                Perbaiki Dokumen &rarr;
-                            </a>
-                            <button type="button" 
-                                onclick="dismissAuditBanner(event, '{{ route('perawat.notifications.read', $latestAuditNotif->id) }}', '{{ $latestAuditNotif->id }}')"
-                                class="px-3 py-2 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs transition">
-                                ✕
-                            </button>
+            @if ($profile->verification_status === 'rejected')
+                <div class="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-rose-900 via-rose-800 to-red-900 text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-2 border-rose-400/80">
+                    <div class="flex items-start gap-3.5">
+                        <span class="text-3xl shrink-0">⚠️</span>
+                        <div class="space-y-1">
+                            <span class="inline-block px-2.5 py-0.5 rounded-full bg-rose-500/30 border border-rose-300/40 text-rose-100 text-[10px] font-black uppercase tracking-wider">
+                                ✕ PEMBERITAHUAN PENTING: BERKAS LEGALITAS DITOLAK ADMIN
+                            </span>
+                            <h4 class="font-extrabold text-base text-white">Pengajuan Legalitas STR &amp; SIP Anda Ditolak — Silakan Revisi</h4>
+                            <p class="text-xs text-rose-100 leading-relaxed">
+                                <strong>Alasan Penolakan Admin:</strong> &ldquo;{{ $profile->rejection_reason ?? ($latestAuditNotif->data['rejection_reason'] ?? 'Berkas dokumen belum sesuai standar atau kurang jelas terbaca.') }}&rdquo;
+                            </p>
                         </div>
                     </div>
-                @endif
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="{{ route('perawat.verifikasi') }}" class="px-5 py-3 rounded-2xl bg-white text-rose-900 font-black text-xs shadow-md hover:bg-rose-50 transition whitespace-nowrap flex items-center gap-1.5">
+                            <span>✏️ Revisi &amp; Unggah Ulang Dokumen &rarr;</span>
+                        </a>
+                    </div>
+                </div>
+            @elseif ($profile->verification_status === 'pending')
+                <div class="p-5 rounded-3xl bg-gradient-to-r from-amber-800 to-amber-950 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-2 border-amber-500/80">
+                    <div class="flex items-center gap-3.5">
+                        <span class="text-3xl shrink-0">⏳</span>
+                        <div class="space-y-0.5">
+                            <h4 class="font-extrabold text-sm text-white">Berkas Legalitas Anda Sedang Diaudit oleh Administrator</h4>
+                            <p class="text-xs text-amber-100">Tim Admin sedang memverifikasi keabsahan STR &amp; SIP Anda. Anda akan menerima notifikasi begitu disetujui.</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('perawat.verifikasi') }}" class="px-4 py-2.5 rounded-xl bg-amber-400 text-amber-950 font-black text-xs shadow-xs hover:bg-amber-300 transition whitespace-nowrap shrink-0">
+                        Lihat Status Berkas &rarr;
+                    </a>
+                </div>
+            @elseif ($profile->verification_status === 'verified' && $latestAuditNotif && is_null($latestAuditNotif->read_at) && ($latestAuditNotif->data['type'] ?? '') === 'document_approved')
+                <div id="notif-banner-{{ $latestAuditNotif->id }}" class="audit-notif-banner p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#064e3b] via-emerald-800 to-teal-800 text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-2 border-emerald-400/80">
+                    <div class="flex items-center gap-3.5">
+                        <span class="text-3xl shrink-0">🎉</span>
+                        <div class="space-y-1">
+                            <span class="inline-block px-2.5 py-0.5 rounded-full bg-emerald-400/20 border border-emerald-300/40 text-emerald-200 text-[10px] font-black uppercase tracking-wider">
+                                ✓ LEGALITAS DISETUJUI &bull; AKUN RESMI AKTIF
+                            </span>
+                            <h4 class="font-extrabold text-base text-white">Selamat! Berkas Legalitas STR &amp; SIP Anda Telah Diverifikasi Admin</h4>
+                            <p class="text-xs text-emerald-100">Seluruh fitur Mitra Perawat telah aktif! Anda kini dapat mengatur Jadwal Harian (WIB), menerima pesanan homecare di Feed Order, mengisi E-Report Klinis, dan menarik saldo Payout.</p>
+                        </div>
+                    </div>
+                    <button type="button" 
+                        onclick="dismissAuditBanner(event, '{{ route('perawat.notifications.read', $latestAuditNotif->id) }}', '{{ $latestAuditNotif->id }}')"
+                        class="px-4 py-2.5 rounded-xl bg-[#10b981] text-slate-950 font-black text-xs shadow-xs hover:bg-emerald-400 transition whitespace-nowrap cursor-pointer shrink-0">
+                        ✓ Mengerti &amp; Mulai Bekerja
+                    </button>
+                </div>
             @endif
 
             <!-- Flash Status Messages -->
