@@ -72,6 +72,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('pasien/pesanan/{order}/bayar/token', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'getPaymentToken'])->name('pasien.pesanan.payment-token');
         Route::post('pasien/pesanan/{order}/bayar', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'pay'])->name('pasien.pesanan.pay');
         Route::post('pasien/pesanan/{order}/batal', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancel'])->name('pasien.pesanan.cancel');
+        Route::get('pasien/pesanan/{order}/tracking', [\App\Http\Controllers\Api\OrderApiController::class, 'tracking'])->name('pasien.pesanan.tracking');
 
         // Lembar E-Report Klinis & Ulasan/Rating Pasien
         Route::get('pasien/orders/{order}/ereport', [\App\Http\Controllers\Patient\PatientReviewReportController::class, 'showReport'])->name('pasien.ereport.show');

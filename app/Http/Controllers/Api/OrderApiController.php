@@ -316,6 +316,75 @@ class OrderApiController extends Controller
     }
 
     /**
+     * Endpoint Live Tracking Real-Time (Polling posisi GPS perawat, rute OSRM & status pesanan).
+     */
+    public function tracking(string $orderNumberOrId): JsonResponse
+    {
+        $order = Order::with(['nurse.nurseProfile', 'serviceCatalog'])
+            ->where('order_number', $orderNumberOrId)
+            ->orWhere('id', $orderNumberOrId)
+            ->first();
+
+        if (! $order) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pesanan tidak ditemukan.',
+            ], 404);
+        }
+
+        $patientLat = (float) ($order->latitude ?: $order->patient_latitude ?: -7.3144);
+        $patientLng = (float) ($order->longitude ?: $order->patient_longitude ?: 112.7304);
+
+        $nurseProfile = $order->nurse?->nurseProfile;
+        $nurseLat = $nurseProfile && $nurseProfile->latitude !== null
+            ? (float) $nurseProfile->latitude
+            : ($patientLat - 0.015);
+        $nurseLng = $nurseProfile && $nurseProfile->longitude !== null
+            ? (float) $nurseProfile->longitude
+            : ($patientLng + 0.012);
+
+        if (abs($nurseLat - $patientLat) < 0.0005 && abs($nurseLng - $patientLng) < 0.0005) {
+            $nurseLat = $patientLat - 0.014;
+            $nurseLng = $patientLng + 0.011;
+        }
+
+        $routeData = OsrmRoutingService::getDrivingRoute($nurseLat, $nurseLng, $patientLat, $patientLng, true);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'status_label' => $order->status_label,
+                'payment_status' => $order->payment_status,
+                'nurse' => [
+                    'id' => $order->nurse?->id,
+                    'name' => $order->nurse?->name ?? 'Mitra Perawat',
+                    'latitude' => round($nurseLat, 6),
+                    'longitude' => round($nurseLng, 6),
+                    'location_updated_at' => $nurseProfile?->location_updated_at
+                        ? $nurseProfile->location_updated_at->timezone('Asia/Jakarta')->format('H:i:s') . ' WIB'
+                        : now('Asia/Jakarta')->format('H:i:s') . ' WIB',
+                ],
+                'patient' => [
+                    'name' => $order->patient_name,
+                    'latitude' => round($patientLat, 6),
+                    'longitude' => round($patientLng, 6),
+                    'address' => $order->address,
+                ],
+                'routing' => [
+                    'distance_km' => $routeData['distance_km'],
+                    'duration_minutes' => $routeData['duration_minutes'],
+                    'geometry' => $routeData['geometry'],
+                    'source' => $routeData['source'],
+                ],
+                'server_time_wib' => now('Asia/Jakarta')->format('H:i:s') . ' WIB',
+            ],
+        ]);
+    }
+
+    /**
      * Daftar pesanan milik pasien.
      */
     public function index(Request $request): JsonResponse

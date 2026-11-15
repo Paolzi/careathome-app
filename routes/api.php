@@ -28,6 +28,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/orders', [\App\Http\Controllers\Api\OrderApiController::class, 'store'])->name('api.orders.store');
         Route::get('/orders', [\App\Http\Controllers\Api\OrderApiController::class, 'index'])->name('api.orders.index');
         Route::get('/orders/{orderNumberOrId}', [\App\Http\Controllers\Api\OrderApiController::class, 'show'])->name('api.orders.show');
+        Route::get('/orders/{orderNumberOrId}/tracking', [\App\Http\Controllers\Api\OrderApiController::class, 'tracking'])->name('api.orders.tracking');
         Route::post('/orders/{orderNumberOrId}/cancel', [\App\Http\Controllers\Api\OrderApiController::class, 'cancel'])->name('api.orders.cancel');
 
         // API Payment Gateway & Escrow Integration
