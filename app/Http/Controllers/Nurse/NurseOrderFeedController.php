@@ -110,10 +110,20 @@ class NurseOrderFeedController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
-        $profile = NurseProfile::firstOrCreate(['user_id' => $user->id], ['verification_status' => 'verified']);
+        $profile = NurseProfile::firstOrCreate(['user_id' => $user->id], ['verification_status' => 'draft']);
         if ($profile->verification_status !== 'verified') {
-            $profile->verification_status = 'verified';
-            $profile->save();
+            $errMsg = $profile->verification_status === 'rejected'
+                ? 'Legalitas STR & SIP Anda berstatus DITOLAK. Silakan revisi dokumen di halaman Verifikasi terlebih dahulu sebelum menerima order.'
+                : 'Akun Anda belum diverifikasi Admin (Status: ' . strtoupper($profile->verification_status) . '). Anda dapat menerima order setelah disetujui Admin.';
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $errMsg,
+                ], 403);
+            }
+
+            return redirect()->route('perawat.verifikasi')->with('error', $errMsg);
         }
 
         $orderId = $orderInput instanceof Order ? $orderInput->id : (int) $orderInput;

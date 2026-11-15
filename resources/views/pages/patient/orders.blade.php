@@ -735,16 +735,16 @@
         x-transition:leave-end="opacity-0">
 
         <div @click.away="if (!processingCancel) cancelModalOpen = false"
-            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800"
+            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 max-h-[90vh] flex flex-col"
             x-transition:enter="ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100">
 
             <!-- Modal Header -->
-            <div class="px-6 py-5 bg-gradient-to-r from-rose-700 to-rose-900 text-white flex items-center justify-between">
+            <div class="px-6 py-4 bg-gradient-to-r from-rose-700 to-rose-900 text-white flex items-center justify-between shrink-0">
                 <div>
                     <span class="text-[10px] uppercase font-bold tracking-wider text-rose-200">Pembatalan &amp; Pengembalian Dana</span>
-                    <h3 class="text-lg font-bold mt-0.5">Konfirmasi Pembatalan Pesanan</h3>
+                    <h3 class="text-base font-bold mt-0.5">Konfirmasi Pembatalan Pesanan</h3>
                 </div>
                 <button type="button" @click="cancelModalOpen = false" :disabled="processingCancel" class="text-rose-200 hover:text-white p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -753,8 +753,8 @@
                 </button>
             </div>
 
-            <!-- Modal Body -->
-            <div class="p-6 space-y-4 text-xs">
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-6 space-y-4 text-xs overflow-y-auto grow">
 
                 <!-- Escrow Refund Assurance Notice -->
                 <div class="p-4 rounded-2xl border text-xs leading-relaxed"

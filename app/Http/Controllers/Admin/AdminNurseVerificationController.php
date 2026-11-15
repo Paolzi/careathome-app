@@ -77,7 +77,10 @@ class AdminNurseVerificationController extends Controller
         DB::transaction(function () use ($nurseProfile, $admin, $oldStatus) {
             $nurseProfile->update([
                 'verification_status' => 'verified',
+                'status_verifikasi' => 'verified',
+                'status_legalitas' => 'verified',
                 'is_available' => true,
+                'is_online' => true,
                 'latitude' => $nurseProfile->latitude ?? -7.3144,
                 'longitude' => $nurseProfile->longitude ?? 112.7304,
                 'location_updated_at' => $nurseProfile->location_updated_at ?? now(),
@@ -86,9 +89,11 @@ class AdminNurseVerificationController extends Controller
                 'reviewed_at' => now(),
             ]);
 
-            // Pastikan jadwal harian 7 hari (Senin - Minggu) otomatis tersedia untuk perawat ini
+            // Pastikan jadwal harian 7 hari (Senin - Minggu) dan Wallet otomatis tersedia untuk perawat ini
             if ($nurseProfile->user_id) {
                 \App\Models\NurseSchedule::ensureDefaultSchedulesForNurse((int) $nurseProfile->user_id);
+                \App\Models\Wallet::getOrCreateForUser((int) $nurseProfile->user_id);
+                \App\Models\NurseWallet::getOrCreateForNurse((int) $nurseProfile->user_id);
             }
 
             // Jika perawat belum memilih layanan tindakan, kaitkan dengan katalog layanan aktif
@@ -123,15 +128,27 @@ class AdminNurseVerificationController extends Controller
             );
         });
 
-        // Trigger Notifikasi Otomatis (Email & In-App Database Notification)
+        // Tandai notifikasi penolakan lama sebagai dibaca & kirim Notifikasi Persetujuan baru
         try {
-            $nurseProfile->user?->notify(new NurseDocumentApprovedNotification($nurseProfile, $admin));
+            if ($nurseProfile->user) {
+                $nurseProfile->user->unreadNotifications()
+                    ->where('data->type', 'document_rejected')
+                    ->update(['read_at' => now()]);
+                $nurseProfile->user->notify(new NurseDocumentApprovedNotification($nurseProfile, $admin));
+            }
         } catch (\Throwable $e) {
-            // Log jika terjadi kegagalan mailer lokal, sistem tetap berjalan lancar
             report($e);
         }
 
-        return back()->with('status', "Legalitas perawat {$nurseProfile->user?->name} berhasil diverifikasi & disetujui. Notifikasi telah dikirimkan ke perawat.");
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'verification_status' => 'verified',
+                'message' => "Legalitas perawat {$nurseProfile->user?->name} berhasil diverifikasi & disetujui.",
+            ]);
+        }
+
+        return back()->with('status', "Legalitas perawat {$nurseProfile->user?->name} berhasil diverifikasi & disetujui (Status: VERIFIED). Notifikasi telah dikirimkan ke perawat.");
     }
 
     /**
@@ -140,19 +157,23 @@ class AdminNurseVerificationController extends Controller
     public function reject(Request $request, NurseProfile $nurseProfile)
     {
         $request->validate([
-            'rejection_reason' => ['required', 'string', 'min:5', 'max:1000'],
-        ], [
-            'rejection_reason.required' => 'Alasan penolakan wajib diisi agar perawat mengetahui dokumen yang perlu diperbaiki.',
+            'rejection_reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $admin = Auth::user();
-        $reason = $request->input('rejection_reason');
+        $rawReason = trim((string) $request->input('rejection_reason', ''));
+        $reason = $rawReason !== ''
+            ? $rawReason
+            : 'Berkas dokumen legalitas belum sesuai standar atau kurang jelas terbaca. Silakan revisi dan unggah ulang dokumen Anda.';
         $oldStatus = $nurseProfile->verification_status;
 
         DB::transaction(function () use ($nurseProfile, $admin, $reason, $oldStatus) {
             $nurseProfile->update([
                 'verification_status' => 'rejected',
+                'status_verifikasi' => 'rejected',
+                'status_legalitas' => 'rejected',
                 'rejection_reason' => $reason,
+                'is_available' => false,
                 'is_online' => false, // Perawat ditolak otomatis OFF
                 'reviewed_by' => $admin->id,
                 'reviewed_at' => now(),
@@ -183,14 +204,28 @@ class AdminNurseVerificationController extends Controller
             );
         });
 
-        // Trigger Notifikasi Otomatis (Email & In-App Database Notification)
+        // Tandai notifikasi lama & kirim Notifikasi Penolakan baru ke Perawat
         try {
-            $nurseProfile->user?->notify(new NurseDocumentRejectedNotification($nurseProfile, $reason, $admin));
+            if ($nurseProfile->user) {
+                $nurseProfile->user->unreadNotifications()
+                    ->where('data->type', 'document_approved')
+                    ->update(['read_at' => now()]);
+                $nurseProfile->user->notify(new NurseDocumentRejectedNotification($nurseProfile, $reason, $admin));
+            }
         } catch (\Throwable $e) {
             report($e);
         }
 
-        return back()->with('status', "Berkas legalitas perawat {$nurseProfile->user?->name} telah ditolak dengan alasan tercatat dan dikirimkan via notifikasi.");
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'verification_status' => 'rejected',
+                'rejection_reason' => $reason,
+                'message' => "Berkas legalitas perawat {$nurseProfile->user?->name} telah ditolak.",
+            ]);
+        }
+
+        return back()->with('status', "Berkas legalitas perawat {$nurseProfile->user?->name} telah DITOLAK (Status: REJECTED) dengan alasan: \"{$reason}\". Notifikasi revisi telah dikirimkan ke perawat.");
     }
 
     /**

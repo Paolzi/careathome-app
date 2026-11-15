@@ -33,10 +33,22 @@ class WalletTransaction extends Model
     ];
 
     /**
-     * Pastikan tabel wallet_transactions adalah append-only.
+     * Pastikan tabel wallet_transactions adalah append-only dan kolom unsigned selalu bernilai positif.
      */
     protected static function booted(): void
     {
+        static::creating(function (WalletTransaction $tx) {
+            if ($tx->net_amount !== null) {
+                $tx->net_amount = abs((int) $tx->net_amount);
+            }
+            if ($tx->platform_fee !== null) {
+                $tx->platform_fee = abs((int) $tx->platform_fee);
+            }
+            if ($tx->balance_after !== null) {
+                $tx->balance_after = max(0, (int) $tx->balance_after);
+            }
+        });
+
         static::updating(function () {
             throw new \RuntimeException('Wallet transactions are immutable and cannot be updated.');
         });
