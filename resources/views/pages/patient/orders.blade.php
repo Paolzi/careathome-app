@@ -575,11 +575,17 @@
 
                 <!-- 1. Interactive Peta Geolokasi (Leaflet) -->
                 <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="font-bold text-slate-800 flex items-center gap-1.5">
-                            <span>🗺️</span>
-                            <span>Peta Pelacakan Rute Nakes &amp; Titik Pasien</span>
-                        </span>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>🗺️</span>
+                                <span>Peta Pelacakan Rute Nakes &amp; Titik Pasien</span>
+                            </span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[9px] font-extrabold text-[#064e3b]">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-ping"></span>
+                                <span x-text="lastLiveSyncWib ? ('LIVE GPS • ' + lastLiveSyncWib) : 'LIVE GPS AKTIF'"></span>
+                            </span>
+                        </div>
                         <div class="flex items-center gap-2">
                             <span class="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-bold"
                                 x-text="'Estimasi Tiba: ~' + (liveEtaMin !== null ? liveEtaMin : Math.max(8, Math.round((selectedOrder?.distance_km || 3) * 3))) + ' Menit'"></span>
@@ -1378,6 +1384,8 @@
                 routeCoordinates: [],
                 isTrackingAnimating: false,
                 trackingInterval: null,
+                livePollingInterval: null,
+                lastLiveSyncWib: '',
                 liveDistanceKm: null,
                 liveEtaMin: null,
                 liveStatusText: '',
@@ -1576,11 +1584,13 @@
                         clearInterval(this.trackingInterval);
                         this.trackingInterval = null;
                     }
+                    this.stopLiveTrackingPoll();
                     this.isTrackingAnimating = false;
 
-                    // Beri waktu modal untuk dirender di DOM sebelum init Leaflet map
+                    // Beri waktu modal untuk dirender di DOM sebelum init Leaflet map & mulai live polling
                     this.$nextTick(() => {
                         this.initTrackingMap(order);
+                        this.startLiveTrackingPoll(order.id);
                     });
                 },
 
@@ -1589,8 +1599,95 @@
                         clearInterval(this.trackingInterval);
                         this.trackingInterval = null;
                     }
+                    this.stopLiveTrackingPoll();
                     this.isTrackingAnimating = false;
                     this.trackingModalOpen = false;
+                },
+
+                startLiveTrackingPoll(orderId) {
+                    this.stopLiveTrackingPoll();
+                    if (!orderId) return;
+                    this.pollLiveTracking(orderId);
+                    this.livePollingInterval = setInterval(() => {
+                        if (this.trackingModalOpen && this.selectedOrder && this.selectedOrder.id === orderId) {
+                            this.pollLiveTracking(orderId);
+                        } else {
+                            this.stopLiveTrackingPoll();
+                        }
+                    }, 5000);
+                },
+
+                stopLiveTrackingPoll() {
+                    if (this.livePollingInterval) {
+                        clearInterval(this.livePollingInterval);
+                        this.livePollingInterval = null;
+                    }
+                },
+
+                async pollLiveTracking(orderId) {
+                    try {
+                        const res = await fetch(`/pasien/pesanan/${orderId}/tracking`, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        if (!res.ok) return;
+                        const json = await res.json();
+                        if (json.status !== 'success' || !json.data) return;
+
+                        const d = json.data;
+                        this.lastLiveSyncWib = d.server_time_wib || '';
+
+                        const prevStatus = this.selectedOrder?.status;
+                        if (this.selectedOrder) {
+                            this.selectedOrder.status = d.status;
+                            this.selectedOrder.status_label = d.status_label;
+                            this.selectedOrder.payment_status = d.payment_status;
+                        }
+
+                        if (!this.isTrackingAnimating) {
+                            if (d.status === 'dalam_perjalanan') {
+                                this.liveStatusText = '🛵 Nakes Menuju Rumah Anda';
+                            } else if (d.status === 'tiba') {
+                                this.liveStatusText = '📍 Nakes Telah Tiba di Lokasi';
+                            } else if (d.status === 'tindakan_berlangsung') {
+                                this.liveStatusText = '🩺 Sedang Melakukan Perawatan';
+                            } else if (d.status === 'selesai') {
+                                this.liveStatusText = '✓ Perawatan Selesai';
+                            } else {
+                                this.liveStatusText = d.status_label || 'Siap Berangkat';
+                            }
+
+                            if (d.nurse && typeof d.nurse.latitude === 'number' && typeof d.nurse.longitude === 'number') {
+                                const newLat = d.nurse.latitude;
+                                const newLng = d.nurse.longitude;
+                                this.originNurseCoords = [newLat, newLng];
+                                if (this.nurseMarker) {
+                                    this.nurseMarker.setLatLng([newLat, newLng]);
+                                }
+                            }
+
+                            if (d.routing) {
+                                if (d.routing.distance_km) {
+                                    this.liveDistanceKm = Number(d.routing.distance_km).toFixed(1);
+                                }
+                                if (d.routing.duration_minutes) {
+                                    this.liveEtaMin = d.routing.duration_minutes;
+                                }
+                                if (Array.isArray(d.routing.geometry) && d.routing.geometry.length >= 2) {
+                                    this.routeCoordinates = d.routing.geometry;
+                                    if (this.routeLine) {
+                                        this.routeLine.setLatLngs(this.routeCoordinates);
+                                    }
+                                }
+                            }
+
+                            // Jika status berubah menjadi 'dalam_perjalanan', otomatis jalankan animasi rute jalan raya
+                            if (prevStatus !== 'dalam_perjalanan' && d.status === 'dalam_perjalanan') {
+                                this.startNurseMovementSimulation();
+                            }
+                        }
+                    } catch (e) {
+                        // Silent fallback on temporary network hiccup
+                    }
                 },
 
                 async initTrackingMap(order) {
