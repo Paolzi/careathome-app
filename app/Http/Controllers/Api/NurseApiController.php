@@ -175,16 +175,25 @@ class NurseApiController extends Controller
                 $scheduledDate,
                 $scheduledTime
             );
+            $nowAvailability = NurseSchedule::checkAvailability(
+                (int) $profile->user_id,
+                'now',
+                null,
+                null
+            );
+            $slotDetailsForDate = NurseSchedule::getSlotDetailsForDate((int) $profile->user_id, $scheduledDate);
 
             $formattedSchedules = $schedules->map(function (NurseSchedule $sch) {
+                $daySlots = $sch->getEffectiveTimeSlots();
                 return [
                     'day_of_week' => $sch->day_of_week,
                     'day_name' => $sch->day_name,
                     'start_time' => substr($sch->start_time, 0, 5),
                     'end_time' => substr($sch->end_time, 0, 5),
-                    'is_active' => (bool) $sch->is_active,
-                    'label' => $sch->is_active
-                        ? substr($sch->start_time, 0, 5) . ' - ' . substr($sch->end_time, 0, 5) . ' WIB'
+                    'time_slots' => $daySlots,
+                    'is_active' => (bool) ($sch->is_active && !empty($daySlots)),
+                    'label' => ($sch->is_active && !empty($daySlots))
+                        ? implode(', ', array_map(fn ($s) => $s . ' WIB', $daySlots))
                         : 'Libur',
                 ];
             })->values();
@@ -211,7 +220,13 @@ class NurseApiController extends Controller
                 'longitude' => $nLng,
                 'is_available_for_slot' => (bool) $availability['available'],
                 'availability_reason' => $availability['reason'],
-                'schedule_window' => $availability['schedule_window'],
+                'unavailable_reason' => $availability['reason'],
+                'can_book_now' => (bool) $nowAvailability['available'],
+                'book_now_reason' => $nowAvailability['reason'],
+                'slot_details_for_date' => $slotDetailsForDate,
+                'available_slots_for_date' => $availability['available_slots'] ?? [],
+                'booked_slots_for_date' => $availability['booked_slots'] ?? [],
+                'schedule_window' => $availability['schedule_window'] ?? $availability['schedule_hours'],
                 'day_name' => $availability['day_name'],
                 'schedules' => $formattedSchedules,
                 'verification_status' => 'verified',

@@ -256,11 +256,9 @@
                         <label class="text-[11px] font-bold text-slate-600">Jam (WIB):</label>
                         <select x-model="bookingForm.scheduled_time" @change="fetchNearbyNurses(true)"
                             class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500">
-                            <option value="08:00 - 10:00">08:00 - 10:00 WIB (Pagi)</option>
-                            <option value="10:00 - 12:00">10:00 - 12:00 WIB (Menjelang Siang)</option>
-                            <option value="13:00 - 15:00">13:00 - 15:00 WIB (Siang)</option>
-                            <option value="15:00 - 17:00">15:00 - 17:00 WIB (Sore)</option>
-                            <option value="19:00 - 21:00">19:00 - 21:00 WIB (Malam)</option>
+                            <template x-for="opt in getCatalogTimeOptions()" :key="opt.value">
+                                <option :value="opt.value" x-text="opt.label"></option>
+                            </template>
                         </select>
                     </div>
                 </div>
@@ -987,61 +985,122 @@
                     </template>
 
                     <!-- Pilihan Tipe Waktu Pemesanan di Modal Step 1 -->
-                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                         <label class="block text-xs font-extrabold text-slate-800">
-                            Pilih Tipe Waktu Pemesanan <span class="text-rose-500">*</span>
+                            Pilih Tipe Waktu Pemesanan (Real-Time WIB) <span class="text-rose-500">*</span>
                         </label>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             <button type="button"
-                                @click="bookingForm.booking_type = 'now'; bookingForm.scheduled_date = todayDate; bookingForm.scheduled_time = currentWibClock"
-                                :class="bookingForm.booking_type === 'now' ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'"
-                                class="p-3 rounded-xl border text-left transition flex items-start gap-2.5 cursor-pointer">
-                                <span class="text-base">⚡</span>
+                                :disabled="!canBookNowForModal()"
+                                @click="if (canBookNowForModal()) { bookingForm.booking_type = 'now'; bookingForm.scheduled_date = todayDate; bookingForm.scheduled_time = currentWibClock; onModalDateOrTimeChange(); }"
+                                :class="!canBookNowForModal()
+                                    ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
+                                    : (bookingForm.booking_type === 'now' ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm cursor-pointer' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 cursor-pointer')"
+                                class="p-3 rounded-xl border text-left transition flex items-start gap-2.5">
+                                <span class="text-base" x-text="canBookNowForModal() ? '⚡' : '🔒'"></span>
                                 <div>
                                     <span class="text-xs font-extrabold block">Pesan Sekarang (WIB)</span>
-                                    <span class="text-[10px] opacity-85 block">Perawat langsung dipanggil untuk jam saat ini (<span x-text="currentWibClock"></span>)</span>
+                                    <span x-show="canBookNowForModal()" class="text-[10px] opacity-85 block">
+                                        Perawat langsung dipanggil untuk jam saat ini (<span x-text="currentWibClock"></span>)
+                                    </span>
+                                    <span x-show="!canBookNowForModal()" class="text-[10px] text-rose-600 font-bold block"
+                                        x-text="selectedNurse?.book_now_reason || 'Tidak tersedia / sudah dipesan pada jam saat ini'">
+                                    </span>
                                 </div>
                             </button>
                             <button type="button"
-                                @click="bookingForm.booking_type = 'scheduled'; if (bookingForm.scheduled_time.includes('WIB')) bookingForm.scheduled_time = '08:00 - 10:00'"
+                                @click="switchToScheduledInModal()"
                                 :class="bookingForm.booking_type === 'scheduled' ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'"
                                 class="p-3 rounded-xl border text-left transition flex items-start gap-2.5 cursor-pointer">
                                 <span class="text-base">📅</span>
                                 <div>
                                     <span class="text-xs font-extrabold block">Pesan Untuk Nanti</span>
-                                    <span class="text-[10px] opacity-85 block">Pilih tanggal &amp; sesi jam kunjungan sesuai jadwal perawat</span>
+                                    <span class="text-[10px] opacity-85 block">Pilih tanggal &amp; jam kerja perawat yang masih tersedia</span>
                                 </div>
                             </button>
                         </div>
                     </div>
 
-                    <div x-show="bookingForm.booking_type === 'scheduled'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <!-- Tanggal Kunjungan -->
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                                Tanggal Kunjungan <span class="text-rose-500">*</span>
-                            </label>
-                            <input type="date"
-                                x-model="bookingForm.scheduled_date"
-                                :min="todayDate"
-                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs" />
-                            <p class="text-[10px] text-slate-400 mt-1">Dapat dijadwalkan mulai hari ini atau hari berikutnya.</p>
+                    <div x-show="bookingForm.booking_type === 'scheduled'" class="space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Tanggal Kunjungan -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                    Tanggal Kunjungan <span class="text-rose-500">*</span>
+                                </label>
+                                <input type="date"
+                                    x-model="bookingForm.scheduled_date"
+                                    :min="todayDate"
+                                    @change="onModalDateOrTimeChange()"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs" />
+                                <p class="text-[10px] text-slate-400 mt-1">Dapat dijadwalkan mulai hari ini atau hari berikutnya.</p>
+                            </div>
+
+                            <!-- Sesi Waktu Kunjungan (WIB) - Hanya Jam yang Tersedia & Belum Dipesan -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                                    Jam Perawatan (WIB) <span class="text-rose-500">*</span>
+                                </label>
+                                <select x-model="bookingForm.scheduled_time"
+                                    @change="onModalDateOrTimeChange()"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs">
+                                    <template x-for="slot in getModalSlotDetails()" :key="slot.range">
+                                        <option :value="slot.range"
+                                            :disabled="!slot.is_available"
+                                            x-text="slot.is_booked
+                                                ? ('🔒 ' + slot.range + ' WIB — SUDAH DIPESAN PASIEN LAIN')
+                                                : (slot.is_past ? ('⏰ ' + slot.range + ' WIB — JAM SUDAH LEWAT') : ('✓ ' + slot.label))">
+                                        </option>
+                                    </template>
+                                    <template x-if="getModalSlotDetails().length === 0">
+                                        <option value="" disabled>Tidak ada jadwal buka pada tanggal ini</option>
+                                    </template>
+                                </select>
+                                <p class="text-[10px] text-slate-400 mt-1">Jam yang sudah dipesan pasien lain otomatis dikunci dan tidak dapat dipilih.</p>
+                            </div>
                         </div>
 
-                        <!-- Sesi Waktu Kunjungan (WIB) -->
+                        <!-- Visual Chips Daftar Jam Kerja Perawat pada Tanggal Terpilih -->
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-extrabold text-slate-700">
+                                     Pilihan Jam Kerja <span x-text="selectedNurse ? ('(' + selectedNurse.name + ')') : ''"></span>:
+                                </span>
+                                <span class="text-[10px] text-slate-500">Klik jam yang berwarna hijau untuk memilih</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                <template x-for="slot in getModalSlotDetails()" :key="'chip-' + slot.range">
+                                    <button type="button"
+                                        :disabled="!slot.is_available"
+                                        @click="if (slot.is_available) { bookingForm.scheduled_time = slot.range; onModalDateOrTimeChange(); }"
+                                        :class="!slot.is_available
+                                            ? (slot.is_booked
+                                                ? 'bg-rose-50 text-rose-400 border-rose-200 line-through cursor-not-allowed'
+                                                : 'bg-slate-100 text-slate-400 border-slate-200 line-through cursor-not-allowed')
+                                            : (bookingForm.scheduled_time === slot.range
+                                                ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs cursor-pointer'
+                                                : 'bg-white text-emerald-900 border-emerald-300 hover:bg-emerald-50 cursor-pointer')"
+                                        class="px-2.5 py-1.5 rounded-xl border text-[11px] font-mono font-bold transition flex items-center gap-1">
+                                        <span x-text="slot.is_booked ? '🔒' : (slot.is_past ? '⏰' : '🕒')"></span>
+                                        <span x-text="slot.time + ' WIB'"></span>
+                                        <span x-show="slot.is_booked" class="text-[9px] font-sans font-extrabold no-underline ml-0.5">(Dipesan)</span>
+                                        <span x-show="!slot.is_booked && slot.is_past" class="text-[9px] font-sans font-semibold no-underline ml-0.5">(Lewat)</span>
+                                    </button>
+                                </template>
+                                <template x-if="getModalSlotDetails().length === 0">
+                                    <span class="text-xs text-rose-600 font-semibold">Perawat libur / tidak membuka jam praktik pada hari ini. Silakan pilih tanggal lain.</span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alert Jika Jam Tidak Tersedia / Sudah Dipesan -->
+                    <div x-show="!isCurrentModalSelectionBookable()" x-cloak
+                        class="p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-start gap-2.5">
+                        <span class="text-base shrink-0">🔒</span>
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                                Jam Perawatan (WIB) <span class="text-rose-500">*</span>
-                            </label>
-                            <select x-model="bookingForm.scheduled_time"
-                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs">
-                                <option value="08:00 - 10:00">Pagi (08:00 - 10:00 WIB)</option>
-                                <option value="10:00 - 12:00">Menjelang Siang (10:00 - 12:00 WIB)</option>
-                                <option value="13:00 - 15:00">Siang (13:00 - 15:00 WIB)</option>
-                                <option value="15:00 - 17:00">Sore (15:00 - 17:00 WIB)</option>
-                                <option value="19:00 - 21:00">Malam (19:00 - 21:00 WIB)</option>
-                            </select>
-                            <p class="text-[10px] text-slate-400 mt-1">Seluruh jadwal menggunakan Zona Waktu Indonesia Barat (WIB).</p>
+                            <strong class="font-extrabold block">Waktu Ini Tidak Dapat Dipesan</strong>
+                            <span x-text="getModalUnbookableReason()"></span>
                         </div>
                     </div>
 
@@ -1317,10 +1376,14 @@
                     <!-- Step 1 & 2: Tombol Lanjut -->
                     <button type="button"
                         x-show="bookingStep < 3 && !orderSuccess"
+                        :disabled="bookingStep === 1 && !isCurrentModalSelectionBookable()"
                         @click="nextStep()"
-                        class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
-                        <span>Lanjut ke Tahap Berikutnya</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        :class="(bookingStep === 1 && !isCurrentModalSelectionBookable())
+                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-75'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 cursor-pointer'"
+                        class="px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                        <span x-text="(bookingStep === 1 && !isCurrentModalSelectionBookable()) ? '🔒 Jam Tidak Tersedia' : 'Lanjut ke Tahap Berikutnya'"></span>
+                        <svg x-show="!(bookingStep === 1 && !isCurrentModalSelectionBookable())" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
                     </button>
@@ -1626,15 +1689,23 @@
 
             <div class="p-6 space-y-3 max-h-[65vh] overflow-y-auto">
                 <p class="text-xs text-slate-600">
-                    Berikut adalah jam operasional praktik mingguan perawat ini dalam Zona Waktu Indonesia Barat (WIB):
+                    Berikut adalah daftar jam kerja harian perawat ini dalam Zona Waktu Indonesia Barat (WIB). Klik salah satu jam pada hari aktif untuk memesan:
                 </p>
                 <div class="divide-y divide-slate-100 rounded-2xl border border-slate-200 overflow-hidden">
                     <template x-for="sch in (scheduleModalNurse?.schedules || [])" :key="sch.day_of_week">
-                        <div class="px-4 py-3 flex items-center justify-between text-xs bg-white hover:bg-slate-50">
-                            <span class="font-bold text-slate-800" x-text="sch.day_name"></span>
-                            <div class="flex items-center gap-2">
-                                <span x-show="sch.is_active" class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold"
-                                    x-text="sch.start_time + ' - ' + sch.end_time + ' WIB'"></span>
+                        <div class="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs bg-white hover:bg-slate-50">
+                            <span class="font-extrabold text-slate-800 w-24 shrink-0" x-text="sch.day_name"></span>
+                            <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                <template x-if="sch.is_active && Array.isArray(sch.time_slots) && sch.time_slots.length > 0">
+                                    <template x-for="slot in sch.time_slots" :key="sch.day_of_week + '-' + slot">
+                                        <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono font-bold text-[11px]"
+                                            x-text="'🕒 ' + slot + ' WIB'"></span>
+                                    </template>
+                                </template>
+                                <template x-if="sch.is_active && (!Array.isArray(sch.time_slots) || sch.time_slots.length === 0)">
+                                    <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold"
+                                        x-text="sch.start_time + ' - ' + sch.end_time + ' WIB'"></span>
+                                </template>
                                 <span x-show="!sch.is_active" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 font-semibold">
                                     Libur / Tidak Praktik
                                 </span>
@@ -1650,9 +1721,9 @@
                     Tutup
                 </button>
                 <button type="button"
-                    @click="scheduleModalOpen = false; openNurseServicePicker(scheduleModalNurse)"
+                    @click="scheduleModalOpen = false; openNurseBookingFromScheduleModal(scheduleModalNurse)"
                     class="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition cursor-pointer">
-                    Pilih &amp; Pesan Perawat Ini &rarr;
+                    Pilih Jam Tersedia &amp; Pesan &rarr;
                 </button>
             </div>
         </div>
@@ -1794,9 +1865,155 @@
                     if (mode === 'now') {
                         this.bookingForm.scheduled_date = this.todayDate;
                     } else if (!this.bookingForm.scheduled_time || this.bookingForm.scheduled_time.includes('WIB')) {
-                        this.bookingForm.scheduled_time = '08:00 - 10:00';
+                        const opts = this.getCatalogTimeOptions();
+                        this.bookingForm.scheduled_time = opts.length > 0 ? opts[0].value : '08:00 - 10:00';
                     }
                     this.fetchNearbyNurses(true);
+                },
+
+                getCatalogTimeOptions() {
+                    const map = new Map();
+                    const defaultRanges = [
+                        { time: '08:00', value: '08:00 - 10:00', label: '08:00 - 10:00 WIB (Pagi)' },
+                        { time: '10:00', value: '10:00 - 12:00', label: '10:00 - 12:00 WIB (Menjelang Siang)' },
+                        { time: '13:00', value: '13:00 - 15:00', label: '13:00 - 15:00 WIB (Siang)' },
+                        { time: '15:00', value: '15:00 - 17:00', label: '15:00 - 17:00 WIB (Sore)' },
+                        { time: '19:00', value: '19:00 - 21:00', label: '19:00 - 21:00 WIB (Malam)' },
+                        { time: '21:00', value: '21:00 - 23:00', label: '21:00 - 23:00 WIB (Malam)' },
+                    ];
+                    defaultRanges.forEach(r => map.set(r.value, r));
+
+                    if (Array.isArray(this.nearbyNurses)) {
+                        this.nearbyNurses.forEach(n => {
+                            if (Array.isArray(n.slot_details_for_date)) {
+                                n.slot_details_for_date.forEach(sd => {
+                                    if (sd.range && !map.has(sd.range)) {
+                                        map.set(sd.range, {
+                                            time: sd.time,
+                                            value: sd.range,
+                                            label: `${sd.range} WIB`,
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    return Array.from(map.values()).sort((a, b) => a.time.localeCompare(b.time));
+                },
+
+                canBookNowForModal() {
+                    if (this.selectedNurse) {
+                        return this.selectedNurse.can_book_now !== false;
+                    }
+                    if (Array.isArray(this.nearbyNurses) && this.nearbyNurses.length > 0) {
+                        return this.nearbyNurses.some(n => n.can_book_now !== false);
+                    }
+                    return true;
+                },
+
+                getModalSlotDetails() {
+                    if (this.selectedNurse && Array.isArray(this.selectedNurse.slot_details_for_date)) {
+                        return this.selectedNurse.slot_details_for_date;
+                    }
+                    // Gabungkan slot dari semua perawat jika belum memilih perawat spesifik
+                    const slotMap = new Map();
+                    if (Array.isArray(this.nearbyNurses)) {
+                        this.nearbyNurses.forEach(n => {
+                            if (Array.isArray(n.slot_details_for_date)) {
+                                n.slot_details_for_date.forEach(sd => {
+                                    if (!slotMap.has(sd.range)) {
+                                        slotMap.set(sd.range, { ...sd });
+                                    } else {
+                                        const existing = slotMap.get(sd.range);
+                                        if (sd.is_available) {
+                                            existing.is_available = true;
+                                            existing.is_booked = false;
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    return Array.from(slotMap.values()).sort((a, b) => a.time.localeCompare(b.time));
+                },
+
+                isCurrentModalSelectionBookable() {
+                    if (this.bookingForm.booking_type === 'now') {
+                        return this.canBookNowForModal();
+                    }
+                    const slots = this.getModalSlotDetails();
+                    if (slots.length === 0) {
+                        return false;
+                    }
+                    const currentRange = (this.bookingForm.scheduled_time || '').trim();
+                    const matched = slots.find(s => s.range === currentRange || currentRange.startsWith(s.time));
+                    if (!matched) {
+                        return false;
+                    }
+                    return Boolean(matched.is_available);
+                },
+
+                getModalUnbookableReason() {
+                    if (this.bookingForm.booking_type === 'now') {
+                        return this.selectedNurse?.book_now_reason
+                            || 'Perawat tidak tersedia atau sedang melayani pesanan pasien lain pada jam real-time saat ini. Silakan gunakan Pesan Untuk Nanti.';
+                    }
+                    const slots = this.getModalSlotDetails();
+                    if (slots.length === 0) {
+                        return 'Perawat sedang libur atau tidak memiliki jam kerja aktif pada tanggal ini. Silakan pilih tanggal kunjungan lain.';
+                    }
+                    const currentRange = (this.bookingForm.scheduled_time || '').trim();
+                    const matched = slots.find(s => s.range === currentRange || currentRange.startsWith(s.time));
+                    if (matched && matched.is_booked) {
+                        return (matched.booked_reason || 'Jam ini sudah dipesan oleh pasien lain') + '. Silakan pilih jam lain yang masih tersedia.';
+                    }
+                    if (matched && matched.is_past) {
+                        return 'Jam perawatan ini sudah terlewat pada hari ini (Waktu Real-Time WIB). Silakan pilih jam berikutnya atau tanggal besok.';
+                    }
+                    return 'Silakan pilih salah satu jam kerja yang berstatus Tersedia (warna hijau).';
+                },
+
+                switchToScheduledInModal() {
+                    this.bookingForm.booking_type = 'scheduled';
+                    const slots = this.getModalSlotDetails();
+                    const firstAvail = slots.find(s => s.is_available);
+                    if (firstAvail) {
+                        this.bookingForm.scheduled_time = firstAvail.range;
+                    } else if (slots.length > 0) {
+                        this.bookingForm.scheduled_time = slots[0].range;
+                    }
+                    this.onModalDateOrTimeChange();
+                },
+
+                async onModalDateOrTimeChange() {
+                    await this.fetchNearbyNurses(false);
+                    if (this.bookingForm.booking_type === 'scheduled') {
+                        const slots = this.getModalSlotDetails();
+                        const currentRange = (this.bookingForm.scheduled_time || '').trim();
+                        const matched = slots.find(s => s.range === currentRange || currentRange.startsWith(s.time));
+                        if (!matched || !matched.is_available) {
+                            const firstAvail = slots.find(s => s.is_available);
+                            if (firstAvail && firstAvail.range !== this.bookingForm.scheduled_time) {
+                                this.bookingForm.scheduled_time = firstAvail.range;
+                                await this.fetchNearbyNurses(false);
+                            }
+                        }
+                    }
+                },
+
+                openNurseBookingFromScheduleModal(nurse) {
+                    if (!nurse) return;
+                    if (nurse.is_available_for_slot === false) {
+                        const availSlots = Array.isArray(nurse.slot_details_for_date)
+                            ? nurse.slot_details_for_date.filter(s => s.is_available)
+                            : [];
+                        if (availSlots.length > 0) {
+                            this.bookingForm.booking_type = 'scheduled';
+                            this.bookingForm.scheduled_time = availSlots[0].range;
+                        }
+                    }
+                    this.openNurseServicePicker(nurse);
                 },
 
                 applyRecommendedSlot(dateStr, slotStr) {
@@ -1872,6 +2089,12 @@
                             const list = json.data || [];
                             this.nearbyNurses = list;
                             window.__nearbyNursesCache = list;
+                            if (this.selectedNurse) {
+                                const updatedSelected = list.find(n => (n.nurse_id == this.selectedNurse.nurse_id || n.id == this.selectedNurse.id));
+                                if (updatedSelected) {
+                                    this.selectedNurse = updatedSelected;
+                                }
+                            }
                             if (json.recommendations) {
                                 this.recommendations = json.recommendations;
                             }
@@ -2067,7 +2290,7 @@
                     this.uploadedPhotoFile = null;
                     this.bookingModalOpen = true;
 
-                    // Sinkronisasi jarak awal dan koordinat
+                    // Sinkronisasi jarak awal, koordinat, dan ketersediaan slot real-time
                     if (this.selectedNurse) {
                         if (this.selectedNurse.distance_km !== undefined && this.selectedNurse.distance_km !== null) {
                             this.bookingForm.distance_km = parseFloat(this.selectedNurse.distance_km);
@@ -2079,6 +2302,15 @@
                             } else if (this.selectedNurse.latitude) {
                                 this.bookingForm.latitude = parseFloat(this.selectedNurse.latitude);
                                 this.bookingForm.longitude = parseFloat(this.selectedNurse.longitude);
+                            }
+                        }
+                        // Jika mode 'now' tetapi perawat tidak bisa dipesan sekarang, otomatis arahkan ke slot tersedia di 'scheduled'
+                        if (this.bookingForm.booking_type === 'now' && this.selectedNurse.can_book_now === false) {
+                            this.switchToScheduledInModal();
+                        } else if (this.bookingForm.booking_type === 'scheduled' && !this.isCurrentModalSelectionBookable()) {
+                            const firstAvail = this.getModalSlotDetails().find(s => s.is_available);
+                            if (firstAvail) {
+                                this.bookingForm.scheduled_time = firstAvail.range;
                             }
                         }
                     } else if ((this.bookingForm.latitude === null || this.bookingForm.latitude === -6.2088) && this.patientLat !== null && this.patientLat !== -6.2088) {
@@ -2101,6 +2333,10 @@
 
                     // Validasi Step 1
                     if (this.bookingStep === 1) {
+                        if (!this.isCurrentModalSelectionBookable()) {
+                            this.errorMessage = this.getModalUnbookableReason();
+                            return;
+                        }
                         if (this.bookingForm.booking_type === 'now') {
                             this.bookingForm.scheduled_date = this.todayDate;
                             this.bookingForm.scheduled_time = this.currentWibClock;
@@ -2200,7 +2436,13 @@
                             }, 100);
                         }
 
-                        this.updateLocation(lat, lng);
+                        // Pertahankan jarak akurat dari Katalog jika user belum menggeser marker secara manual
+                        if (this.selectedNurse && this.selectedNurse.distance_km !== undefined && this.selectedNurse.distance_km !== null) {
+                            this.bookingForm.distance_km = parseFloat(this.selectedNurse.distance_km);
+                            this.fetchPriceBreakdown();
+                        } else {
+                            this.updateLocation(lat, lng);
+                        }
                     });
                 },
 
@@ -2399,6 +2641,8 @@
                         this.submittingOrder = false;
                         this.orderSuccess = true;
                         this.createdOrderData = data.data;
+                        // Segarkan daftar perawat & ketersediaan jam secara real-time setelah pesanan dibuat
+                        this.fetchNearbyNurses(false);
                     })
                     .catch((err) => {
                         this.submittingOrder = false;
@@ -2528,17 +2772,42 @@
                 const photo = nurse.profile_photo || nurse.foto;
                 const isAvailable = nurse.is_available_for_slot !== false;
                 const scheduleWindow = nurse.schedule_window || '08:00 - 21:00 WIB';
-                const availabilityReason = nurse.availability_reason || `Jadwal: ${scheduleWindow}`;
+                const availabilityReason = nurse.availability_reason || `Jam kerja: ${scheduleWindow}`;
+                const slotDetails = Array.isArray(nurse.slot_details_for_date) ? nurse.slot_details_for_date : [];
+
+                let slotsChipsHtml = '';
+                if (slotDetails.length > 0) {
+                    const chips = slotDetails.map(sd => {
+                        if (sd.is_booked) {
+                            return `<span title="${sd.booked_reason || 'Sudah Dipesan'}" class="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-500 border border-rose-200 text-[10px] font-mono font-bold line-through cursor-not-allowed">🔒 ${sd.time} (Dipesan)</span>`;
+                        }
+                        if (sd.is_past) {
+                            return `<span title="Jam sudah lewat" class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-400 border border-slate-200 text-[10px] font-mono font-semibold line-through cursor-not-allowed">${sd.time} (Lewat)</span>`;
+                        }
+                        return `<button type="button" onclick="window.bookNurseAtSpecificSlot(${nurse.nurse_id || nurse.id}, '${sd.range}')" title="Klik untuk pesan di jam ${sd.range} WIB" class="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-200 text-[10px] font-mono font-extrabold transition cursor-pointer">🕒 ${sd.time} WIB</button>`;
+                    }).join('');
+                    slotsChipsHtml = `
+                        <div class="space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Slot Jam Kerja Tanggal Terpilih:</span>
+                            <div class="flex flex-wrap gap-1">${chips}</div>
+                        </div>
+                    `;
+                }
 
                 let servicesHtml = '';
                 if (Array.isArray(nurse.services) && nurse.services.length > 0) {
-                    servicesHtml = nurse.services.map(s => `
+                    servicesHtml = nurse.services.map(s => isAvailable ? `
                         <button type="button" 
                             onclick="window.openNurseServiceWithService(${nurse.nurse_id || nurse.id}, ${s.id})"
                             class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 font-medium border border-slate-200 hover:border-emerald-300 transition-all flex items-center gap-1 cursor-pointer">
                             <span>${s.image_emoji || '🩺'}</span>
                             <span class="hover:underline">${s.name}</span>
                         </button>
+                    ` : `
+                        <span class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 text-slate-400 font-medium border border-slate-200 flex items-center gap-1 opacity-70 cursor-not-allowed" title="Tidak tersedia di jam yang dipilih">
+                            <span>${s.image_emoji || '🩺'}</span>
+                            <span>${s.name}</span>
+                        </span>
                     `).join('');
                 } else {
                     servicesHtml = '<span class="text-[10px] text-slate-400 italic">Semua layanan standar homecare</span>';
@@ -2547,15 +2816,29 @@
                 const statusBadgeHtml = isAvailable
                     ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span>Tersedia Sesuai Jadwal</span>
+                            <span>Tersedia di Jam Ini</span>
                        </span>`
-                    : `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                            <span>🕒</span>
-                            <span>Di Luar Jam / Terjadwal</span>
+                    : `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                            <span>🔒</span>
+                            <span>Sudah Dipesan / Di Luar Jam</span>
                        </span>`;
 
+                const actionButtonHtml = isAvailable
+                    ? `<button type="button" 
+                            onclick="window.openBookingWithNurse(${nurse.nurse_id || nurse.id})"
+                            class="col-span-2 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                            <span>Pilih Perawat / Pesan</span>
+                            <span>&rarr;</span>
+                        </button>`
+                    : `<button type="button" disabled
+                            title="${availabilityReason}"
+                            class="col-span-2 py-2.5 px-3 rounded-xl bg-slate-200 text-slate-500 font-bold text-[11px] border border-slate-300 flex items-center justify-center gap-1.5 cursor-not-allowed opacity-80">
+                            <span>🔒</span>
+                            <span>Tidak Tersedia di Jam Ini</span>
+                        </button>`;
+
                 const card = document.createElement('div');
-                card.className = 'bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md transition p-5 flex flex-col justify-between space-y-4';
+                card.className = `bg-white rounded-2xl border ${isAvailable ? 'border-slate-200 hover:border-emerald-500' : 'border-rose-200/80 bg-slate-50/40'} hover:shadow-md transition p-5 flex flex-col justify-between space-y-4`;
                 card.innerHTML = `
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">
@@ -2585,14 +2868,16 @@
                         </div>
                     </div>
 
-                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] flex items-center justify-between gap-2">
-                        <span class="text-slate-600 truncate">🗓️ ${availabilityReason}</span>
+                    <div class="p-2.5 rounded-xl ${isAvailable ? 'bg-slate-50 border-slate-200/80' : 'bg-rose-50/80 border-rose-200'} border text-[11px] flex items-center justify-between gap-2">
+                        <span class="${isAvailable ? 'text-slate-600' : 'text-rose-800 font-semibold'} truncate">🗓️ ${availabilityReason}</span>
                         <button type="button"
                             onclick="window.openScheduleModalById(${nurse.nurse_id || nurse.id})"
                             class="text-[10px] font-extrabold text-emerald-700 hover:underline whitespace-nowrap cursor-pointer">
                             Lihat Jadwal &rarr;
                         </button>
                     </div>
+
+                    ${slotsChipsHtml}
 
                     <div class="space-y-1.5 text-xs">
                         <div class="flex items-center justify-between">
@@ -2610,12 +2895,7 @@
                             class="col-span-1 py-2.5 px-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition cursor-pointer">
                             📅 Jadwal
                         </button>
-                        <button type="button" 
-                            onclick="window.openBookingWithNurse(${nurse.nurse_id || nurse.id})"
-                            class="col-span-2 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
-                            <span>Pilih Perawat / Pesan</span>
-                            <span>&rarr;</span>
-                        </button>
+                        ${actionButtonHtml}
                     </div>
                 `;
 
@@ -2635,6 +2915,20 @@
             const list = window.__nearbyNursesCache || (window.catalogAppInstance ? window.catalogAppInstance.nearbyNurses : []);
             const nurse = list.find(n => (n.nurse_id == nurseId || n.id == nurseId));
             if (nurse && window.catalogAppInstance) {
+                if (nurse.is_available_for_slot === false) {
+                    showLocationToast('🔒 Perawat sudah dipesan atau di luar jadwal pada jam ini. Silakan pilih jam lain yang tersedia.', 'error');
+                    return;
+                }
+                window.catalogAppInstance.openNurseServicePicker(nurse);
+            }
+        };
+
+        window.bookNurseAtSpecificSlot = function(nurseId, slotRange) {
+            const list = window.__nearbyNursesCache || (window.catalogAppInstance ? window.catalogAppInstance.nearbyNurses : []);
+            const nurse = list.find(n => (n.nurse_id == nurseId || n.id == nurseId));
+            if (nurse && window.catalogAppInstance) {
+                window.catalogAppInstance.bookingForm.booking_type = 'scheduled';
+                window.catalogAppInstance.bookingForm.scheduled_time = slotRange;
                 window.catalogAppInstance.openNurseServicePicker(nurse);
             }
         };

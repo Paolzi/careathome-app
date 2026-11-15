@@ -28,6 +28,15 @@ class Order extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING = 'menunggu_konfirmasi';
+    public const STATUS_ACCEPTED = 'diterima';
+    public const STATUS_ON_THE_WAY = 'dalam_perjalanan';
+    public const STATUS_ARRIVED = 'tiba';
+    public const STATUS_IN_PROGRESS = 'tindakan_berlangsung';
+    public const STATUS_COMPLETED = 'selesai';
+    public const STATUS_CANCELLED = 'dibatalkan';
+    public const STATUS_REJECTED = 'ditolak';
+
     protected $fillable = [
         'order_number',
         'booking_type',

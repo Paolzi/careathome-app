@@ -188,17 +188,22 @@ class OrderApiController extends Controller
             if (! $avail['available']) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Perawat ' . ($nurse->name ?? '') . ' tidak tersedia pada waktu tersebut (' . $avail['reason'] . '). Silakan pilih jam lain atau perawat lain pada Rekomendasi Cerdas.',
+                    'message' => 'Perawat ' . ($nurse->name ?? '') . ' tidak tersedia pada waktu tersebut (' . $avail['reason'] . '). Silakan pilih jam lain atau perawat lain.',
                 ], 422);
             }
 
-            if (isset($validated['latitude']) && isset($validated['longitude'])) {
+            if (isset($validated['distance_km']) && (float) $validated['distance_km'] > 0) {
+                $distanceKm = round((float) $validated['distance_km'], 1);
+            } elseif (isset($validated['latitude']) && isset($validated['longitude'])) {
                 $patientLat = (float) $validated['latitude'];
                 $patientLng = (float) $validated['longitude'];
-                $distanceKm = $profile->distanceTo($patientLat, $patientLng);
+                $nLat = $profile->latitude !== null ? (float) $profile->latitude : -7.3144;
+                $nLng = $profile->longitude !== null ? (float) $profile->longitude : 112.7304;
+                $distanceKm = OsrmRoutingService::getDrivingDistanceKm($nLat, $nLng, $patientLat, $patientLng);
             }
         }
 
+        $distanceKm = max(0.1, round((float) $distanceKm, 1));
         $breakdown = Order::calculatePriceBreakdown((float) $service->price, $distanceKm);
 
         $scheduledTimeDisplay = $validated['scheduled_time'];
@@ -338,17 +343,26 @@ class OrderApiController extends Controller
         $nurseProfile = $order->nurse?->nurseProfile;
         $nurseLat = $nurseProfile && $nurseProfile->latitude !== null
             ? (float) $nurseProfile->latitude
-            : ($patientLat - 0.015);
+            : -7.3144;
         $nurseLng = $nurseProfile && $nurseProfile->longitude !== null
             ? (float) $nurseProfile->longitude
-            : ($patientLng + 0.012);
+            : 112.7304;
 
-        if (abs($nurseLat - $patientLat) < 0.0005 && abs($nurseLng - $patientLng) < 0.0005) {
-            $nurseLat = $patientLat - 0.014;
-            $nurseLng = $patientLng + 0.011;
+        $savedDistanceKm = (float) ($order->distance_km ?: 0);
+
+        // Jika koordinat perawat dan pasien sama persis (atau jarak katalog 0.1 km),
+        // gunakan offset visual sangat kecil (~70 meter = 0.1 km) agar pin tidak bertumpuk
+        // namun jarak tetap akurat 0.1 km sesuai katalog!
+        if ((abs($nurseLat - $patientLat) < 0.0005 && abs($nurseLng - $patientLng) < 0.0005) || ($savedDistanceKm > 0 && $savedDistanceKm <= 0.2)) {
+            $nurseLat = $patientLat - 0.0006;
+            $nurseLng = $patientLng + 0.0005;
         }
 
         $routeData = OsrmRoutingService::getDrivingRoute($nurseLat, $nurseLng, $patientLat, $patientLng, true);
+        $authoritativeDistanceKm = $savedDistanceKm > 0
+            ? round($savedDistanceKm, 1)
+            : round((float) $routeData['distance_km'], 1);
+        $authoritativeDurationMin = max(1, (int) ceil($authoritativeDistanceKm * 3));
 
         return response()->json([
             'status' => 'success',
@@ -374,8 +388,8 @@ class OrderApiController extends Controller
                     'address' => $order->address,
                 ],
                 'routing' => [
-                    'distance_km' => $routeData['distance_km'],
-                    'duration_minutes' => $routeData['duration_minutes'],
+                    'distance_km' => $authoritativeDistanceKm,
+                    'duration_minutes' => $authoritativeDurationMin,
                     'geometry' => $routeData['geometry'],
                     'source' => $routeData['source'],
                 ],
