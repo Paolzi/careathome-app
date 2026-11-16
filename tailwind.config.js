@@ -12,26 +12,33 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['"Plus Jakarta Sans"', 'Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Plus Jakarta Sans', 'Figtree', ...defaultTheme.fontFamily.sans],
             },
             colors: {
+                care: {
+                    cream: '#F9F4EA',
+                    pink: '#FF9ABC',
+                    sage: '#78956A',
+                    lime: '#D1EB8F',
+                    olive: '#46571A',
+                },
                 brand: {
-                    50: '#ecfdf5',
-                    100: '#d1fae5',
-                    200: '#a7f3d0',
-                    300: '#6ee7b7',
-                    400: '#34d399',
-                    500: '#10b981',
-                    600: '#059669',
-                    700: '#047857',
-                    800: '#065f46',
-                    900: '#064e3b',
-                    950: '#022c22',
+                    50: '#F9F4EA',
+                    100: '#D1EB8F',
+                    200: '#b8d48c',
+                    300: '#9ab778',
+                    400: '#78956A',
+                    500: '#78956A',
+                    600: '#5e7a52',
+                    700: '#46571A',
+                    800: '#46571A',
+                    900: '#46571A',
+                    950: '#354312',
                 },
                 navy: {
-                    800: '#0f172a',
-                    900: '#0b1329',
-                    950: '#060a17',
+                    800: '#46571A',
+                    900: '#3b4a16',
+                    950: '#2d3910',
                 }
             }
         },

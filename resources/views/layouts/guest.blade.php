@@ -7,28 +7,23 @@
 
         <title>{{ config('app.name', 'CareAtHome') }} - Platform Layanan On-Demand Perawat Medis</title>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-gradient-to-br from-[#064e3b] via-[#043328] to-[#0b1329] min-h-screen text-slate-100 flex flex-col justify-between selection:bg-emerald-500 selection:text-white relative overflow-x-hidden">
+    <body class="font-sans antialiased bg-[#F9F4EA] min-h-screen text-[#46571A] flex flex-col justify-between selection:bg-[#FF9ABC] selection:text-[#46571A] relative overflow-x-hidden">
         
         <!-- Ambient Background Glows -->
-        <div class="fixed top-0 left-1/4 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="fixed bottom-0 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="fixed top-0 left-1/4 w-96 h-96 bg-[#FF9ABC]/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="fixed bottom-0 right-1/4 w-96 h-96 bg-[#D1EB8F]/25 rounded-full blur-3xl pointer-events-none"></div>
 
         <!-- Top Mini Navigation -->
-        <header class="w-full py-4 px-6 sm:px-10 flex items-center justify-between z-10 border-b border-emerald-800/30 backdrop-blur-md bg-emerald-950/40">
-            <a href="/" class="group flex items-center gap-3 transition-transform hover:scale-105" wire:navigate>
-                <x-application-logo />
+        <header class="sticky top-0 z-40 w-full h-16 px-6 sm:px-10 flex items-center justify-between border-b border-[#78956A]/25 backdrop-blur-md bg-[#FFFDF9]/95 shadow-sm">
+            <a href="/" class="group flex items-center gap-3 transition-transform hover:scale-[1.01]" wire:navigate>
+                <x-application-logo :dark="true" />
             </a>
 
             <div class="flex items-center gap-4 text-sm font-medium">
-                <a href="/" class="text-emerald-200/80 hover:text-white flex items-center gap-1 transition" wire:navigate>
+                <a href="/" class="text-[#46571A] hover:bg-[#D1EB8F]/60 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition" wire:navigate>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
@@ -43,7 +38,7 @@
         </main>
 
         <!-- Footer Note -->
-        <footer class="w-full py-4 text-center text-xs text-emerald-300/60 border-t border-emerald-900/30 z-10">
+        <footer class="w-full py-4 text-center text-xs text-[#78956A] border-t border-[#78956A]/20 bg-[#FFFDF9]/70 z-10">
             CareAtHome &bull; Platform Medis Berlisensi Terdaftar Kemenkes
         </footer>
     </body>
