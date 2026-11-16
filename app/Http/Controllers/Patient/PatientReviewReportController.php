@@ -139,6 +139,21 @@ class PatientReviewReportController extends Controller
             'rating' => $review->rating,
         ]);
 
+        // Kirim notifikasi hasil ulasan pasien ke Perawat terkait
+        try {
+            if ($nurseUser = \App\Models\User::find($order->nurse_id)) {
+                $commentSnippet = $review->comment ? (' — "' . \Illuminate\Support\Str::limit($review->comment, 120) . '"') : '';
+                $nurseUser->notify(new \App\Notifications\SystemActivityNotification(
+                    'patient_review',
+                    "Ulasan Baru ({$review->rating}/5 Bintang) #{$order->order_number}",
+                    "Pasien {$order->patient_name} memberikan rating {$review->rating}/5 untuk pesanan #{$order->order_number}{$commentSnippet}",
+                    ['order_id' => $order->id, 'order_number' => $order->order_number, 'rating' => $review->rating]
+                ));
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         if ($request->wantsJson()) {
             return response()->json([
                 'status' => 'success',

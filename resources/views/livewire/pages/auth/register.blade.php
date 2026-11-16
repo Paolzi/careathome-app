@@ -28,6 +28,10 @@ new #[Layout('layouts.guest')] class extends Component
     public string $str_number = '';
     public string $specialization = 'Perawatan Luka Kronis & Diabetes';
 
+    // Koordinat GPS otomatis saat registrasi
+    public ?float $latitude = null;
+    public ?float $longitude = null;
+
     public function setRole(string $selectedRole): void
     {
         $this->role = $selectedRole;
@@ -80,18 +84,44 @@ new #[Layout('layouts.guest')] class extends Component
                     'verification_status' => 'draft',
                     'is_available' => false,
                     'is_online' => false,
+                    'latitude' => $this->latitude,
+                    'longitude' => $this->longitude,
+                    'location_updated_at' => ($this->latitude !== null && $this->longitude !== null) ? now() : null,
                 ]
             );
             session()->flash('status', 'Pendaftaran akun Mitra Perawat berhasil! Silakan lengkapi berkas legalitas STR & SIP Anda.');
             $this->redirect(route('perawat.verifikasi'), navigate: true);
         } else {
+            if ($this->latitude !== null && $this->longitude !== null) {
+                session([
+                    'patient_last_lat' => $this->latitude,
+                    'patient_last_lng' => $this->longitude,
+                ]);
+            }
             session()->flash('status', 'Pendaftaran akun Pasien berhasil. Selamat datang di CareAtHome!');
             $this->redirect(route('pasien.katalog'), navigate: true);
         }
     }
 }; ?>
 
-<div class="w-full max-w-2xl bg-white/95 backdrop-blur-xl shadow-2xl rounded-2xl border border-emerald-500/20 p-6 sm:p-10 text-slate-800">
+<div class="w-full max-w-2xl bg-white/95 backdrop-blur-xl shadow-2xl rounded-2xl border border-emerald-500/20 p-6 sm:p-10 text-slate-800"
+    x-data
+    x-init="
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = parseFloat(pos.coords.latitude.toFixed(6));
+                    const lng = parseFloat(pos.coords.longitude.toFixed(6));
+                    $wire.set('latitude', lat, false);
+                    $wire.set('longitude', lng, false);
+                    localStorage.setItem('careathome_patient_lat', lat);
+                    localStorage.setItem('careathome_patient_lng', lng);
+                },
+                () => {},
+                { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+            );
+        }
+    ">
     
     <!-- Title & Subtitle -->
     <div class="text-center mb-8">

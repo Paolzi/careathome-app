@@ -235,9 +235,31 @@ class OrderApiController extends Controller
             'total_amount' => $breakdown['total_amount'],
             'commission_amount' => $breakdown['commission_amount'],
             'nurse_earnings' => $breakdown['nurse_earnings'],
-            'status' => 'menunggu_konfirmasi',
+            'status' => $selectedNurseId ? 'diterima' : 'menunggu_konfirmasi',
             'payment_status' => 'unpaid',
         ]);
+
+        // Kirim notifikasi ke Perawat & Pasien
+        try {
+            if ($order->nurse_id && ($nurseUser = \App\Models\User::find($order->nurse_id))) {
+                $nurseUser->notify(new \App\Notifications\SystemActivityNotification(
+                    'order_received',
+                    'Order Baru Masuk #' . $order->order_number,
+                    "Pesanan {$service->name} dari pasien {$order->patient_name} pada {$order->scheduled_date->format('d M Y')} ({$order->scheduled_time}) otomatis masuk ke jadwal Anda.",
+                    ['order_id' => $order->id, 'order_number' => $order->order_number, 'status' => $order->status]
+                ));
+            }
+            if ($order->patient_id && ($patientUser = \App\Models\User::find($order->patient_id))) {
+                $nurseName = $order->nurse?->name ?? 'Mitra Perawat';
+                $patientUser->notify(new \App\Notifications\PatientOrderStatusNotification(
+                    $order,
+                    'diterima',
+                    "Pesanan #{$order->order_number} ({$service->name}) berhasil dibuat dan otomatis diterima oleh {$nurseName}. Silakan lakukan pembayaran Escrow."
+                ));
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -471,6 +493,26 @@ class OrderApiController extends Controller
         $order->cancellation_reason = $reason;
         $order->cancelled_at = now('Asia/Jakarta');
         $order->save();
+
+        try {
+            if ($order->nurse_id && ($nurseUser = \App\Models\User::find($order->nurse_id))) {
+                $nurseUser->notify(new \App\Notifications\SystemActivityNotification(
+                    'order_cancelled',
+                    'Pesanan Dibatalkan #' . $order->order_number,
+                    "Pasien {$order->patient_name} membatalkan pesanan #{$order->order_number}. Alasan: {$reason}",
+                    ['order_id' => $order->id, 'order_number' => $order->order_number, 'status' => 'dibatalkan']
+                ));
+            }
+            if ($order->patient_id && ($patientUser = \App\Models\User::find($order->patient_id))) {
+                $patientUser->notify(new \App\Notifications\PatientOrderStatusNotification(
+                    $order,
+                    'dibatalkan',
+                    "Pesanan #{$order->order_number} telah dibatalkan." . ($refundAmount > 0 ? ' Pengembalian dana 100% sebesar Rp ' . number_format($refundAmount, 0, ',', '.') . ' telah diproses.' : '')
+                ));
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'status' => 'success',

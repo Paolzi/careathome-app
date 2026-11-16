@@ -17,7 +17,8 @@
                         </div> <div class="bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5"> <span class="text-emerald-400"><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span> Waktu Real-Time: <strong x-text="currentWibClock">{{ now('Asia/Jakarta')->format('H:i') }} WIB</strong> </div> </div> </div> </div> </div> <!-- 2.5 SECTION MITRA PERAWAT TERVERIFIKASI & PENJADWALAN (WIB) --> <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-sm space-y-5"> <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4"> <div class="space-y-1"> <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200"> <span><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg></span> <span>Penjadwalan Fleksibel Tanpa Batas Radius • Zona Waktu WIB</span> </div> <h2 class="text-lg font-bold text-slate-900 tracking-tight">Mitra Perawat Terverifikasi &amp; Ketersediaan Jadwal</h2> <p class="text-xs text-slate-500"> Pilih mode <strong>Pesan Sekarang</strong> atau <strong>Pesan Untuk Nanti</strong>. Seluruh perawat terverifikasi dapat dipilih dari jarak manapun dengan estimasi jarak rute jalan raya sebenarnya.
                     </p> </div> <div class="flex flex-wrap items-center gap-2"> <button id="btn-detect-gps" type="button" @click="requestBrowserLocation()"
                         :disabled="loadingNurses"
-                        class="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer"> <span x-show="loadingNurses" class="animate-spin text-sm"><svg class="w-4 h-4 inline-block shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></span> <span> Deteksi Lokasi GPS Saya</span> </button> <!-- Manual Location Dropdown Fallback --> <div class="relative" x-data="{ locDropdown: false }"> <button id="btn-manual-location" type="button" @click="locDropdown = !locDropdown"
+                        class="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer"> <span x-show="loadingNurses" class="animate-spin text-sm"><svg class="w-4 h-4 inline-block shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></span> <svg x-show="!loadingNurses" class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg> <span>Gunakan Lokasi Asli Saya (GPS)</span> </button> <button type="button" @click="openPatientMapPicker()"
+                        class="px-3.5 py-2.5 rounded-xl bg-[#D1EB8F] hover:bg-[#78956A] text-[#46571A] hover:text-[#F9F4EA] border border-[#78956A] text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"> <svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg> <span>Tentukan Titik Rumah di Peta</span> </button> <!-- Manual Location Dropdown Fallback --> <div class="relative" x-data="{ locDropdown: false }"> <button id="btn-manual-location" type="button" @click="locDropdown = !locDropdown"
                             class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                             title="Pilih koordinat acuan manual"> <span><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg></span> <span id="selected-location-label">Pilih Manual</span> <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg> </button> <div x-show="locDropdown" @click.away="locDropdown = false" x-cloak
                             class="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-50 text-xs space-y-1.5"> <p class="font-bold text-slate-800 px-1 text-[11px] uppercase tracking-wider text-slate-400">PILIH TITIK ACUAN:</p> <button type="button"
@@ -207,13 +208,16 @@
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition shrink-0"> <span x-show="!detectingLocation"><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg></span> <span x-show="detectingLocation" class="animate-spin text-xs"><svg class="w-4 h-4 inline-block shrink-0 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></span> <span x-text="detectingLocation ? 'Mencari GPS...' : 'Deteksi Lokasi Saya'"></span> </button> </div> <!-- Alamat Lengkap & Patokan --> <div> <label class="block text-xs font-bold text-slate-700 mb-1.5"> Alamat Lengkap Rumah / Patokan Lokasi <span class="text-rose-500">*</span> </label> <textarea x-model="bookingForm.address"
                             rows="2"
                             placeholder="Jl. Mawar No. 12, RT 03/RW 05 (Pagar hitam samping pos satpam), Kelurahan..."
-                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs"></textarea> </div> <!-- Peta Leaflet Interaktif --> <div> <div class="flex items-center justify-between mb-1.5"> <label class="text-xs font-bold text-slate-700"> Titik Pinpoint Peta Digital (Geser marker untuk menyesuaikan titik)
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs"></textarea> </div> <!-- Pencarian Alamat di Peta (Geocoding OpenStreetMap) --> <div class="flex flex-col sm:flex-row gap-2"> <input type="text" x-model="addressSearchQuery" @keydown.enter.prevent="searchAddressOnMap('booking')"
+                            placeholder="Cari nama jalan / kelurahan / kecamatan untuk memindahkan pin peta..."
+                            class="flex-1 px-3.5 py-2 rounded-xl border border-[#78956A] bg-[#FFFDF9] text-xs text-[#46571A]" /> <button type="button" @click="searchAddressOnMap('booking')" :disabled="searchingAddress"
+                            class="px-4 py-2 rounded-xl bg-[#78956A] hover:bg-[#D1EB8F] text-[#F9F4EA] hover:text-[#46571A] text-xs font-bold transition whitespace-nowrap cursor-pointer"> <span x-text="searchingAddress ? 'Mencari...' : 'Cari Alamat di Peta'"></span> </button> </div> <!-- Peta Leaflet Interaktif --> <div> <div class="flex items-center justify-between mb-1.5"> <label class="text-xs font-bold text-slate-700"> Titik Pinpoint Peta Digital (Geser marker untuk menyesuaikan titik)
                             </label> <span class="text-[11px] text-slate-500 font-medium"> Koordinat: <span class="font-mono text-emerald-700 font-semibold" x-text="bookingForm.latitude + ', ' + bookingForm.longitude"></span> </span> </div> <div id="bookingLeafletMap" class="w-full h-56 rounded-2xl border border-slate-200 shadow-inner z-0"></div> <p class="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1"> <span><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span> Klik di peta atau geser pin merah untuk menggeser titik koordinat penjemputan perawat.
                         </p> </div> <!-- Jarak Rute Jalan Raya Sebenarnya (OSRM) Tanpa Batas Radius 10 KM --> <div class="p-3.5 rounded-2xl border bg-emerald-50/80 border-emerald-200 text-emerald-900 flex items-center justify-between"> <div class="flex items-center gap-3"> <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg"> <span><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg></span> </div> <div> <div class="text-xs font-bold"> <span x-text="selectedNurse ? ('Jarak Rute Jalan dari ' + selectedNurse.name + ':') : 'Jarak Rute Jalan Raya (OSRM):'"></span> <span class="text-sm font-black text-emerald-800" x-text="(bookingForm.distance_km === 0 ? '0.1 km' : bookingForm.distance_km + ' km')"></span> </div> <div class="text-[11px] text-emerald-700"> Dihitung akurat berdasarkan rute jalan raya (OSRM) tanpa batasan radius 10 km.
                                 </div> </div> </div> <div class="text-right"> <span class="text-[10px] uppercase font-bold text-slate-400 block">Ongkos Transport</span> <span class="text-xs font-bold text-emerald-700" x-text="breakdown.formatted.transport_fee"></span> </div> </div> </div> <!-- ==================== STEP 3: RINCIAN BIAYA & KONFIRMASI ==================== --> <div x-show="bookingStep === 3 && !orderSuccess" class="space-y-4"> <div class="border-b border-slate-100 pb-3"> <h4 class="text-sm font-bold text-slate-900">Rincian Biaya (Price Breakdown) &amp; Konfirmasi</h4> <p class="text-xs text-slate-500 mt-0.5">Periksa kembali ringkasan pesanan dan transparansi biaya sebelum mengonfirmasi.</p> </div> <!-- Ringkasan Informasi Pesanan --> <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs"> <div class="grid grid-cols-2 gap-3"> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">Layanan Tindakan</span> <span class="font-bold text-slate-900" x-text="activeService?.name"></span> <span class="text-[11px] text-slate-500 block" x-text="'Durasi: ' + activeService?.estimated_duration"></span> </div> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">Jadwal Kunjungan</span> <span class="font-bold text-slate-900" x-text="formatDisplayDate(bookingForm.scheduled_date)"></span> <span class="text-[11px] text-emerald-700 font-semibold block" x-text="bookingForm.scheduled_time"></span> </div> </div> <div class="border-t border-slate-200/80 pt-2 grid grid-cols-2 gap-3"> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">Nama Pasien &amp; Kontak</span> <span class="font-semibold text-slate-900" x-text="bookingForm.patient_name"></span> <span class="text-[11px] text-slate-500 block" x-text="bookingForm.patient_phone"></span> </div> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">Alamat Kunjungan</span> <span class="text-slate-800 line-clamp-2" x-text="bookingForm.address"></span> </div> </div> <template x-if="bookingForm.clinical_notes"> <div class="border-t border-slate-200/80 pt-2"> <span class="text-[10px] uppercase font-bold text-slate-400 block">Catatan Medis Awal:</span> <p class="text-slate-700 italic" x-text="bookingForm.clinical_notes"></p> </div> </template> </div> <!-- Breakdown Biaya Transparan --> <div class="rounded-2xl border border-slate-200 overflow-hidden text-xs"> <div class="px-4 py-2.5 bg-slate-100/80 font-bold text-slate-700 flex justify-between items-center"> <span>Komponen Rincian Biaya</span> <span>Tarif Transparan</span> </div> <div class="p-4 space-y-2.5 bg-white"> <div class="flex justify-between items-center text-slate-600"> <span>Tarif Tindakan Medis Standar:</span> <span class="font-semibold text-slate-900" x-text="breakdown.formatted.base_price"></span> </div> <div class="flex justify-between items-center text-slate-600"> <span class="flex items-center gap-1"> <span>Ongkos Transportasi GPS:</span> <span class="text-[10px] text-slate-400" x-text="'(' + bookingForm.distance_km + ' km)'"></span> </span> <span class="font-semibold text-slate-900" x-text="breakdown.formatted.transport_fee"></span> </div> <div class="flex justify-between items-center text-slate-600"> <span>Biaya Layanan Aplikasi (Platform Fee):</span> <span class="font-semibold text-slate-900" x-text="breakdown.formatted.platform_fee"></span> </div> <div class="border-t border-slate-200 pt-3 flex justify-between items-baseline"> <div> <span class="text-xs font-bold uppercase tracking-wider text-slate-900 block">Total Tagihan</span> <span class="text-[10px] text-slate-500">Sudah termasuk PPN &amp; seluruh komponen</span> </div> <span class="text-xl font-extrabold text-emerald-700" x-text="breakdown.formatted.total_amount"></span> </div> </div> </div> <!-- Info Perlindungan Escrow --> <div class="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-teal-900 text-xs flex items-start gap-2.5"> <span class="text-lg"><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg></span> <div> <span class="font-bold block">Garansi Perlindungan Rekening Penampung (Escrow)</span> <span class="text-[11px] text-teal-800 leading-relaxed block mt-0.5"> Pembayaran ditampung di rekening bersama platform dan baru diteruskan kepada perawat setelah kunjungan medis terlaksana dan E-Report telah Anda setujui.
-                            </span> </div> </div> </div> <!-- ==================== STEP 4: ORDER CREATED SUCCESS STATE ==================== --> <div x-show="orderSuccess" class="py-6 text-center space-y-4"> <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center text-3xl shadow-sm"> </div> <div> <span class="text-xs uppercase font-bold tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200"> Pesanan Kunjungan Berhasil Dibuat
-                        </span> <h3 class="text-xl font-bold text-slate-900 mt-2">Permintaan Layanan Siap Diteruskan</h3> <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto"> Pesanan Anda telah tercatat ke dalam sistem CareAtHome dan akan segera dikonfirmasi oleh mitra perawat terdekat.
-                        </p> </div> <div class="max-w-md mx-auto p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs space-y-2"> <div class="flex justify-between"> <span class="text-slate-500">Nomor Pesanan:</span> <span class="font-mono font-bold text-slate-900" x-text="createdOrderData?.order_number"></span> </div> <div class="flex justify-between"> <span class="text-slate-500">Layanan:</span> <span class="font-semibold text-slate-900" x-text="activeService?.name"></span> </div> <div class="flex justify-between"> <span class="text-slate-500">Jadwal:</span> <span class="font-semibold text-slate-900" x-text="createdOrderData?.scheduled_date + ' (' + createdOrderData?.scheduled_time + ')'"></span> </div> <div class="flex justify-between"> <span class="text-slate-500">Total Biaya:</span> <span class="font-bold text-emerald-700" x-text="createdOrderData?.price_breakdown?.formatted?.total_amount"></span> </div> <div class="flex justify-between items-center pt-2 border-t border-slate-200"> <span class="text-slate-500">Status Awal:</span> <span class="px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-[11px]"> Menunggu Konfirmasi Perawat
+                            </span> </div> </div> </div> <!-- ==================== STEP 4: ORDER CREATED SUCCESS STATE ==================== --> <div x-show="orderSuccess" class="py-6 text-center space-y-4"> <div class="w-16 h-16 rounded-full bg-[#D1EB8F] text-[#46571A] border border-[#78956A] mx-auto flex items-center justify-center shadow-sm"> <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> </div> <div> <span class="text-xs uppercase font-bold tracking-wider text-[#46571A] bg-[#D1EB8F] px-3 py-1 rounded-full border border-[#78956A]"> Pesanan Kunjungan Berhasil Dibuat
+                        </span> <h3 class="text-xl font-bold text-[#46571A] mt-2">Pesanan Otomatis Diterima Perawat</h3> <p class="text-xs text-[#78956A] mt-1 max-w-md mx-auto"> Pesanan Anda telah tercatat di sistem CareAtHome dan langsung diterima oleh mitra perawat pilihan Anda. Silakan lanjutkan pembayaran Escrow.
+                        </p> </div> <div class="max-w-md mx-auto p-4 rounded-2xl bg-[#F9F4EA] border border-[#78956A]/50 text-left text-xs space-y-2"> <div class="flex justify-between"> <span class="text-[#78956A]">Nomor Pesanan:</span> <span class="font-mono font-bold text-[#46571A]" x-text="createdOrderData?.order_number"></span> </div> <div class="flex justify-between"> <span class="text-[#78956A]">Layanan:</span> <span class="font-semibold text-[#46571A]" x-text="activeService?.name"></span> </div> <div class="flex justify-between"> <span class="text-[#78956A]">Jadwal:</span> <span class="font-semibold text-[#46571A]" x-text="createdOrderData?.scheduled_date + ' (' + createdOrderData?.scheduled_time + ')'"></span> </div> <div class="flex justify-between"> <span class="text-[#78956A]">Total Biaya:</span> <span class="font-bold text-[#46571A]" x-text="createdOrderData?.price_breakdown?.formatted?.total_amount"></span> </div> <div class="flex justify-between items-center pt-2 border-t border-[#78956A]/30"> <span class="text-[#78956A]">Status Pesanan:</span> <span class="px-2.5 py-0.5 rounded-full bg-[#D1EB8F] border border-[#78956A] text-[#46571A] font-bold text-[11px]"> Diterima Perawat (Siap Bayar)
                             </span> </div> </div> </div> </div> <!-- Modal Footer Controls --> <div class="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0"> <!-- Left Action --> <div> <button type="button"
                         x-show="bookingStep > 1 && !orderSuccess"
                         @click="prevStep()"
@@ -283,7 +287,52 @@
                 </button> <button type="button"
                     @click="scheduleModalOpen = false; openNurseBookingFromScheduleModal(scheduleModalNurse)"
                     class="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition cursor-pointer"> Pilih Jam Tersedia &amp; Pesan &rarr;
-                </button> </div> </div> </div> <!-- 9. FOOTER --> <footer class="mt-auto border-t border-slate-200 bg-white py-6"> <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500"> CareAtHome Health-Tech Platform &copy; 2026. Platform Layanan Keperawatan On-Demand Terstandar Kemenkes RI (Zona Waktu WIB).
+                </button> </div> </div> </div>
+
+    <!-- 8.5 MODAL: TENTUKAN TITIK RUMAH PASIEN DI PETA -->
+    <div x-show="patientMapPickerOpen" x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+        <div @click.away="patientMapPickerOpen = false"
+            class="bg-[#FFFDF9] rounded-3xl max-w-2xl w-full shadow-2xl border border-[#78956A] overflow-hidden text-[#46571A] flex flex-col">
+            <div class="px-6 py-4 bg-[#78956A] text-[#F9F4EA] flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-[#D1EB8F]">Kalibrasi Lokasi Rumah Pasien</span>
+                    <h3 class="text-base font-bold mt-0.5">Tentukan Titik Lokasi Asli Rumah Anda</h3>
+                </div>
+                <button type="button" @click="patientMapPickerOpen = false" class="p-1.5 rounded-xl hover:bg-white/10 cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-3 text-xs">
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" x-model="addressSearchQuery" @keydown.enter.prevent="searchAddressOnMap('picker')"
+                        placeholder="Ketik alamat rumah / jalan / kecamatan (mis: Ketintang Surabaya)..."
+                        class="flex-1 px-3.5 py-2 rounded-xl border border-[#78956A] bg-[#FFFDF9] text-xs text-[#46571A]" />
+                    <button type="button" @click="searchAddressOnMap('picker')" :disabled="searchingAddress"
+                        class="px-4 py-2 rounded-xl bg-[#78956A] hover:bg-[#D1EB8F] text-[#F9F4EA] hover:text-[#46571A] font-bold transition cursor-pointer">
+                        <span x-text="searchingAddress ? 'Mencari...' : 'Cari Alamat'"></span>
+                    </button>
+                    <button type="button" @click="detectPickerGps()"
+                        class="px-4 py-2 rounded-xl bg-[#D1EB8F] hover:bg-[#FF9ABC] text-[#46571A] border border-[#78956A] font-bold transition cursor-pointer">
+                        GPS Saya
+                    </button>
+                </div>
+                <div id="patientPickerLeafletMap" class="w-full h-64 rounded-2xl border border-[#78956A] z-0"></div>
+                <div class="flex items-center justify-between text-[11px] text-[#78956A]">
+                    <span>Klik di peta atau geser pin ke posisi rumah asli Anda.</span>
+                    <span class="font-mono font-bold text-[#46571A]" x-text="(patientPickerLat ?? '-') + ', ' + (patientPickerLng ?? '-')"></span>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-[#F9F4EA] border-t border-[#78956A]/30 flex items-center justify-end gap-2">
+                <button type="button" @click="patientMapPickerOpen = false"
+                    class="px-4 py-2 rounded-xl border border-[#78956A] bg-[#FFFDF9] text-xs font-bold text-[#46571A] cursor-pointer">Batal</button>
+                <button type="button" @click="savePatientMapPicker()"
+                    class="px-5 py-2 rounded-xl bg-[#FF9ABC] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A] text-xs font-bold shadow-sm cursor-pointer">Simpan Titik Rumah &amp; Hitung Ulang Jarak</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. FOOTER --> <footer class="mt-auto border-t border-slate-200 bg-white py-6"> <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500"> CareAtHome Health-Tech Platform &copy; 2026. Platform Layanan Keperawatan On-Demand Terstandar Kemenkes RI (Zona Waktu WIB).
         </div> </footer> <!-- Alpine App Logic for Instant Filtering, Search, and Multi-Step Booking --> <script> function patientCatalogApp() {
             const today = @json(now('Asia/Jakarta')->toDateString());
 
@@ -300,6 +349,13 @@
                 compareModalOpen: false,
                 nurseServicePickerOpen: false,
                 scheduleModalOpen: false,
+                patientMapPickerOpen: false,
+                patientPickerMap: null,
+                patientPickerMarker: null,
+                patientPickerLat: null,
+                patientPickerLng: null,
+                addressSearchQuery: '',
+                searchingAddress: false,
                 scheduleModalNurse: null,
                 pickerNurse: null,
                 compareList: [],
@@ -386,12 +442,146 @@
                     // Muat perawat terdekat via AJAX
                     this.fetchNearbyNurses(this.nearbyNurses.length === 0);
 
+                    // Auto-refresh koordinat GPS asli pasien saat halaman dibuka
+                    this.autoDetectLocationOnLoad();
+
                     // Polling real-time background setiap 60 detik
                     setInterval(() => {
                         if (!this.loadingNurses && !this.bookingModalOpen) {
                             this.fetchNearbyNurses(false);
                         }
                     }, 60000);
+                },
+
+                autoDetectLocationOnLoad() {
+                    if (!navigator.geolocation) return;
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            const lat = parseFloat(pos.coords.latitude.toFixed(6));
+                            const lng = parseFloat(pos.coords.longitude.toFixed(6));
+                            const changed = this.patientLat === null ||
+                                Math.abs(this.patientLat - lat) > 0.0005 ||
+                                Math.abs(this.patientLng - lng) > 0.0005;
+                            this.patientLat = lat;
+                            this.patientLng = lng;
+                            this.hasPatientLocation = true;
+                            this.bookingForm.latitude = lat;
+                            this.bookingForm.longitude = lng;
+                            localStorage.setItem('careathome_patient_lat', lat);
+                            localStorage.setItem('careathome_patient_lng', lng);
+                            const labelEl = document.getElementById('selected-location-label');
+                            if (labelEl) labelEl.textContent = 'Lokasi GPS Asli';
+                            if (changed) {
+                                this.fetchNearbyNurses(false);
+                            }
+                        },
+                        () => {
+                            // Diam-diam gunakan lokasi tersimpan / fallback jika izin GPS belum diberikan
+                        },
+                        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+                    );
+                },
+
+                openPatientMapPicker() {
+                    this.patientPickerLat = this.patientLat ?? -7.3144;
+                    this.patientPickerLng = this.patientLng ?? 112.7304;
+                    this.patientMapPickerOpen = true;
+                    this.$nextTick(() => {
+                        if (typeof L === 'undefined') return;
+                        if (!this.patientPickerMap) {
+                            this.patientPickerMap = L.map('patientPickerLeafletMap').setView([this.patientPickerLat, this.patientPickerLng], 15);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 19,
+                                attribution: '&copy; OpenStreetMap'
+                            }).addTo(this.patientPickerMap);
+                            this.patientPickerMarker = L.marker([this.patientPickerLat, this.patientPickerLng], { draggable: true }).addTo(this.patientPickerMap);
+                            this.patientPickerMarker.on('dragend', (e) => {
+                                const pos = e.target.getLatLng();
+                                this.patientPickerLat = parseFloat(pos.lat.toFixed(6));
+                                this.patientPickerLng = parseFloat(pos.lng.toFixed(6));
+                            });
+                            this.patientPickerMap.on('click', (e) => {
+                                this.patientPickerMarker.setLatLng(e.latlng);
+                                this.patientPickerLat = parseFloat(e.latlng.lat.toFixed(6));
+                                this.patientPickerLng = parseFloat(e.latlng.lng.toFixed(6));
+                            });
+                        } else {
+                            this.patientPickerMap.setView([this.patientPickerLat, this.patientPickerLng], 15);
+                            if (this.patientPickerMarker) {
+                                this.patientPickerMarker.setLatLng([this.patientPickerLat, this.patientPickerLng]);
+                            }
+                            setTimeout(() => this.patientPickerMap.invalidateSize(), 120);
+                        }
+                    });
+                },
+
+                detectPickerGps() {
+                    if (!navigator.geolocation) {
+                        showLocationToast('Browser tidak mendukung GPS.', 'warning');
+                        return;
+                    }
+                    showLocationToast('Mendeteksi koordinat GPS asli...', 'info');
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            this.patientPickerLat = parseFloat(pos.coords.latitude.toFixed(6));
+                            this.patientPickerLng = parseFloat(pos.coords.longitude.toFixed(6));
+                            if (this.patientPickerMap && this.patientPickerMarker) {
+                                this.patientPickerMap.setView([this.patientPickerLat, this.patientPickerLng], 16);
+                                this.patientPickerMarker.setLatLng([this.patientPickerLat, this.patientPickerLng]);
+                            }
+                            showLocationToast('Koordinat GPS asli ditemukan.', 'success');
+                        },
+                        (err) => {
+                            showLocationToast('Gagal membaca GPS: ' + (err.message || 'Izin ditolak'), 'warning');
+                        },
+                        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                    );
+                },
+
+                savePatientMapPicker() {
+                    if (this.patientPickerLat !== null && this.patientPickerLng !== null) {
+                        this.setManualLocation(this.patientPickerLat, this.patientPickerLng, 'Titik Rumah Saya');
+                    }
+                    this.patientMapPickerOpen = false;
+                },
+
+                async searchAddressOnMap(mode = 'booking') {
+                    const q = (this.addressSearchQuery || '').trim();
+                    if (!q) return;
+                    this.searchingAddress = true;
+                    try {
+                        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=id&q=${encodeURIComponent(q)}`;
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (Array.isArray(data) && data.length > 0) {
+                            const lat = parseFloat(parseFloat(data[0].lat).toFixed(6));
+                            const lng = parseFloat(parseFloat(data[0].lon).toFixed(6));
+                            if (mode === 'picker') {
+                                this.patientPickerLat = lat;
+                                this.patientPickerLng = lng;
+                                if (this.patientPickerMap && this.patientPickerMarker) {
+                                    this.patientPickerMap.setView([lat, lng], 16);
+                                    this.patientPickerMarker.setLatLng([lat, lng]);
+                                }
+                            } else {
+                                if (!this.bookingForm.address || this.bookingForm.address.trim().length < 5) {
+                                    this.bookingForm.address = data[0].display_name;
+                                }
+                                if (this.map && this.marker) {
+                                    this.map.setView([lat, lng], 16);
+                                    this.marker.setLatLng([lat, lng]);
+                                }
+                                this.updateLocation(lat, lng);
+                            }
+                            showLocationToast('Lokasi alamat ditemukan di peta.', 'success');
+                        } else {
+                            showLocationToast('Alamat tidak ditemukan. Coba kata kunci jalan/kecamatan/kota.', 'warning');
+                        }
+                    } catch (e) {
+                        showLocationToast('Gagal mencari alamat di peta.', 'warning');
+                    } finally {
+                        this.searchingAddress = false;
+                    }
                 },
 
                 updateWibClock() {
@@ -938,20 +1128,15 @@
                         const container = document.getElementById('bookingLeafletMap');
                         if (!container) return;
 
-                        let lat = this.bookingForm.latitude;
-                        let lng = this.bookingForm.longitude;
+                        let lat = this.patientLat ?? this.bookingForm.latitude;
+                        let lng = this.patientLng ?? this.bookingForm.longitude;
 
                         if (lat === null || lat === -6.2088) {
-                            if (this.patientLat !== null && this.patientLat !== -6.2088) {
-                                lat = this.patientLat;
-                                lng = this.patientLng;
-                            } else {
-                                lat = -7.3144;
-                                lng = 112.7304;
-                            }
-                            this.bookingForm.latitude = lat;
-                            this.bookingForm.longitude = lng;
+                            lat = -7.3144;
+                            lng = 112.7304;
                         }
+                        this.bookingForm.latitude = lat;
+                        this.bookingForm.longitude = lng;
 
                         if (!this.map) {
                             this.map = L.map('bookingLeafletMap').setView([lat, lng], 15);
@@ -1004,10 +1189,11 @@
                     navigator.geolocation.getCurrentPosition(
                         (position) => {
                             this.detectingLocation = false;
-                            const lat = position.coords.latitude;
-                            const lng = position.coords.longitude;
+                            const lat = parseFloat(position.coords.latitude.toFixed(6));
+                            const lng = parseFloat(position.coords.longitude.toFixed(6));
 
                             this.updateLocation(lat, lng);
+                            this.fetchNearbyNurses(false);
 
                             if (this.map && this.marker) {
                                 this.map.setView([lat, lng], 15);
@@ -1018,7 +1204,7 @@
                             this.detectingLocation = false;
                             this.errorMessage = 'Gagal mendeteksi lokasi GPS: ' + (err.message || 'Izin akses lokasi ditolak');
                         },
-                        { timeout: 10000, enableHighAccuracy: true }
+                        { timeout: 10000, enableHighAccuracy: true, maximumAge: 0 }
                     );
                 },
 
@@ -1027,6 +1213,11 @@
                     const pLng = parseFloat(Number(lng).toFixed(6));
                     this.bookingForm.latitude = pLat;
                     this.bookingForm.longitude = pLng;
+                    this.patientLat = pLat;
+                    this.patientLng = pLng;
+                    this.hasPatientLocation = true;
+                    localStorage.setItem('careathome_patient_lat', pLat);
+                    localStorage.setItem('careathome_patient_lng', pLng);
 
                     let nLat = -7.3144;
                     let nLng = 112.7304;

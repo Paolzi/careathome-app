@@ -35,6 +35,8 @@ Route::view('profile', 'profile')
     ->name('profile');
 
 Route::middleware(['auth'])->group(function () {
+    Route::post('notifications/read-all', [\App\Http\Controllers\NurseDocumentController::class, 'markAllNotificationsAsRead'])->name('notifications.read-all');
+
     // Portal Perawat (Role: perawat atau admin)
     Route::middleware(['role:perawat|admin'])->group(function () {
         Route::get('perawat/dashboard', [\App\Http\Controllers\Nurse\NurseDashboardController::class, 'index'])->name('perawat.dashboard');
