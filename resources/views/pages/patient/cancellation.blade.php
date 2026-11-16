@@ -6,11 +6,6 @@
     <title>Pusat Pembatalan Pesanan &amp; Refund Escrow - CareAtHome</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
@@ -19,72 +14,11 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col"
+<body class="bg-[#F9F4EA] text-[#46571A] font-sans antialiased min-h-screen flex flex-col"
     x-data="patientCancellationApp()">
 
     <!-- 1. TOP NAVBAR -->
-    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                
-                <!-- Left: Brand Logo & Portal Tag -->
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 group">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <span class="text-lg font-extrabold text-slate-900 tracking-tight leading-none block">
-                                Care<span class="text-emerald-600">AtHome</span>
-                            </span>
-                            <span class="text-[10px] uppercase tracking-wider font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60 mt-0.5 inline-block">
-                                Portal Pasien
-                            </span>
-                        </div>
-                    </a>
-
-                    <!-- Nav separator -->
-                    <div class="hidden sm:block h-6 w-px bg-slate-200 ml-2"></div>
-
-                    <!-- Desktop Nav Links -->
-                    <nav class="hidden sm:flex items-center space-x-1 ml-2">
-                        <a href="{{ route('dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            Dashboard
-                        </a>
-                        <a href="{{ route('pasien.katalog') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            Katalog Layanan
-                        </a>
-                        <a href="{{ route('pasien.pesanan') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            Jadwal &amp; Detail Booking
-                        </a>
-                        <a href="{{ route('pasien.pembayaran') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1.5">
-                            <span>Pembayaran Escrow</span>
-                            <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Escrow</span>
-                        </a>
-                        <a href="{{ route('pasien.pembatalan') }}" class="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 transition">
-                            Pembatalan &amp; Refund
-                        </a>
-                    </nav>
-                </div>
-
-                <!-- Right Actions: User Info -->
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold">
-                            {{ substr(auth()->user()?->name ?? 'P', 0, 1) }}
-                        </div>
-                        <div class="hidden lg:block text-left">
-                            <span class="text-xs font-bold text-slate-800 block leading-tight">{{ auth()->user()?->name ?? 'Pasien' }}</span>
-                            <span class="text-[10px] text-slate-500 block leading-tight">Pengguna Pasien</span>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </header>
+    <x-careathome-navbar />
 
     <!-- 2. MAIN CONTAINER -->
     <main class="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -120,8 +54,10 @@
 
         <!-- 3. ATURAN PEMBATALAN & GARANSI REFUND ESCROW -->
         <div class="p-5 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3 text-xs leading-relaxed">
-            <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                <span>🛡️</span>
+            <h3 class="font-bold text-[#46571A] flex items-center gap-2">
+                <svg class="w-4 h-4 text-[#78956A]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
                 <span>Ketentuan Garansi 100% Pengembalian Dana (Escrow Protection)</span>
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-600 pt-1">
@@ -153,30 +89,36 @@
             </div>
 
             @if ($cancellableOrders->isEmpty())
-                <div class="p-8 rounded-3xl bg-white border border-slate-200 text-center space-y-2">
-                    <span class="text-3xl block">📋</span>
-                    <h4 class="text-sm font-bold text-slate-800">Tidak Ada Pesanan yang Memenuhi Syarat Pembatalan</h4>
-                    <p class="text-xs text-slate-500 max-w-md mx-auto">
+                <div class="p-8 rounded-3xl bg-[#FFFDF9] border border-[#78956A] text-center space-y-2">
+                    <div class="w-12 h-12 rounded-2xl bg-[#F9F4EA] border border-[#78956A]/50 flex items-center justify-center mx-auto text-[#78956A]">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+                        </svg>
+                    </div>
+                    <h4 class="text-sm font-bold text-[#46571A]">Tidak Ada Pesanan yang Memenuhi Syarat Pembatalan</h4>
+                    <p class="text-xs text-[#78956A] max-w-md mx-auto">
                         Saat ini Anda tidak memiliki pesanan kunjungan aktif yang berstatus menunggu atau diterima.
                     </p>
                 </div>
             @else
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     @foreach ($cancellableOrders as $order)
-                        <div class="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 shadow-sm flex flex-col justify-between">
+                        <div class="bg-[#FFFDF9] rounded-3xl border border-[#78956A] p-6 space-y-4 shadow-sm flex flex-col justify-between">
                             <div class="space-y-3">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl">
-                                            {{ $order->serviceCatalog->image_emoji ?? '🩺' }}
+                                        <div class="w-10 h-10 rounded-xl bg-[#D1EB8F] border border-[#78956A] text-[#46571A] flex items-center justify-center">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                                            </svg>
                                         </div>
                                         <div>
-                                            <span class="text-[10px] font-mono font-bold text-slate-400">{{ $order->order_number }}</span>
-                                            <h4 class="text-sm font-bold text-slate-900 leading-snug">{{ $order->serviceCatalog->name ?? 'Tindakan Keperawatan' }}</h4>
+                                            <span class="text-[10px] font-mono font-bold text-[#78956A]">{{ $order->order_number }}</span>
+                                            <h4 class="text-sm font-bold text-[#46571A] leading-snug">{{ $order->serviceCatalog->name ?? 'Tindakan Keperawatan' }}</h4>
                                         </div>
                                     </div>
-                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold {{ $order->payment_status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}">
-                                        {{ $order->payment_status === 'paid' ? '🛡️ Dana di Escrow' : 'Belum Bayar' }}
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border border-[#78956A]/50 {{ $order->payment_status === 'paid' ? 'bg-[#D1EB8F] text-[#46571A]' : 'bg-[#F9F4EA] text-[#78956A]' }}">
+                                        {{ $order->payment_status === 'paid' ? 'Dana di Escrow' : 'Belum Bayar' }}
                                     </span>
                                 </div>
 
@@ -224,10 +166,14 @@
             </div>
 
             @if ($cancelledOrders->isEmpty())
-                <div class="p-10 rounded-3xl bg-white border border-slate-200 text-center space-y-2 max-w-lg mx-auto">
-                    <span class="text-4xl block">🎉</span>
-                    <h4 class="text-sm font-bold text-slate-800">Belum Ada Riwayat Pembatalan</h4>
-                    <p class="text-xs text-slate-500">
+                <div class="p-10 rounded-3xl bg-[#FFFDF9] border border-[#78956A] text-center space-y-2 max-w-lg mx-auto">
+                    <div class="w-12 h-12 rounded-2xl bg-[#D1EB8F] border border-[#78956A] flex items-center justify-center mx-auto text-[#46571A]">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h4 class="text-sm font-bold text-[#46571A]">Belum Ada Riwayat Pembatalan</h4>
+                    <p class="text-xs text-[#78956A]">
                         Seluruh pesanan Anda berjalan sesuai jadwal atau belum pernah ada riwayat pembatalan transaksi.
                     </p>
                 </div>
@@ -255,9 +201,11 @@
                                 <p class="text-rose-800 italic">{{ $order->cancellation_reason ?: 'Dibatalkan oleh pasien.' }}</p>
 
                                 @if ($order->refund_status === 'refunded' || $order->payment_status === 'refunded')
-                                    <div class="pt-2 border-t border-rose-200 flex items-center justify-between text-emerald-800 font-bold">
+                                    <div class="pt-2 border-t border-[#78956A]/30 flex items-center justify-between text-[#46571A] font-bold">
                                         <span class="flex items-center gap-1.5">
-                                            <span>🛡️</span>
+                                            <svg class="w-4 h-4 text-[#78956A]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                            </svg>
                                             <span>Refund 100% Berhasil</span>
                                         </span>
                                         <span class="text-sm">Rp {{ number_format($order->refund_amount ?: $order->total_amount, 0, ',', '.') }}</span>
@@ -321,7 +269,9 @@
                     :class="selectedOrder?.payment_status === 'paid' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-700'">
                     <template x-if="selectedOrder?.payment_status === 'paid'">
                         <div class="flex items-start gap-3">
-                            <span class="text-2xl">🛡️</span>
+                            <svg class="w-6 h-6 text-[#78956A] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                            </svg>
                             <div class="space-y-1">
                                 <span class="font-bold block text-emerald-950">Jaminan 100% Pengembalian Dana Escrow</span>
                                 <p class="text-emerald-800">
@@ -403,8 +353,11 @@
                     Kembali
                 </button>
                 <button type="button" @click="submitCancel()" :disabled="processingCancel"
-                    class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow transition flex items-center gap-2">
-                    <span x-show="processingCancel" class="animate-spin text-sm">⏳</span>
+                    class="px-5 py-2 rounded-xl bg-[#FF9ABC] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A] text-xs font-bold shadow transition flex items-center gap-2 cursor-pointer">
+                    <svg x-show="processingCancel" class="animate-spin w-4 h-4 text-[#46571A]" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                     <span x-text="processingCancel ? 'Memproses Pembatalan & Refund...' : (selectedOrder?.payment_status === 'paid' ? 'Batalkan & Refund Escrow' : 'Konfirmasi Batalkan')"></span>
                 </button>
             </div>

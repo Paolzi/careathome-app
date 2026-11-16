@@ -6,86 +6,19 @@
     <title>Tagihan &amp; Pembayaran Langsung - CareAtHome</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
     <style>
         [x-cloak] { display: none !important; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col"
+<body class="bg-[#F9F4EA] text-[#46571A] font-sans antialiased min-h-screen flex flex-col"
     x-data="patientPaymentTableApp()">
 
     <!-- 1. TOP NAVBAR PASIEN -->
-    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                
-                <!-- Left: Brand Logo & Portal Tag -->
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 group">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <span class="text-lg font-extrabold text-slate-900 tracking-tight leading-none block">
-                                Care<span class="text-emerald-600">AtHome</span>
-                            </span>
-                            <span class="text-[10px] uppercase tracking-wider font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60 mt-0.5 inline-block">
-                                Portal Pasien
-                            </span>
-                        </div>
-                    </a>
-
-                    <!-- Nav separator -->
-                    <div class="hidden sm:block h-6 w-px bg-slate-200 ml-2"></div>
-
-                    <!-- Desktop Nav Links -->
-                    <nav class="hidden sm:flex items-center space-x-1 ml-2">
-                        <a href="{{ route('dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            Dashboard
-                        </a>
-                        <a href="{{ route('pasien.katalog') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            Katalog Layanan
-                        </a>
-                        <a href="{{ route('pasien.pesanan') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            Riwayat Layanan
-                        </a>
-                        <a href="{{ route('pasien.pembayaran') }}" class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 transition flex items-center gap-1.5">
-                            <span>Tagihan &amp; Pembayaran</span>
-                            <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Direct Pay</span>
-                        </a>
-                        <a href="{{ route('pasien.pembatalan') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:text-rose-900 hover:bg-rose-50 transition">
-                            Pembatalan
-                        </a>
-                    </nav>
-                </div>
-
-                <!-- Right Actions: User Info -->
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold">
-                            {{ substr(auth()->user()?->name ?? 'P', 0, 1) }}
-                        </div>
-                        <div class="hidden lg:block text-left">
-                            <span class="text-xs font-bold text-slate-800 block leading-tight">{{ auth()->user()?->name ?? 'Pasien' }}</span>
-                            <span class="text-[10px] text-slate-500 block leading-tight">Pasien Terdaftar</span>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </header>
+    <x-careathome-navbar />
 
     <!-- 2. MAIN CONTAINER -->
     <main class="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -121,13 +54,18 @@
 
         <!-- Feedback Alert Toast -->
         <div x-show="alertMessage" x-cloak
-            class="p-4 rounded-2xl flex items-center justify-between shadow-lg transition-all"
-            :class="alertType === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'">
+            class="p-4 rounded-2xl flex items-center justify-between shadow-lg transition-all border border-[#78956A]"
+            :class="alertType === 'success' ? 'bg-[#D1EB8F] text-[#46571A]' : 'bg-[#FF9ABC] text-[#46571A]'">
             <div class="flex items-center gap-3">
-                <span class="text-xl font-black" x-text="alertType === 'success' ? '✓' : '⚠️'"></span>
+                <svg x-show="alertType === 'success'" class="w-5 h-5 text-[#46571A] shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <svg x-show="alertType !== 'success'" class="w-5 h-5 text-[#46571A] shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
                 <span class="text-xs font-semibold" x-text="alertMessage"></span>
             </div>
-            <button @click="alertMessage = ''" class="text-white/80 hover:text-white text-xs font-bold px-2 py-1">Tutup</button>
+            <button @click="alertMessage = ''" class="text-[#46571A]/80 hover:text-[#46571A] text-xs font-bold px-2 py-1">Tutup</button>
         </div>
 
         <!-- 3. TABEL PEMBAYARAN INSTAN (DIRECT INSTANT PAYMENT TABLE) -->
@@ -153,8 +91,10 @@
 
             @if ($unpaidOrders->isEmpty())
                 <div class="p-12 text-center space-y-4">
-                    <div class="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl mx-auto shadow-inner">
-                        ✓
+                    <div class="w-16 h-16 rounded-3xl bg-[#D1EB8F] text-[#46571A] border border-[#78956A] flex items-center justify-center mx-auto">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                     </div>
                     <div class="space-y-1">
                         <h3 class="text-base font-bold text-slate-900">Semua Tagihan Anda Telah Berstatus Lunas</h3>
@@ -174,8 +114,7 @@
             @else
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border-collapse">
-                        <!-- Dark / Contrast Header -->
-                        <thead class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white text-[11px] uppercase tracking-wider font-extrabold">
+                        <thead class="bg-[#78956A] text-[#F9F4EA] text-[11px] uppercase tracking-wider font-extrabold">
                             <tr>
                                 <th class="py-3.5 px-4 font-bold">No. Pesanan &amp; Layanan</th>
                                 <th class="py-3.5 px-4 font-bold">Jadwal Kunjungan</th>
@@ -183,7 +122,7 @@
                                 <th class="py-3.5 px-4 font-bold text-right">Tarif Tindakan</th>
                                 <th class="py-3.5 px-4 font-bold text-right">Transport GPS</th>
                                 <th class="py-3.5 px-4 font-bold text-right">Biaya Platform</th>
-                                <th class="py-3.5 px-4 font-bold text-right text-emerald-300">Total Akhir</th>
+                                <th class="py-3.5 px-4 font-bold text-right text-[#D1EB8F]">Total Akhir</th>
                                 <th class="py-3.5 px-4 font-bold text-center">Status</th>
                                 <th class="py-3.5 px-4 font-bold text-center">Aksi Langsung</th>
                             </tr>
@@ -201,12 +140,18 @@
                                     <td class="py-4 px-4">
                                         <div class="space-y-0.5">
                                             <span class="font-mono text-[10px] font-bold text-slate-400 block">{{ $order->order_number }}</span>
-                                            <div class="flex items-center gap-1.5 font-extrabold text-slate-900 text-xs">
-                                                <span>{{ $order->serviceCatalog->image_emoji ?? '🩺' }}</span>
+                                            <div class="flex items-center gap-1.5 font-extrabold text-[#46571A] text-xs">
+                                                <svg class="w-4 h-4 text-[#78956A] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                                                </svg>
                                                 <span>{{ $order->serviceCatalog->name ?? 'Tindakan Keperawatan' }}</span>
                                             </div>
-                                            <span class="text-[10px] text-slate-500 block truncate max-w-[180px]" title="{{ $order->address }}">
-                                                📍 {{ $order->address }}
+                                            <span class="text-[10px] text-[#78956A] flex items-center gap-1 truncate max-w-[180px]" title="{{ $order->address }}">
+                                                <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                                </svg>
+                                                <span class="truncate">{{ $order->address }}</span>
                                             </span>
                                         </div>
                                     </td>
@@ -267,8 +212,10 @@
                                         <span x-show="!isRowPaid" class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs inline-block">
                                             Belum Dibayar
                                         </span>
-                                        <span x-show="isRowPaid" x-cloak class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs inline-flex items-center justify-center gap-1">
-                                            <span>✓</span>
+                                        <span x-show="isRowPaid" x-cloak class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#D1EB8F] text-[#46571A] border border-[#78956A] inline-flex items-center justify-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
                                             <span>Lunas (Paid)</span>
                                         </span>
                                     </td>
@@ -279,19 +226,26 @@
                                             x-show="!isRowPaid"
                                             :disabled="isRowPaying"
                                             @click="payOrderRow({{ $order->id }}, '{{ $order->order_number }}', $data)"
-                                            class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs shadow-md shadow-emerald-500/20 transition-all transform active:scale-95 disabled:opacity-50 inline-flex items-center gap-1.5 mx-auto cursor-pointer">
+                                            class="px-4 py-2 rounded-xl bg-[#FF9ABC] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A] font-extrabold text-xs shadow-sm transition-all transform active:scale-95 disabled:opacity-50 inline-flex items-center gap-1.5 mx-auto cursor-pointer">
                                             <span x-show="!isRowPaying" class="inline-flex items-center gap-1.5">
-                                                <span>⚡</span>
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                                                </svg>
                                                 <span>Bayar Sekarang</span>
                                             </span>
                                             <span x-show="isRowPaying" x-cloak class="inline-flex items-center gap-1.5">
-                                                <span class="animate-spin">⏳</span>
+                                                <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
                                                 <span>Memproses...</span>
                                             </span>
                                         </button>
 
-                                        <span x-show="isRowPaid" x-cloak class="text-[11px] font-bold text-emerald-600 inline-flex items-center justify-center gap-1">
-                                            <span>🎉</span>
+                                        <span x-show="isRowPaid" x-cloak class="text-[11px] font-bold text-[#46571A] inline-flex items-center justify-center gap-1">
+                                            <svg class="w-3.5 h-3.5 text-[#78956A]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
                                             <span>Pembayaran Selesai</span>
                                         </span>
                                     </td>
@@ -306,7 +260,11 @@
             <!-- Footer Penjelasan Sistem -->
             <div class="p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
                 <div class="flex items-center gap-2">
-                    <span class="p-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs">🛡️</span>
+                    <span class="p-1.5 rounded-lg bg-[#D1EB8F] text-[#46571A] border border-[#78956A]">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                        </svg>
+                    </span>
                     <span>Direct Simulated Instant Settlement &bull; Alokasi Saldo Otomatis (85% Perawat + 15% Platform).</span>
                 </div>
                 <div class="text-[11px] text-slate-400">
@@ -373,8 +331,11 @@
                                         Rp {{ number_format($paidBreakdown['total_amount'], 0, ',', '.') }}
                                     </td>
                                     <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                            ✓ Lunas
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#D1EB8F] text-[#46571A] border border-[#78956A] inline-flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
+                                            <span>Lunas</span>
                                         </span>
                                     </td>
                                     <td class="py-3.5 px-4 text-center whitespace-nowrap">
@@ -426,7 +387,7 @@
                             rowScope.isRowPaid = true;
                             this.unpaidOrdersCount = Math.max(0, this.unpaidOrdersCount - 1);
                             this.alertType = 'success';
-                            this.alertMessage = `✓ Pembayaran pesanan #${orderNumber} sebesar Rp ${Number(res.data.gross_amount).toLocaleString('id-ID')} Berhasil! Dana telah langsung dialokasikan ke Perawat (85% + transport) dan Admin (15%).`;
+                            this.alertMessage = `Pembayaran pesanan #${orderNumber} sebesar Rp ${Number(res.data.gross_amount).toLocaleString('id-ID')} Berhasil! Dana telah langsung dialokasikan ke Perawat (85% + transport) dan Admin (15%).`;
                             setTimeout(() => window.location.reload(), 1300);
                         } else {
                             rowScope.isRowPaying = false;

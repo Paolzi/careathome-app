@@ -1,9 +1,5 @@
-<x-admin-layout>
-    <x-slot name="header">
-        Audit Legalitas Nakes STR &amp; SIP
-    </x-slot>
-
-    <div class="space-y-6" x-data="{
+<x-admin-layout> <x-slot name="header"> Audit Legalitas Nakes STR &amp; SIP
+    </x-slot> <div class="space-y-6" x-data="{
         selectedNurse: null,
         modalOpen: false,
         rejectionOpen: false,
@@ -49,404 +45,80 @@
                 this.ktkiChecking = false;
             }
         }
-    }">
+    }"> @if ($errors->any())
+            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1 shadow-xs"> <div class="font-bold flex items-center gap-1.5 text-rose-900"> <span><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg></span> <span>Gagal memproses verifikasi perawat:</span> </div> <ul class="list-disc list-inside pl-4"> @foreach ($errors->all() as $err)
+                        <li>{{ $err }}</li> @endforeach
+                </ul> </div> @endif
 
-        @if ($errors->any())
-            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1 shadow-xs">
-                <div class="font-bold flex items-center gap-1.5 text-rose-900">
-                    <span>⚠️</span>
-                    <span>Gagal memproses verifikasi perawat:</span>
-                </div>
-                <ul class="list-disc list-inside pl-4">
-                    @foreach ($errors->all() as $err)
-                        <li>{{ $err }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <!-- Filter Tabs & Search Bar -->
-        <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                
-                <!-- Status Tabs -->
-                <div class="flex flex-wrap items-center gap-2">
-                    <a href="{{ route('admin.nurses.index', ['status' => 'all', 'search' => $search]) }}"
-                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'all' ? 'bg-emerald-700 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900' }}">
-                        <span>Semua Nakes</span>
-                        <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'all' ? 'bg-emerald-800 text-white' : 'bg-slate-200 text-slate-700' }}">{{ $counts['all'] }}</span>
-                    </a>
-
-                    <a href="{{ route('admin.nurses.index', ['status' => 'pending', 'search' => $search]) }}"
-                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'pending' ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 text-amber-800 hover:bg-amber-100' }}">
-                        <span>Menunggu Review</span>
-                        <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'pending' ? 'bg-amber-700 text-white' : 'bg-amber-200 text-amber-900' }}">{{ $counts['pending'] }}</span>
-                    </a>
-
-                    <a href="{{ route('admin.nurses.index', ['status' => 'draft', 'search' => $search]) }}"
-                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'draft' ? 'bg-slate-800 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}">
-                        <span>Draf (Draft)</span>
-                        <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'draft' ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-800' }}">{{ $counts['draft'] ?? 0 }}</span>
-                    </a>
-
-                    <a href="{{ route('admin.nurses.index', ['status' => 'verified', 'search' => $search]) }}"
-                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'verified' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100' }}">
-                        <span>Terverifikasi (Verified)</span>
-                        <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'verified' ? 'bg-emerald-700 text-white' : 'bg-emerald-200 text-emerald-900' }}">{{ $counts['verified'] }}</span>
-                    </a>
-
-                    <a href="{{ route('admin.nurses.index', ['status' => 'rejected', 'search' => $search]) }}"
-                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'rejected' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100' }}">
-                        <span>Ditolak (Rejected)</span>
-                        <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'rejected' ? 'bg-rose-700 text-white' : 'bg-rose-200 text-rose-900' }}">{{ $counts['rejected'] }}</span>
-                    </a>
-                </div>
-
-                <!-- Search Input -->
-                <form action="{{ route('admin.nurses.index') }}" method="GET" class="flex items-center gap-2">
-                    <input type="hidden" name="status" value="{{ $status }}">
-                    <input type="text" name="search" value="{{ $search }}" placeholder="Cari nama, NIK, STR/SIP..."
-                        class="text-xs rounded-xl border-slate-200 focus:ring-emerald-500 focus:border-emerald-500 py-1.5 px-3 w-48 sm:w-64">
-                    <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">Cari</button>
-                    @if ($search)
-                        <a href="{{ route('admin.nurses.index', ['status' => $status]) }}" class="text-xs text-rose-600 font-bold hover:underline">Reset</a>
-                    @endif
-                </form>
-
-            </div>
-        </div>
-
-        <!-- Tabel Perawat -->
-        <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-600">
-                    <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
-                        <tr>
-                            <th class="p-4">Perawat &amp; NIK</th>
-                            <th class="p-4">Nomor STR &amp; Masa Berlaku</th>
-                            <th class="p-4">Nomor SIP &amp; Institusi</th>
-                            <th class="p-4">Dokumen</th>
-                            <th class="p-4">Status Legalitas</th>
-                            <th class="p-4">Reviewer</th>
-                            <th class="p-4 text-right">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @forelse ($nurses as $nurse)
+        <!-- Filter Tabs & Search Bar --> <div class="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4"> <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"> <!-- Status Tabs --> <div class="flex flex-wrap items-center gap-2"> <a href="{{ route('admin.nurses.index', ['status' => 'all', 'search' => $search]) }}"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'all' ? 'bg-emerald-700 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900' }}"> <span>Semua Nakes</span> <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'all' ? 'bg-emerald-800 text-white' : 'bg-slate-200 text-slate-700' }}">{{ $counts['all'] }}</span> </a> <a href="{{ route('admin.nurses.index', ['status' => 'pending', 'search' => $search]) }}"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'pending' ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 text-amber-800 hover:bg-amber-100' }}"> <span>Menunggu Review</span> <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'pending' ? 'bg-amber-700 text-white' : 'bg-amber-200 text-amber-900' }}">{{ $counts['pending'] }}</span> </a> <a href="{{ route('admin.nurses.index', ['status' => 'draft', 'search' => $search]) }}"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'draft' ? 'bg-slate-800 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"> <span>Draf (Draft)</span> <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'draft' ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-800' }}">{{ $counts['draft'] ?? 0 }}</span> </a> <a href="{{ route('admin.nurses.index', ['status' => 'verified', 'search' => $search]) }}"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'verified' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100' }}"> <span>Terverifikasi (Verified)</span> <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'verified' ? 'bg-emerald-700 text-white' : 'bg-emerald-200 text-emerald-900' }}">{{ $counts['verified'] }}</span> </a> <a href="{{ route('admin.nurses.index', ['status' => 'rejected', 'search' => $search]) }}"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {{ $status === 'rejected' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100' }}"> <span>Ditolak (Rejected)</span> <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $status === 'rejected' ? 'bg-rose-700 text-white' : 'bg-rose-200 text-rose-900' }}">{{ $counts['rejected'] }}</span> </a> </div> <!-- Search Input --> <form action="{{ route('admin.nurses.index') }}" method="GET" class="flex items-center gap-2"> <input type="hidden" name="status" value="{{ $status }}"> <input type="text" name="search" value="{{ $search }}" placeholder="Cari nama, NIK, STR/SIP..."
+                        class="text-xs rounded-xl border-slate-200 focus:ring-emerald-500 focus:border-emerald-500 py-1.5 px-3 w-48 sm:w-64"> <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">Cari</button> @if ($search)
+                        <a href="{{ route('admin.nurses.index', ['status' => $status]) }}" class="text-xs text-rose-600 font-bold hover:underline">Reset</a> @endif
+                </form> </div> </div> <!-- Tabel Perawat --> <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs"> <div class="overflow-x-auto"> <table class="w-full text-left text-xs text-slate-600"> <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100"> <tr> <th class="p-4">Perawat &amp; NIK</th> <th class="p-4">Nomor STR &amp; Masa Berlaku</th> <th class="p-4">Nomor SIP &amp; Institusi</th> <th class="p-4">Dokumen</th> <th class="p-4">Status Legalitas</th> <th class="p-4">Reviewer</th> <th class="p-4 text-right">Aksi</th> </tr> </thead> <tbody class="divide-y divide-slate-100"> @forelse ($nurses as $nurse)
                             @php $nurseData = $nurse->toArray(); @endphp
-                            <tr class="hover:bg-emerald-50/30 transition cursor-pointer" @click="openModal(@js($nurseData))">
-                                <td class="p-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 font-black text-xs flex items-center justify-center border border-emerald-100">
-                                            {{ strtoupper(substr($nurse->user->name ?? 'NS', 0, 2)) }}
-                                        </div>
-                                        <div>
-                                            <span class="font-bold text-slate-900 block">{{ $nurse->user->name ?? 'N/A' }}</span>
-                                            <span class="text-[11px] text-slate-400 block">{{ $nurse->user->email ?? '-' }} &bull; NIK: {{ $nurse->nik ?? '-' }}</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="p-4">
-                                    <span class="font-mono font-semibold text-slate-800 block">{{ $nurse->str_number ?? '-' }}</span>
-                                    <span class="text-[10px] text-slate-400">Exp: {{ $nurse->str_expiry ? $nurse->str_expiry->format('d M Y') : ($nurse->str_expired_at ? $nurse->str_expired_at->format('d M Y') : '-') }}</span>
-                                </td>
-                                <td class="p-4">
-                                    <span class="font-mono font-semibold text-slate-800 block">{{ $nurse->sip_number ?? '-' }}</span>
-                                    <span class="text-[10px] text-slate-400">{{ $nurse->sip_institution ?? 'Praktik Mandiri' }}</span>
-                                </td>
-                                <td class="p-4">
-                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $nurse->documents->count() > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-500' }}">
-                                        {{ $nurse->documents->count() }} Berkas
-                                    </span>
-                                </td>
-                                <td class="p-4">
-                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-flex items-center gap-1
-                                        {{ $nurse->verification_status === 'verified' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : ($nurse->verification_status === 'rejected' ? 'bg-rose-50 text-rose-800 border border-rose-200' : ($nurse->verification_status === 'pending' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200')) }}">
-                                        @if ($nurse->verification_status === 'verified')
-                                            <span>✓ Terverifikasi</span>
-                                        @elseif ($nurse->verification_status === 'rejected')
-                                            <span>✕ Ditolak (Perlu Revisi)</span>
-                                        @elseif ($nurse->verification_status === 'pending')
-                                            <span>⏳ Pending Review</span>
-                                        @else
-                                            <span>Draf</span>
-                                        @endif
-                                    </span>
-                                    @if ($nurse->verification_status === 'rejected' && $nurse->rejection_reason)
-                                        <span class="block text-[10px] text-rose-600 mt-1 max-w-[180px] truncate" title="{{ $nurse->rejection_reason }}">
-                                            Alasan: {{ $nurse->rejection_reason }}
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="p-4 text-[11px]">
-                                    @if ($nurse->reviewer)
-                                        <span class="font-semibold text-slate-800 block">{{ $nurse->reviewer->name }}</span>
-                                        <span class="text-slate-400 text-[10px]">{{ $nurse->reviewed_at?->diffForHumans() }}</span>
-                                    @else
-                                        <span class="text-slate-400 italic">Belum direview</span>
-                                    @endif
-                                </td>
-                                <td class="p-4 text-right" @click.stop>
-                                    <button type="button" @click="openModal(@js($nurseData))"
-                                        class="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs transition shadow-2xs">
-                                        Audit Berkas &rarr;
-                                    </button>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="p-8 text-center text-xs text-slate-400 italic">
-                                    Tidak ada data perawat yang sesuai dengan filter.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <div class="p-4 border-t border-slate-100">
-                {{ $nurses->links() }}
-            </div>
-        </div>
-
-        <!-- MODAL AUDIT LEGALITAS & PREVIEW DOKUMEN -->
-        <div x-show="modalOpen" x-cloak
-            class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-            
-            <div @click.away="modalOpen = false"
-                class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 flex flex-col max-h-[90vh]">
-                
-                <!-- Modal Header -->
-                <div class="px-6 py-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white flex items-center justify-between shrink-0">
-                    <div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Audit Berkas Legalitas Profesi Nakes</span>
-                        <h3 class="text-base font-bold text-white mt-0.5" x-text="selectedNurse?.user?.name || 'Profil Perawat'"></h3>
-                    </div>
-                    <button type="button" @click="modalOpen = false" class="text-slate-300 hover:text-white p-1 rounded-xl text-lg font-bold">
-                        ✕
-                    </button>
-                </div>
-
-                <!-- Modal Body -->
-                <div class="p-6 overflow-y-auto space-y-5 text-xs">
-                    
-                    <!-- Rincian Identitas & Nomor Izin -->
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100">
-                        <div>
-                            <span class="text-[10px] uppercase font-bold text-slate-400 block">NIK KTP</span>
-                            <strong class="text-slate-800 font-mono" x-text="selectedNurse?.nik || '-'"></strong>
-                        </div>
-                        <div>
-                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Nomor STR</span>
-                            <strong class="text-slate-800 font-mono" x-text="selectedNurse?.str_number || '-'"></strong>
-                            <span class="text-[10px] text-slate-500 block" x-text="'Masa Berlaku: ' + (selectedNurse?.str_expiry ? selectedNurse.str_expiry.substring(0, 10) : (selectedNurse?.str_expired_at ? selectedNurse.str_expired_at.substring(0, 10) : '-'))"></span>
-                        </div>
-                        <div>
-                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Nomor SIP</span>
-                            <strong class="text-slate-800 font-mono" x-text="selectedNurse?.sip_number || '-'"></strong>
-                            <span class="text-[10px] text-slate-500 block" x-text="'Masa Berlaku: ' + (selectedNurse?.sip_expiry ? selectedNurse.sip_expiry.substring(0, 10) : (selectedNurse?.sip_expired_at ? selectedNurse.sip_expired_at.substring(0, 10) : '-'))"></span>
-                        </div>
-                        <div>
-                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Institusi SIP</span>
-                            <span class="text-slate-700" x-text="selectedNurse?.sip_institution || 'Praktik Mandiri'"></span>
-                        </div>
-                        <div>
-                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Spesialisasi</span>
-                            <span class="text-slate-700" x-text="selectedNurse?.specialization || 'Perawat Umum'"></span>
-                        </div>
-                        <div>
-                            <span class="text-[10px] uppercase font-bold text-slate-400 block">Status Saat Ini</span>
-                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase mt-0.5"
+                            <tr class="hover:bg-emerald-50/30 transition cursor-pointer" @click="openModal(@js($nurseData))"> <td class="p-4"> <div class="flex items-center gap-3"> <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 font-black text-xs flex items-center justify-center border border-emerald-100"> {{ strtoupper(substr($nurse->user->name ?? 'NS', 0, 2)) }}
+                                        </div> <div> <span class="font-bold text-slate-900 block">{{ $nurse->user->name ?? 'N/A' }}</span> <span class="text-[11px] text-slate-400 block">{{ $nurse->user->email ?? '-' }} &bull; NIK: {{ $nurse->nik ?? '-' }}</span> </div> </div> </td> <td class="p-4"> <span class="font-mono font-semibold text-slate-800 block">{{ $nurse->str_number ?? '-' }}</span> <span class="text-[10px] text-slate-400">Exp: {{ $nurse->str_expiry ? $nurse->str_expiry->format('d M Y') : ($nurse->str_expired_at ? $nurse->str_expired_at->format('d M Y') : '-') }}</span> </td> <td class="p-4"> <span class="font-mono font-semibold text-slate-800 block">{{ $nurse->sip_number ?? '-' }}</span> <span class="text-[10px] text-slate-400">{{ $nurse->sip_institution ?? 'Praktik Mandiri' }}</span> </td> <td class="p-4"> <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $nurse->documents->count() > 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-500' }}"> {{ $nurse->documents->count() }} Berkas
+                                    </span> </td> <td class="p-4"> <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold inline-flex items-center gap-1
+                                        {{ $nurse->verification_status === 'verified' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : ($nurse->verification_status === 'rejected' ? 'bg-rose-50 text-rose-800 border border-rose-200' : ($nurse->verification_status === 'pending' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200')) }}"> @if ($nurse->verification_status === 'verified')
+                                            <span> Terverifikasi</span> @elseif ($nurse->verification_status === 'rejected')
+                                            <span> Ditolak (Perlu Revisi)</span> @elseif ($nurse->verification_status === 'pending')
+                                            <span> Pending Review</span> @else
+                                            <span>Draf</span> @endif
+                                    </span> @if ($nurse->verification_status === 'rejected' && $nurse->rejection_reason)
+                                        <span class="block text-[10px] text-rose-600 mt-1 max-w-[180px] truncate" title="{{ $nurse->rejection_reason }}"> Alasan: {{ $nurse->rejection_reason }}
+                                        </span> @endif
+                                </td> <td class="p-4 text-[11px]"> @if ($nurse->reviewer)
+                                        <span class="font-semibold text-slate-800 block">{{ $nurse->reviewer->name }}</span> <span class="text-slate-400 text-[10px]">{{ $nurse->reviewed_at?->diffForHumans() }}</span> @else
+                                        <span class="text-slate-400 italic">Belum direview</span> @endif
+                                </td> <td class="p-4 text-right" @click.stop> <button type="button" @click="openModal(@js($nurseData))"
+                                        class="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs transition shadow-2xs"> Audit Berkas &rarr;
+                                    </button> </td> </tr> @empty
+                            <tr> <td colspan="7" class="p-8 text-center text-xs text-slate-400 italic"> Tidak ada data perawat yang sesuai dengan filter.
+                                </td> </tr> @endforelse
+                    </tbody> </table> </div> <!-- Pagination --> <div class="p-4 border-t border-slate-100"> {{ $nurses->links() }}
+            </div> </div> <!-- MODAL AUDIT LEGALITAS & PREVIEW DOKUMEN --> <div x-show="modalOpen" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"> <div @click.away="modalOpen = false"
+                class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 flex flex-col max-h-[90vh]"> <!-- Modal Header --> <div class="px-6 py-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white flex items-center justify-between shrink-0"> <div> <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Audit Berkas Legalitas Profesi Nakes</span> <h3 class="text-base font-bold text-white mt-0.5" x-text="selectedNurse?.user?.name || 'Profil Perawat'"></h3> </div> <button type="button" @click="modalOpen = false" class="text-slate-300 hover:text-white p-1 rounded-xl text-lg font-bold"> </button> </div> <!-- Modal Body --> <div class="p-6 overflow-y-auto space-y-5 text-xs"> <!-- Rincian Identitas & Nomor Izin --> <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100"> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">NIK KTP</span> <strong class="text-slate-800 font-mono" x-text="selectedNurse?.nik || '-'"></strong> </div> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">Nomor STR</span> <strong class="text-slate-800 font-mono" x-text="selectedNurse?.str_number || '-'"></strong> <span class="text-[10px] text-slate-500 block" x-text="'Masa Berlaku: ' + (selectedNurse?.str_expiry ? selectedNurse.str_expiry.substring(0, 10) : (selectedNurse?.str_expired_at ? selectedNurse.str_expired_at.substring(0, 10) : '-'))"></span> </div> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">Nomor SIP</span> <strong class="text-slate-800 font-mono" x-text="selectedNurse?.sip_number || '-'"></strong> <span class="text-[10px] text-slate-500 block" x-text="'Masa Berlaku: ' + (selectedNurse?.sip_expiry ? selectedNurse.sip_expiry.substring(0, 10) : (selectedNurse?.sip_expired_at ? selectedNurse.sip_expired_at.substring(0, 10) : '-'))"></span> </div> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">Institusi SIP</span> <span class="text-slate-700" x-text="selectedNurse?.sip_institution || 'Praktik Mandiri'"></span> </div> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">Spesialisasi</span> <span class="text-slate-700" x-text="selectedNurse?.specialization || 'Perawat Umum'"></span> </div> <div> <span class="text-[10px] uppercase font-bold text-slate-400 block">Status Saat Ini</span> <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase mt-0.5"
                                   :class="selectedNurse?.verification_status === 'verified'
                                       ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                       : (selectedNurse?.verification_status === 'rejected'
                                           ? 'bg-rose-100 text-rose-800 border border-rose-300'
                                           : 'bg-amber-100 text-amber-800 border border-amber-300')"
-                                  x-text="selectedNurse?.verification_status === 'verified' ? '✓ TERVERIFIKASI' : (selectedNurse?.verification_status === 'rejected' ? '✕ DITOLAK (REVISI)' : '⏳ PENDING AUDIT')"></span>
-                        </div>
-                    </div>
-
-                    <!-- CARD SIMULASI VALIDASI KTKI / KEMENKES RI -->
-                    <div class="p-4 rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 space-y-3">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div class="flex items-center gap-2.5">
-                                <span class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                                    🏛️
-                                </span>
-                                <div>
-                                    <h4 class="font-extrabold text-teal-950 text-xs">Simulasi Validasi KTKI &amp; Kemenkes RI</h4>
-                                    <p class="text-[10px] text-teal-700">Validasi otomatis format 16 digit STR, masa aktif lisensi, dan keabsahan nakes</p>
-                                </div>
-                            </div>
-
-                            <button type="button" @click="checkKtki()" :disabled="ktkiChecking"
-                                class="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-[11px] shadow-xs transition flex items-center gap-1.5 self-start sm:self-auto disabled:opacity-50">
-                                <span x-show="!ktkiChecking">🔍 Jalankan Cek KTKI</span>
-                                <span x-show="ktkiChecking" x-cloak class="flex items-center gap-1">
-                                    <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                                    Memvalidasi...
-                                </span>
-                            </button>
-                        </div>
-
-                        <!-- Hasil Cek KTKI -->
-                        <div x-show="ktkiResult" x-cloak class="mt-2 p-3.5 rounded-xl border transition"
-                             :class="ktkiResult?.is_valid ? 'bg-emerald-100/70 border-emerald-300 text-emerald-950' : 'bg-rose-100/70 border-rose-300 text-rose-950'">
-                            <div class="flex items-start justify-between gap-2">
-                                <div class="space-y-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                                  x-text="selectedNurse?.verification_status === 'verified' ? ' TERVERIFIKASI' : (selectedNurse?.verification_status === 'rejected' ? ' DITOLAK (REVISI)' : ' PENDING AUDIT')"></span> </div> </div> <!-- CARD SIMULASI VALIDASI KTKI / KEMENKES RI --> <div class="p-4 rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 space-y-3"> <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"> <div class="flex items-center gap-2.5"> <span class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-xs"> </span> <div> <h4 class="font-extrabold text-teal-950 text-xs">Simulasi Validasi KTKI &amp; Kemenkes RI</h4> <p class="text-[10px] text-teal-700">Validasi otomatis format 16 digit STR, masa aktif lisensi, dan keabsahan nakes</p> </div> </div> <button type="button" @click="checkKtki()" :disabled="ktkiChecking"
+                                class="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-[11px] shadow-xs transition flex items-center gap-1.5 self-start sm:self-auto disabled:opacity-50"> <span x-show="!ktkiChecking"> Jalankan Cek KTKI</span> <span x-show="ktkiChecking" x-cloak class="flex items-center gap-1"> <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Memvalidasi...
+                                </span> </button> </div> <!-- Hasil Cek KTKI --> <div x-show="ktkiResult" x-cloak class="mt-2 p-3.5 rounded-xl border transition"
+                             :class="ktkiResult?.is_valid ? 'bg-emerald-100/70 border-emerald-300 text-emerald-950' : 'bg-rose-100/70 border-rose-300 text-rose-950'"> <div class="flex items-start justify-between gap-2"> <div class="space-y-1"> <div class="flex items-center gap-2"> <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
                                               :class="ktkiResult?.is_valid ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'"
-                                              x-text="'STATUS: ' + (ktkiResult?.status || 'INVALID')"></span>
-                                        <span class="text-[10px] font-semibold text-slate-600" x-text="ktkiResult?.verified_at"></span>
-                                    </div>
-                                    <p class="font-bold text-xs" x-text="ktkiResult?.message"></p>
-                                    <div class="text-[11px] text-slate-700 pt-1 space-y-0.5">
-                                        <p>• <strong>Nama Terdaftar:</strong> <span x-text="ktkiResult?.registered_name"></span></p>
-                                        <p>• <strong>Profesi:</strong> <span x-text="ktkiResult?.profession"></span></p>
-                                        <p>• <strong>Nomor STR:</strong> <span class="font-mono" x-text="ktkiResult?.str_number"></span> (<span x-text="ktkiResult?.digit_count + ' digit'"></span>)</p>
-                                        <p>• <strong>Masa Berlaku:</strong> <span x-text="ktkiResult?.expiry_date || '-'"></span></p>
-                                    </div>
-                                </div>
-                                <span class="text-2xl" x-text="ktkiResult?.is_valid ? '✅' : '❌'"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Dokumen Legalitas (Preview / Unduh) -->
-                    <div class="space-y-2">
-                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
-                            <span>Berkas Legalitas yang Diunggah</span>
-                            <span class="text-[10px] text-slate-400 font-normal" x-text="(selectedNurse?.documents?.length || 0) + ' Berkas terlampir'"></span>
-                        </h4>
-                        
-                        <template x-if="!selectedNurse?.documents || selectedNurse?.documents?.length === 0">
-                            <div class="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-slate-400">
-                                <span class="text-2xl block mb-1">📂</span>
-                                <span class="text-xs">Perawat belum mengunggah dokumen fisik / masih dalam proses pengisian.</span>
-                            </div>
-                        </template>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="selectedNurse?.documents?.length > 0">
-                            <template x-for="doc in selectedNurse?.documents" :key="doc.id">
-                                <div class="p-3 rounded-2xl border border-slate-200 flex flex-col justify-between gap-2 hover:bg-emerald-50/30 transition">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div class="flex items-center gap-2.5">
-                                            <span class="text-lg">📄</span>
-                                            <div>
-                                                <div class="flex items-center gap-1.5">
-                                                    <span class="font-bold text-slate-800 uppercase text-[11px]" x-text="doc.document_type"></span>
-                                                    <span class="text-[9px] px-1.5 py-0.2 rounded font-mono uppercase"
+                                              x-text="'STATUS: ' + (ktkiResult?.status || 'INVALID')"></span> <span class="text-[10px] font-semibold text-slate-600" x-text="ktkiResult?.verified_at"></span> </div> <p class="font-bold text-xs" x-text="ktkiResult?.message"></p> <div class="text-[11px] text-slate-700 pt-1 space-y-0.5"> <p>• <strong>Nama Terdaftar:</strong> <span x-text="ktkiResult?.registered_name"></span></p> <p>• <strong>Profesi:</strong> <span x-text="ktkiResult?.profession"></span></p> <p>• <strong>Nomor STR:</strong> <span class="font-mono" x-text="ktkiResult?.str_number"></span> (<span x-text="ktkiResult?.digit_count + ' digit'"></span>)</p> <p>• <strong>Masa Berlaku:</strong> <span x-text="ktkiResult?.expiry_date || '-'"></span></p> </div> </div> <span class="text-2xl" x-text="ktkiResult?.is_valid ? '' : ''"></span> </div> </div> </div> <!-- Dokumen Legalitas (Preview / Unduh) --> <div class="space-y-2"> <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between"> <span>Berkas Legalitas yang Diunggah</span> <span class="text-[10px] text-slate-400 font-normal" x-text="(selectedNurse?.documents?.length || 0) + ' Berkas terlampir'"></span> </h4> <template x-if="!selectedNurse?.documents || selectedNurse?.documents?.length === 0"> <div class="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-slate-400"> <span class="text-2xl block mb-1"><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg></span> <span class="text-xs">Perawat belum mengunggah dokumen fisik / masih dalam proses pengisian.</span> </div> </template> <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="selectedNurse?.documents?.length > 0"> <template x-for="doc in selectedNurse?.documents" :key="doc.id"> <div class="p-3 rounded-2xl border border-slate-200 flex flex-col justify-between gap-2 hover:bg-emerald-50/30 transition"> <div class="flex items-start justify-between gap-2"> <div class="flex items-center gap-2.5"> <span class="text-lg"><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg></span> <div> <div class="flex items-center gap-1.5"> <span class="font-bold text-slate-800 uppercase text-[11px]" x-text="doc.document_type"></span> <span class="text-[9px] px-1.5 py-0.2 rounded font-mono uppercase"
                                                           :class="doc.storage_driver === 's3' ? 'bg-indigo-100 text-indigo-800 font-bold' : 'bg-slate-100 text-slate-600'"
-                                                          x-text="(doc.storage_driver || 'public')"></span>
-                                                </div>
-                                                <span class="text-[10px] text-slate-400 truncate max-w-[140px] block" x-text="doc.original_name || 'Berkas Dokumen'"></span>
-                                            </div>
-                                        </div>
-                                        <a :href="'/admin/documents/' + doc.id + '/preview'" target="_blank"
-                                            class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[10px] hover:bg-emerald-100 transition whitespace-nowrap">
-                                            Buka Berkas &rarr;
-                                        </a>
-                                    </div>
-
-                                    <template x-if="doc.ktki_verified_at">
-                                        <span class="inline-flex items-center gap-1 text-[9px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                                            ✓ Tervalidasi KTKI
-                                        </span>
-                                    </template>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-                    <!-- Box Alasan Penolakan Jika Sebelumnya Ditolak -->
-                    <template x-if="selectedNurse?.rejection_reason && !rejectionOpen">
-                        <div class="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
-                            <strong>Catatan Penolakan Saat Ini:</strong>
-                            <p class="mt-1 italic" x-text="selectedNurse.rejection_reason"></p>
-                        </div>
-                    </template>
-
-                </div>
-
-                <!-- Panel Form Penolakan Sticky di Atas Footer (Selalu Terlihat Tanpa Perlu Scroll) -->
-                <div x-show="rejectionOpen" x-cloak class="px-6 py-4 bg-rose-50 border-t-2 border-rose-200 space-y-3 shrink-0">
-                    <div class="flex items-center justify-between">
-                        <label for="admin_rejection_reason_input" class="block font-extrabold text-rose-900 text-xs flex items-center gap-1.5">
-                            <span>⚠️</span>
-                            <span>Alasan Penolakan &amp; Instruksi Revisi untuk Perawat:</span>
-                        </label>
-                        <span class="text-[10px] font-semibold text-rose-700">Klik alasan cepat atau ketik manual</span>
-                    </div>
-
-                    <!-- Chip Pilihan Alasan Cepat -->
-                    <div class="flex flex-wrap gap-1.5">
-                        <button type="button" @click="rejectionReason = 'Foto berkas KTP/STR/SIP buram atau kurang jelas terbaca. Mohon unggah ulang dengan resolusi jelas.'"
-                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
-                            + Foto Berkas Buram
-                        </button>
-                        <button type="button" @click="rejectionReason = 'Nomor STR atau Nomor SIP yang diinput tidak sesuai dengan dokumen fisik yang diunggah.'"
-                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
-                            + Nomor STR/SIP Tidak Sesuai
-                        </button>
-                        <button type="button" @click="rejectionReason = 'Masa berlaku STR atau SIP telah habis (kadaluarsa). Mohon unggah dokumen yang masih aktif.'"
-                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
-                            + Masa Berlaku Habis
-                        </button>
-                        <button type="button" @click="rejectionReason = 'Berkas dokumen legalitas (KTP, STR, SIP, atau Ijazah) belum lengkap. Mohon lengkapi seluruh berkas.'"
-                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
-                            + Dokumen Belum Lengkap
-                        </button>
-                    </div>
-
-                    <form id="admin-reject-nurse-form" x-bind:action="'/admin/nurses/' + selectedNurse?.id + '/reject'" method="POST" class="space-y-2">
-                        @csrf
+                                                          x-text="(doc.storage_driver || 'public')"></span> </div> <span class="text-[10px] text-slate-400 truncate max-w-[140px] block" x-text="doc.original_name || 'Berkas Dokumen'"></span> </div> </div> <a :href="'/admin/documents/' + doc.id + '/preview'" target="_blank"
+                                            class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[10px] hover:bg-emerald-100 transition whitespace-nowrap"> Buka Berkas &rarr;
+                                        </a> </div> <template x-if="doc.ktki_verified_at"> <span class="inline-flex items-center gap-1 text-[9px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200"> Tervalidasi KTKI
+                                        </span> </template> </div> </template> </div> </div> <!-- Box Alasan Penolakan Jika Sebelumnya Ditolak --> <template x-if="selectedNurse?.rejection_reason && !rejectionOpen"> <div class="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs"> <strong>Catatan Penolakan Saat Ini:</strong> <p class="mt-1 italic" x-text="selectedNurse.rejection_reason"></p> </div> </template> </div> <!-- Panel Form Penolakan Sticky di Atas Footer (Selalu Terlihat Tanpa Perlu Scroll) --> <div x-show="rejectionOpen" x-cloak class="px-6 py-4 bg-rose-50 border-t-2 border-rose-200 space-y-3 shrink-0"> <div class="flex items-center justify-between"> <label for="admin_rejection_reason_input" class="block font-extrabold text-rose-900 text-xs flex items-center gap-1.5"> <span><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg></span> <span>Alasan Penolakan &amp; Instruksi Revisi untuk Perawat:</span> </label> <span class="text-[10px] font-semibold text-rose-700">Klik alasan cepat atau ketik manual</span> </div> <!-- Chip Pilihan Alasan Cepat --> <div class="flex flex-wrap gap-1.5"> <button type="button" @click="rejectionReason = 'Foto berkas KTP/STR/SIP buram atau kurang jelas terbaca. Mohon unggah ulang dengan resolusi jelas.'"
+                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer"> + Foto Berkas Buram
+                        </button> <button type="button" @click="rejectionReason = 'Nomor STR atau Nomor SIP yang diinput tidak sesuai dengan dokumen fisik yang diunggah.'"
+                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer"> + Nomor STR/SIP Tidak Sesuai
+                        </button> <button type="button" @click="rejectionReason = 'Masa berlaku STR atau SIP telah habis (kadaluarsa). Mohon unggah dokumen yang masih aktif.'"
+                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer"> + Masa Berlaku Habis
+                        </button> <button type="button" @click="rejectionReason = 'Berkas dokumen legalitas (KTP, STR, SIP, atau Ijazah) belum lengkap. Mohon lengkapi seluruh berkas.'"
+                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold transition cursor-pointer"> + Dokumen Belum Lengkap
+                        </button> </div> <form id="admin-reject-nurse-form" x-bind:action="'/admin/nurses/' + selectedNurse?.id + '/reject'" method="POST" class="space-y-2"> @csrf
                         <textarea id="admin_rejection_reason_input" name="rejection_reason" x-model="rejectionReason" rows="2"
                             placeholder="Tuliskan alasan penolakan agar perawat dapat merevisi bagian yang salah..."
-                            class="w-full text-xs rounded-xl border-rose-300 bg-white focus:border-rose-500 focus:ring-rose-500 p-2.5 text-slate-800"></textarea>
-                    </form>
-                </div>
-
-                <!-- Modal Footer -->
-                <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
-                    <button type="button" @click="modalOpen = false; rejectionOpen = false"
-                        class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer">
-                        Tutup
-                    </button>
-
-                    <!-- Tombol Saat Mode Normal (!rejectionOpen) -->
-                    <div x-show="!rejectionOpen" class="flex items-center gap-2">
-                        <button type="button" @click="openRejectPanel()"
-                            class="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold text-xs transition cursor-pointer">
-                            ✕ Tolak Berkas
-                        </button>
-
-                        <form x-bind:action="'/admin/nurses/' + selectedNurse?.id + '/approve'" method="POST">
-                            @csrf
+                            class="w-full text-xs rounded-xl border-rose-300 bg-white focus:border-rose-500 focus:ring-rose-500 p-2.5 text-slate-800"></textarea> </form> </div> <!-- Modal Footer --> <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0"> <button type="button" @click="modalOpen = false; rejectionOpen = false"
+                        class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 cursor-pointer"> Tutup
+                    </button> <!-- Tombol Saat Mode Normal (!rejectionOpen) --> <div x-show="!rejectionOpen" class="flex items-center gap-2"> <button type="button" @click="openRejectPanel()"
+                            class="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold text-xs transition cursor-pointer"> Tolak Berkas
+                        </button> <form x-bind:action="'/admin/nurses/' + selectedNurse?.id + '/approve'" method="POST"> @csrf
                             <button type="submit"
-                                class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition cursor-pointer">
-                                ✓ Setujui Legalitas Nakes
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Tombol Saat Mode Konfirmasi Penolakan (rejectionOpen) -->
-                    <div x-show="rejectionOpen" x-cloak class="flex items-center gap-2">
-                        <button type="button" @click="rejectionOpen = false"
-                            class="px-4 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer">
-                            Batal
-                        </button>
-                        <button type="button"
+                                class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"> Setujui Legalitas Nakes
+                            </button> </form> </div> <!-- Tombol Saat Mode Konfirmasi Penolakan (rejectionOpen) --> <div x-show="rejectionOpen" x-cloak class="flex items-center gap-2"> <button type="button" @click="rejectionOpen = false"
+                            class="px-4 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"> Batal
+                        </button> <button type="button"
                             @click="document.getElementById('admin-reject-nurse-form').submit()"
-                            class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition cursor-pointer flex items-center gap-1.5">
-                            <span>✕ Konfirmasi Tolak &amp; Minta Revisi Perawat</span>
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-    </div>
+                            class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition cursor-pointer flex items-center gap-1.5"> <span> Konfirmasi Tolak &amp; Minta Revisi Perawat</span> </button> </div> </div> </div> </div> </div>
 </x-admin-layout>

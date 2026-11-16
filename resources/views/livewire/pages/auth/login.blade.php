@@ -119,21 +119,27 @@ new #[Layout('layouts.guest')] class extends Component
             <button 
                 type="button" 
                 wire:click="quickLogin('pasien')"
-                class="py-2.5 px-3 rounded-xl bg-white border-2 border-emerald-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-xs font-bold text-slate-800 hover:text-emerald-900 transition shadow-sm text-center flex flex-col items-center gap-1 group">
-                <span class="text-lg group-hover:scale-110 transition-transform">👤</span>
+                class="py-2.5 px-3 rounded-xl bg-[#FFFDF9] border border-[#78956A] hover:bg-[#D1EB8F] text-xs font-bold text-[#46571A] transition shadow-sm text-center flex flex-col items-center gap-1.5 group">
+                <svg class="w-5 h-5 text-[#46571A] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
                 <span>Masuk Pasien</span>
             </button>
             <button 
                 type="button" 
                 wire:click="quickLogin('perawat')"
-                class="py-2.5 px-3 rounded-xl bg-white border-2 border-teal-200 hover:border-teal-500 hover:bg-teal-50/50 text-xs font-bold text-slate-800 hover:text-teal-900 transition shadow-sm text-center flex flex-col items-center gap-1 group">
-                <span class="text-lg group-hover:scale-110 transition-transform">🩺</span>
+                class="py-2.5 px-3 rounded-xl bg-[#FFFDF9] border border-[#78956A] hover:bg-[#D1EB8F] text-xs font-bold text-[#46571A] transition shadow-sm text-center flex flex-col items-center gap-1.5 group">
+                <svg class="w-5 h-5 text-[#46571A] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                </svg>
                 <span>Masuk Perawat</span>
             </button>
         </div>
-        <div class="mt-2.5 p-2 rounded-lg bg-emerald-50/60 border border-emerald-100 text-[10px] text-slate-600 leading-tight flex items-start gap-1.5">
-            <span class="text-emerald-700">🔒</span>
-            <span><strong>Catatan:</strong> Akun Admin wajib login kredensial manual demi integritas data rekam medis & keuangan.</span>
+        <div class="mt-2.5 p-2.5 rounded-xl bg-[#D1EB8F]/40 border border-[#78956A]/50 text-[10px] text-[#46571A] leading-tight flex items-start gap-2">
+            <svg class="w-4 h-4 text-[#46571A] shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+            <span><strong>Catatan:</strong> Akun Admin wajib login kredensial manual demi integritas data rekam medis &amp; keuangan.</span>
         </div>
     </div>
 
