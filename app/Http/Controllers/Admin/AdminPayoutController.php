@@ -82,6 +82,19 @@ class AdminPayoutController extends Controller
                 ['status' => 'pending'],
                 ['status' => 'transferred', 'proof_path' => $path]
             );
+
+            try {
+                if ($nurseUser) {
+                    $nurseUser->notify(new \App\Notifications\SystemActivityNotification(
+                        'payout_approved',
+                        'Pencairan Dana Disetujui #' . $payout->id,
+                        'Penarikan saldo sebesar Rp ' . number_format($payout->amount, 0, ',', '.') . " telah ditransfer ke {$payout->bank_name} {$payout->account_number}.",
+                        ['payout_id' => $payout->id]
+                    ));
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
         });
 
         return back()->with('success', 'Bukti transfer berhasil disimpan dan status penarikan diubah menjadi Ditransfer.');
@@ -131,6 +144,19 @@ class AdminPayoutController extends Controller
                 ['status' => 'pending'],
                 ['status' => 'rejected', 'reason' => $request->rejection_reason]
             );
+
+            try {
+                if ($nurseUser = ($payout->nurseUser ?? $payout->nurse)) {
+                    $nurseUser->notify(new \App\Notifications\SystemActivityNotification(
+                        'payout_rejected',
+                        'Penarikan Dana Ditolak #' . $payout->id,
+                        'Permintaan penarikan Rp ' . number_format($payout->amount, 0, ',', '.') . " ditolak Admin ({$request->rejection_reason}). Saldo telah dikembalikan ke dompet Anda.",
+                        ['payout_id' => $payout->id]
+                    ));
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
         });
 
         return back()->with('success', 'Permintaan penarikan ditolak dan saldo perawat telah dikembalikan.');

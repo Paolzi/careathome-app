@@ -280,6 +280,16 @@ class NurseVerificationController extends Controller
             $user->unreadNotifications()
                 ->where('data->type', 'document_rejected')
                 ->update(['read_at' => now()]);
+
+            // Kirim notifikasi ke semua Admin bahwa ada pengajuan verifikasi baru/revisi
+            foreach (User::role('admin')->get() as $adminUser) {
+                $adminUser->notify(new \App\Notifications\SystemActivityNotification(
+                    'nurse_verification_submitted',
+                    $wasRejected ? 'Revisi Legalitas Nakes Masuk' : 'Pengajuan Legalitas Nakes Baru',
+                    "Mitra perawat {$user->name} telah mengirimkan berkas STR/SIP untuk diaudit.",
+                    ['nurse_user_id' => $user->id]
+                ));
+            }
         } catch (\Throwable $e) {
             report($e);
         }

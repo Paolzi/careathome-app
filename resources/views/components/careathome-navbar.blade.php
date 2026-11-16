@@ -9,10 +9,17 @@
     $userNotifications = collect();
     $unreadNotifCount = 0;
 
-    if ($user && $isNurse) {
-        $nurseStatus = \App\Models\NurseProfile::where('user_id', $user->id)->value('verification_status');
-        $userNotifications = $user->notifications()->take(10)->get();
+    if ($user) {
+        try {
+            \App\Services\OrderReminderService::dispatchDueReminders();
+        } catch (\Throwable $e) {
+            // Abaikan error pengingat jadwal agar navbar tetap aman dirender
+        }
+        $userNotifications = $user->notifications()->take(15)->get();
         $unreadNotifCount = $user->unreadNotifications()->count();
+        if ($isNurse) {
+            $nurseStatus = \App\Models\NurseProfile::where('user_id', $user->id)->value('verification_status');
+        }
     }
 @endphp
 
@@ -307,6 +314,80 @@
                             </svg>
                             <span>Admin</span>
                         </span>
+
+                        <!-- In-App Notification Bell Dropdown (Admin) -->
+                        <div class="relative" x-data="{
+                            notifOpen: false,
+                            unreadCount: {{ $unreadNotifCount }},
+                            isMarking: false,
+                            async markAllAdminRead() {
+                                if (this.isMarking || this.unreadCount <= 0) return;
+                                this.isMarking = true;
+                                try {
+                                    const token = document.querySelector('meta[name=csrf-token]')?.content || '{{ csrf_token() }}';
+                                    const res = await fetch('{{ route('notifications.read-all') }}', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': token,
+                                            'X-Requested-With': 'XMLHttpRequest',
+                                            'Accept': 'application/json'
+                                        }
+                                    });
+                                    if (res.ok) {
+                                        this.unreadCount = 0;
+                                        document.querySelectorAll('.admin-notif-unread').forEach(el => el.classList.remove('admin-notif-unread', 'bg-[#D1EB8F]/35'));
+                                        document.querySelectorAll('.admin-notif-dot').forEach(el => el.remove());
+                                    }
+                                } catch (e) { console.error(e); }
+                                finally { this.isMarking = false; }
+                            }
+                        }">
+                            <button type="button" @click="notifOpen = !notifOpen"
+                                class="relative p-2 rounded-xl bg-[#FFFDF9] border border-[#78956A] text-[#46571A] hover:bg-[#D1EB8F] transition flex items-center justify-center cursor-pointer"
+                                title="Notifikasi Admin">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                                </svg>
+                                <template x-if="unreadCount > 0">
+                                    <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#FF9ABC] text-[#46571A] border border-[#78956A] font-extrabold text-[10px] flex items-center justify-center"
+                                        x-text="unreadCount"></span>
+                                </template>
+                            </button>
+
+                            <div x-show="notifOpen" @click.away="notifOpen = false" x-cloak
+                                class="absolute right-0 mt-2 w-80 sm:w-96 bg-[#FFFDF9] rounded-2xl shadow-xl border border-[#78956A] py-2 text-xs text-[#46571A] z-50">
+                                <div class="px-4 py-2.5 border-b border-[#78956A]/30 flex items-center justify-between">
+                                    <span class="font-bold text-[#46571A]">Notifikasi Admin</span>
+                                    <template x-if="unreadCount > 0">
+                                        <button type="button" @click="markAllAdminRead()" :disabled="isMarking"
+                                            class="text-[11px] font-bold text-[#46571A] hover:underline cursor-pointer disabled:opacity-50">
+                                            Tandai Semua Dibaca
+                                        </button>
+                                    </template>
+                                </div>
+                                <div class="max-h-72 overflow-y-auto divide-y divide-[#78956A]/20">
+                                    @forelse ($userNotifications as $aNotif)
+                                        @php
+                                            $aData = $aNotif->data;
+                                            $isUnread = is_null($aNotif->read_at);
+                                        @endphp
+                                        <div class="p-3.5 space-y-1 transition {{ $isUnread ? 'admin-notif-unread bg-[#D1EB8F]/35' : 'hover:bg-[#F9F4EA]' }}">
+                                            <div class="flex items-start justify-between gap-2">
+                                                <span class="font-bold text-[11px] text-[#46571A]">{{ $aData['title'] ?? 'Aktivitas Sistem' }}</span>
+                                                @if ($isUnread)
+                                                    <span class="admin-notif-dot w-2 h-2 rounded-full bg-[#FF9ABC] border border-[#78956A] shrink-0 mt-1"></span>
+                                                @endif
+                                            </div>
+                                            <p class="text-[11px] text-[#46571A]/85 leading-relaxed">{{ $aData['message'] ?? '-' }}</p>
+                                            <span class="block text-[10px] text-[#78956A]">{{ $aData['formatted_time'] ?? $aNotif->created_at->diffForHumans() }}</span>
+                                        </div>
+                                    @empty
+                                        <div class="p-6 text-center text-[#78956A] text-xs">Belum ada notifikasi baru.</div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
                     @else
                         <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#D1EB8F] text-[#46571A] border border-[#78956A] whitespace-nowrap">
                             <svg class="w-3.5 h-3.5 text-[#46571A]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
@@ -314,6 +395,91 @@
                             </svg>
                             <span>Aktif</span>
                         </span>
+
+                        <!-- In-App Notification Bell Dropdown (Patient) -->
+                        <div class="relative" x-data="{
+                            notifOpen: false,
+                            unreadCount: {{ $unreadNotifCount }},
+                            isMarking: false,
+                            async markAllPatientRead() {
+                                if (this.isMarking || this.unreadCount <= 0) return;
+                                this.isMarking = true;
+                                try {
+                                    const token = document.querySelector('meta[name=csrf-token]')?.content || '{{ csrf_token() }}';
+                                    const res = await fetch('{{ route('notifications.read-all') }}', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': token,
+                                            'X-Requested-With': 'XMLHttpRequest',
+                                            'Accept': 'application/json'
+                                        }
+                                    });
+                                    if (res.ok) {
+                                        this.unreadCount = 0;
+                                        document.querySelectorAll('.patient-notif-unread').forEach(el => el.classList.remove('patient-notif-unread', 'bg-[#D1EB8F]/35', 'bg-[#FF9ABC]/25'));
+                                        document.querySelectorAll('.patient-notif-dot').forEach(el => el.remove());
+                                    }
+                                } catch (e) { console.error(e); }
+                                finally { this.isMarking = false; }
+                            }
+                        }">
+                            <button type="button" @click="notifOpen = !notifOpen"
+                                class="relative p-2 rounded-xl bg-[#FFFDF9] border border-[#78956A] text-[#46571A] hover:bg-[#D1EB8F] transition flex items-center justify-center cursor-pointer"
+                                title="Notifikasi Pesanan &amp; E-Report">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                                </svg>
+                                <template x-if="unreadCount > 0">
+                                    <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#FF9ABC] text-[#46571A] border border-[#78956A] font-extrabold text-[10px] flex items-center justify-center"
+                                        x-text="unreadCount"></span>
+                                </template>
+                            </button>
+
+                            <div x-show="notifOpen" @click.away="notifOpen = false" x-cloak
+                                class="absolute right-0 mt-2 w-80 sm:w-96 bg-[#FFFDF9] rounded-2xl shadow-xl border border-[#78956A] py-2 text-xs text-[#46571A] z-50">
+                                <div class="px-4 py-2.5 border-b border-[#78956A]/30 flex items-center justify-between">
+                                    <span class="font-bold text-[#46571A]">Notifikasi Pasien</span>
+                                    <template x-if="unreadCount > 0">
+                                        <button type="button" @click="markAllPatientRead()" :disabled="isMarking"
+                                            class="text-[11px] font-bold text-[#46571A] hover:underline cursor-pointer disabled:opacity-50">
+                                            Tandai Semua Dibaca
+                                        </button>
+                                    </template>
+                                </div>
+
+                                <div class="max-h-72 overflow-y-auto divide-y divide-[#78956A]/20">
+                                    @forelse ($userNotifications as $pNotif)
+                                        @php
+                                            $pData = $pNotif->data;
+                                            $pStatus = $pData['status'] ?? '';
+                                            $isUnread = is_null($pNotif->read_at);
+                                            $isDeclined = in_array($pStatus, ['ditolak', 'declined']);
+                                        @endphp
+                                        <div class="p-3.5 space-y-1.5 transition {{ $isUnread ? 'patient-notif-unread ' . ($isDeclined ? 'bg-[#FF9ABC]/25' : 'bg-[#D1EB8F]/35') : 'hover:bg-[#F9F4EA]' }}">
+                                            <div class="flex items-start justify-between gap-2">
+                                                <p class="font-bold text-[11px] text-[#46571A] leading-relaxed">
+                                                    {{ $pData['message'] ?? 'Pembaruan status pesanan Anda.' }}
+                                                </p>
+                                                @if ($isUnread)
+                                                    <span class="patient-notif-dot w-2 h-2 rounded-full bg-[#FF9ABC] border border-[#78956A] shrink-0 mt-1"></span>
+                                                @endif
+                                            </div>
+                                            <div class="flex items-center justify-between text-[10px] text-[#78956A]">
+                                                <span>{{ $pNotif->created_at->diffForHumans() }}</span>
+                                                @if ($isDeclined)
+                                                    <a href="{{ route('pasien.katalog') }}" class="font-bold text-[#46571A] hover:underline">Pilih Perawat Lain &rarr;</a>
+                                                @elseif ($pStatus === 'selesai')
+                                                    <a href="{{ route('pasien.pesanan', ['tab' => 'past']) }}" class="font-bold text-[#46571A] hover:underline">Lihat E-Report &rarr;</a>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="p-6 text-center text-[#78956A] text-xs">Belum ada notifikasi pesanan.</div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
                     @endif
 
                     <!-- Profile Pill & Dropdown -->

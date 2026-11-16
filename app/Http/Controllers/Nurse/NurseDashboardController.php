@@ -405,6 +405,24 @@ class NurseDashboardController extends Controller
                 ]);
             });
 
+            try {
+                $timeStr = now('Asia/Jakarta')->format('d M Y, H:i') . ' WIB';
+                $user->notify(new \App\Notifications\SystemActivityNotification(
+                    'payout_withdrawn',
+                    'Penarikan Saldo Berhasil',
+                    'Penarikan saldo sebesar Rp ' . number_format($amount, 0, ',', '.') . " telah dicatat ({$timeStr})."
+                ));
+                foreach (User::role('admin')->get() as $adminUser) {
+                    $adminUser->notify(new \App\Notifications\SystemActivityNotification(
+                        'nurse_payout_withdrawn',
+                        'Aktivitas Penarikan Dana Perawat',
+                        "Perawat {$user->name} menarik saldo sebesar Rp " . number_format($amount, 0, ',', '.') . '.'
+                    ));
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
             return back()->with('status', 'Penarikan saldo sebesar Rp ' . number_format($amount, 0, ',', '.') . ' berhasil diproses! Saldo aktif Anda telah terpotong otomatis.');
         } catch (\DomainException $e) {
             return back()->with('error', $e->getMessage())->withInput();
