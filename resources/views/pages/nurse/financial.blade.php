@@ -4,31 +4,31 @@
 
             <!-- 3 Financial Stat Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <div class="bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-3xl p-6 shadow-md shadow-emerald-600/20 space-y-2">
-                    <span class="text-[10px] font-bold text-emerald-100 uppercase tracking-wider block">Saldo Dompet Tersedia</span>
+                <div class="bg-[#78956A] text-[#F9F4EA] rounded-3xl p-6 shadow-md shadow-[#78956A]/25 space-y-2">
+                    <span class="text-[10px] font-bold text-[#F9F4EA] uppercase tracking-wider block">Saldo Dompet Tersedia</span>
                     <span class="text-3xl font-black block">Rp {{ number_format($nurseWallet->balance, 0, ',', '.') }}</span>
-                    <span class="text-xs text-emerald-100 block">Siap diajukan penarikan kapan saja</span>
+                    <span class="text-xs text-[#F9F4EA] block">Siap diajukan penarikan kapan saja</span>
                 </div>
 
-                <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-2">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Saldo Pending (Proses Payout)</span>
-                    <span class="text-3xl font-black text-amber-600 block">Rp {{ number_format($nurseWallet->pending_balance, 0, ',', '.') }}</span>
-                    <span class="text-xs text-slate-500 block">Sedang dalam verifikasi transfer admin</span>
+                <div class="bg-white rounded-3xl border border-[#78956A]/50 p-6 shadow-sm space-y-2">
+                    <span class="text-[10px] font-bold text-[#78956A] uppercase tracking-wider block">Saldo Pending (Proses Payout)</span>
+                    <span class="text-3xl font-black text-[#78956A] block">Rp {{ number_format($nurseWallet->pending_balance, 0, ',', '.') }}</span>
+                    <span class="text-xs text-[#78956A] block">Sedang dalam verifikasi transfer admin</span>
                 </div>
 
-                <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-2">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Mutasi Transaksi</span>
-                    <span class="text-3xl font-black text-slate-900 block">{{ $transactions->total() }}</span>
-                    <span class="text-xs text-emerald-600 font-semibold block">Tercatat secara otomatis &amp; akuntabel</span>
+                <div class="bg-white rounded-3xl border border-[#78956A]/50 p-6 shadow-sm space-y-2">
+                    <span class="text-[10px] font-bold text-[#78956A] uppercase tracking-wider block">Total Mutasi Transaksi</span>
+                    <span class="text-3xl font-black text-[#46571A] block">{{ $transactions->total() }}</span>
+                    <span class="text-xs text-[#78956A] font-semibold block">Tercatat secara otomatis &amp; akuntabel</span>
                 </div>
             </div>
 
             <!-- Tabel Riwayat Mutasi Dompet -->
-            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden space-y-4">
-                <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div class="bg-white rounded-3xl border border-[#78956A]/50 shadow-sm overflow-hidden space-y-4">
+                <div class="p-6 border-b border-[#78956A]/50 flex items-center justify-between">
                     <div>
-                        <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Log Mutasi Finansial Perawat</h3>
-                        <p class="text-xs text-slate-500 mt-0.5">Seluruh arus pendapatan tindakan medis dan penarikan saldo.</p>
+                        <h3 class="text-base font-extrabold text-[#46571A] tracking-tight">Log Mutasi Finansial Perawat</h3>
+                        <p class="text-xs text-[#78956A] mt-0.5">Seluruh arus pendapatan tindakan medis dan penarikan saldo.</p>
                     </div>
                 </div>
 
@@ -55,31 +55,31 @@
                                     <th class="py-3.5 px-4 text-center">Status</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                            <tbody class="divide-y divide-[#78956A]/30 text-[#46571A] font-medium">
                                 @foreach ($transactions as $tx)
-                                    <tr class="hover:bg-slate-50/70 transition">
-                                        <td class="py-3.5 px-4 whitespace-nowrap text-slate-500 text-[11px]">
+                                    <tr class="hover:bg-[#F9F4EA] transition">
+                                        <td class="py-3.5 px-4 whitespace-nowrap text-[#78956A] text-[11px]">
                                             {{ $tx->created_at->format('d M Y, H:i') }}
                                         </td>
                                         <td class="py-3.5 px-4 whitespace-nowrap">
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold {{ in_array($tx->type, ['income', 'order_income']) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200' }}">
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold {{ in_array($tx->type, ['income', 'order_income']) ? 'bg-[#D1EB8F]/45 text-[#46571A] border border-[#78956A]/50' : 'bg-[#F9F4EA] text-[#46571A] border border-[#78956A]/50' }}">
                                                 {{ in_array($tx->type, ['income', 'order_income']) ? '+ Pendapatan Medis' : '- Penarikan Saldo' }}
                                             </span>
                                         </td>
                                         <td class="py-3.5 px-4">
-                                            <span class="font-bold text-slate-900 block">{{ $tx->description ?: 'Mutasi dompet nakes' }}</span>
+                                            <span class="font-bold text-[#46571A] block">{{ $tx->description ?: 'Mutasi dompet nakes' }}</span>
                                         </td>
-                                        <td class="py-3.5 px-4 text-right text-slate-400 whitespace-nowrap">
+                                        <td class="py-3.5 px-4 text-right text-[#78956A] whitespace-nowrap">
                                             {{ $tx->platform_fee > 0 ? 'Rp ' . number_format($tx->platform_fee, 0, ',', '.') : '-' }}
                                         </td>
-                                        <td class="py-3.5 px-4 text-right font-black whitespace-nowrap {{ in_array($tx->type, ['income', 'order_income']) ? 'text-emerald-700' : 'text-slate-800' }}">
+                                        <td class="py-3.5 px-4 text-right font-black whitespace-nowrap {{ in_array($tx->type, ['income', 'order_income']) ? 'text-[#46571A]' : 'text-[#46571A]' }}">
                                             {{ in_array($tx->type, ['income', 'order_income']) ? '+ ' : '- ' }} Rp {{ number_format(abs($tx->net_amount ?: $tx->amount), 0, ',', '.') }}
                                         </td>
-                                        <td class="py-3.5 px-4 text-right font-bold text-slate-900 whitespace-nowrap">
+                                        <td class="py-3.5 px-4 text-right font-bold text-[#46571A] whitespace-nowrap">
                                             Rp {{ number_format($tx->balance_after, 0, ',', '.') }}
                                         </td>
                                         <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#D1EB8F]/45 text-[#46571A]">
                                                 {{ ucfirst($tx->status ?: 'completed') }}
                                             </span>
                                         </td>
@@ -89,7 +89,7 @@
                         </table>
                     </div>
 
-                    <div class="p-4 border-t border-slate-100">
+                    <div class="p-4 border-t border-[#78956A]/50">
                         {{ $transactions->links() }}
                     </div>
                 @endif
