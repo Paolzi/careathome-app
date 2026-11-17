@@ -116,10 +116,12 @@
 
                                         <!-- Tombol / Tampilan Rating & Ulasan --> @if (!$order->review)
                                             <button type="button" @click="openReviewModal(@js($order))"
-                                                class="px-3.5 py-1.5 rounded-xl bg-[#F9F4EA] hover:bg-[#D1EB8F]/70 text-[#46571A] border border-[#78956A]/50 text-xs font-bold transition flex items-center gap-1.5 ml-auto cursor-pointer"> <span>⭐</span> <span>Beri Rating &amp; Ulasan</span> </button> @endif
+                                                class="px-3.5 py-1.5 rounded-xl bg-[#FF9ABC] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A] text-xs font-bold transition flex items-center gap-1.5 ml-auto cursor-pointer">
+                                                <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" /></svg>
+                                                <span>Beri Rating &amp; Ulasan</span> </button> @endif
                                     </div> <!-- Tampilan Ulasan yang Sudah Diberikan --> @if ($order->review)
                                         <div class="p-3 rounded-2xl bg-[#F9F4EA] border border-[#78956A]/50 text-xs space-y-1"> <div class="flex items-center justify-between text-[#78956A] font-extrabold text-xs"> <div class="flex items-center gap-1"> @for ($i = 1; $i <= 5; $i++)
-                                                        <span>{{ $i <= $order->review->rating ? '' : '' }}</span> @endfor
+                                                        <svg class="w-4 h-4 {{ $i <= $order->review->rating ? 'text-[#46571A]' : 'text-[#78956A]/30' }}" fill="currentColor" viewBox="0 0 24 24"><path d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" /></svg> @endfor
                                                     <span class="text-[#46571A] ml-1">({{ $order->review->rating }}/5)</span> </div> <span class="text-[10px] text-[#78956A] font-normal">{{ $order->review->created_at->format('d M Y') }}</span> </div> <p class="text-[11px] text-[#46571A] italic">"{{ $order->review->comment ?: 'Pelayanan sangat memuaskan!' }}"</p> </div> @endif
                                 </div> @endif
                         </div> @endforeach
@@ -234,14 +236,19 @@
             class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-[#78956A]/50 overflow-hidden text-[#46571A]"
             x-transition:enter="ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
-            x-transition:enter-end="opacity-100 scale-100"> <div class="px-6 py-5 bg-[#78956A] text-[#F9F4EA] flex items-center justify-between"> <div class="flex items-center gap-2.5"> <span class="text-2xl">⭐</span> <div> <span class="text-[10px] uppercase font-extrabold tracking-wider text-[#F9F4EA] block">Evaluasi Pelayanan</span> <h3 class="text-base font-extrabold leading-tight">Beri Penilaian &amp; Ulasan</h3> </div> </div> <button type="button" @click="reviewModalOpen = false" class="p-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs"> </button> </div> <form :action="'/pasien/orders/' + selectedOrderForReview?.id + '/review'" method="POST" class="p-6 space-y-4 text-xs"> @csrf
+            x-transition:enter-end="opacity-100 scale-100"> <div class="px-6 py-5 bg-[#78956A] text-[#F9F4EA] flex items-center justify-between"> <div class="flex items-center gap-2.5"> <svg class="w-6 h-6 text-[#D1EB8F] shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" /></svg> <div> <span class="text-[10px] uppercase font-extrabold tracking-wider text-[#D1EB8F] block">Evaluasi Pelayanan</span> <h3 class="text-base font-extrabold leading-tight">Beri Penilaian &amp; Ulasan</h3> </div> </div> <button type="button" @click="reviewModalOpen = false" class="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-[#F9F4EA] cursor-pointer"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button> </div> <form :action="'/pasien/orders/' + selectedOrderForReview?.id + '/review'" method="POST" class="p-6 space-y-4 text-xs"> @csrf
 
                 <!-- Info Perawat --> <div class="p-3.5 rounded-2xl bg-[#F9F4EA] border border-[#78956A]/50 text-center space-y-1"> <span class="text-[#78956A] text-[11px] block">Mitra Perawat:</span> <strong class="text-sm text-[#46571A] font-extrabold" x-text="selectedOrderForReview?.nurse?.name || 'Ns. CareAtHome'"></strong> <span class="text-[11px] text-[#78956A] block" x-text="selectedOrderForReview?.service_catalog?.name"></span> </div> <!-- Star Rating Interaktif (Hover & Click) --> <div class="text-center space-y-2 pt-2"> <label class="block text-xs font-extrabold text-[#46571A]">Bagaimana kualitas pelayanan perawat?</label> <input type="hidden" name="rating" :value="userRating"> <div class="flex items-center justify-center gap-2"> <template x-for="star in [1, 2, 3, 4, 5]" :key="star"> <button type="button"
                                 @click="userRating = star"
                                 @mouseenter="hoverRating = star"
                                 @mouseleave="hoverRating = 0"
-                                class="text-3xl transition-transform hover:scale-125 cursor-pointer focus:outline-none"
-                                :class="(hoverRating || userRating) >= star ? 'text-[#78956A]' : 'text-[#F9F4EA]'"> 
+                                class="p-1 transition-transform hover:scale-125 cursor-pointer focus:outline-none"
+                                :aria-label="'Beri ' + star + ' bintang'">
+                                <svg class="w-9 h-9 transition-colors"
+                                    :class="(hoverRating || userRating) >= star ? 'text-[#46571A]' : 'text-[#78956A]/30'"
+                                    fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" />
+                                </svg>
                             </button> </template> </div> <!-- Label Kepuasan Dinamis --> <span class="text-xs font-bold block"
                         :class="userRating >= 4 ? 'text-[#46571A]' : (userRating === 3 ? 'text-[#46571A]' : 'text-[#46571A]')"
                         x-text="getRatingLabel(hoverRating || userRating)"> </span> </div> <!-- Kolom Komentar Ulasan --> <div class="pt-2"> <label class="block text-xs font-bold text-[#46571A] mb-1"> Komentar / Pengalaman Pelayanan <span class="text-[#78956A] font-normal">(Opsional)</span> </label> <textarea name="comment" rows="3"
@@ -249,7 +256,7 @@
                         class="w-full text-xs rounded-xl border-[#78956A]/50 focus:border-[#78956A] focus:ring-[#78956A]"></textarea> </div> <!-- Tombol Aksi --> <div class="pt-2 flex items-center justify-end gap-2"> <button type="button" @click="reviewModalOpen = false"
                         class="px-4 py-2.5 rounded-xl border border-[#78956A]/50 text-xs font-bold text-[#46571A]/85 hover:bg-[#F9F4EA] transition"> Batal
                     </button> <button type="submit"
-                        class="px-5 py-2.5 rounded-xl bg-[#78956A] hover:bg-[#D1EB8F] text-[#46571A] font-extrabold text-xs shadow-md shadow-orange-500/20 transition cursor-pointer"> Kirim Ulasan &amp; Rating
+                        class="px-5 py-2.5 rounded-xl bg-[#FF9ABC] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A] font-extrabold text-xs shadow-sm transition cursor-pointer"> Kirim Ulasan &amp; Rating
                     </button> </div> </form> </div> </div> <!-- 9. FOOTER --> <footer class="mt-auto border-t border-[#78956A]/50 bg-white py-6"> <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-[#78956A]"> CareAtHome Health-Tech Platform &copy; 2026. Platform Layanan Keperawatan On-Demand Terstandar Kemenkes RI.
         </div> </footer> <!-- Alpine App Logic for Orders, Escrow Payments, Tracking & Cancellation --> <script> function patientOrdersApp() {
             return {
@@ -332,11 +339,11 @@
 
                 getRatingLabel(r) {
                     switch (parseInt(r)) {
-                        case 1: return '⭐ Sangat Kecewa / Buruk';
-                        case 2: return '⭐⭐ Kurang Puas';
-                        case 3: return '⭐⭐⭐ Cukup Baik';
-                        case 4: return '⭐⭐⭐⭐ Puas & Ramah';
-                        case 5: return '⭐⭐⭐⭐⭐ Sangat Memuaskan & Profesional!';
+                        case 1: return '1/5 — Sangat Kecewa / Buruk';
+                        case 2: return '2/5 — Kurang Puas';
+                        case 3: return '3/5 — Cukup Baik';
+                        case 4: return '4/5 — Puas & Ramah';
+                        case 5: return '5/5 — Sangat Memuaskan & Profesional!';
                         default: return 'Pilih Bintang Penilaian';
                     }
                 },
