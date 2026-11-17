@@ -18,21 +18,40 @@ class AdminEscrowMonitoringController extends Controller
      */
     public function index(Request $request): View
     {
-        // 1. Hitung total saldo semua wallet
-        $wallets = Wallet::with('user.roles')->get();
+        // 1. Hitung total saldo wallet Escrow (Perawat & Platform Admin)
+        $wallets = Wallet::with('user.roles')
+            ->whereHas('user.roles', function ($q) {
+                $q->whereIn('name', ['perawat', 'admin']);
+            })
+            ->get();
         $totalWalletBalance = (int) $wallets->sum('balance');
+        $escrowWalletIds = $wallets->pluck('id')->all();
 
         // 2. Total pending payout (dana yang sedang ditahan untuk ditarik)
         $totalPendingPayout = (int) PayoutRequest::where('status', 'pending')->sum('amount');
 
-        // 3. Total pendapatan seumur hidup yang masuk ke sistem (order_income)
-        $totalLifetimeIncome = (int) WalletTransaction::where('type', 'order_income')->sum('amount');
+        // 3. Total pendapatan bersih seumur hidup yang masuk ke sistem (order_income - refund_reversal)
+        $grossIncome = (int) WalletTransaction::whereIn('wallet_id', $escrowWalletIds)
+            ->where('type', 'order_income')
+            ->selectRaw('COALESCE(SUM(ABS(amount)), 0) as total')
+            ->value('total');
+        $totalReversals = (int) WalletTransaction::whereIn('wallet_id', $escrowWalletIds)
+            ->where('type', 'refund_reversal')
+            ->selectRaw('COALESCE(SUM(ABS(amount)), 0) as total')
+            ->value('total');
+        $totalLifetimeIncome = max(0, $grossIncome - $totalReversals);
 
-        // 4. Rekonsiliasi ledger:
-        // Mutasi yang menambah saldo wallet: order_income, payout_release
-        // Mutasi yang mengurangi saldo wallet: refund_reversal, payout_hold
-        $totalCredits = (int) WalletTransaction::whereIn('type', ['order_income', 'payout_release'])->sum('amount');
-        $totalDebits = (int) WalletTransaction::whereIn('type', ['refund_reversal', 'payout_hold'])->sum('amount');
+        // 4. Rekonsiliasi ledger (menggunakan ABS(amount) agar debit bertanda negatif tidak menjadi penambah):
+        // Mutasi kredit (+): order_income, payout_release, topup, initial_balance
+        // Mutasi debit  (-): refund_reversal, payout_hold, withdrawal
+        $totalCredits = (int) WalletTransaction::whereIn('wallet_id', $escrowWalletIds)
+            ->whereIn('type', ['order_income', 'payout_release', 'topup', 'initial_balance'])
+            ->selectRaw('COALESCE(SUM(ABS(amount)), 0) as total')
+            ->value('total');
+        $totalDebits = (int) WalletTransaction::whereIn('wallet_id', $escrowWalletIds)
+            ->whereIn('type', ['refund_reversal', 'payout_hold', 'withdrawal'])
+            ->selectRaw('COALESCE(SUM(ABS(amount)), 0) as total')
+            ->value('total');
         $expectedNetBalance = $totalCredits - $totalDebits;
 
         $isReconciled = ($totalWalletBalance === $expectedNetBalance);

@@ -158,34 +158,35 @@ class Order extends Model
     public static function calculatePriceBreakdown(float $basePrice, float $distanceKm = 0.0): array
     {
         $distance = max(0.0, round($distanceKm, 2));
+        $basePriceInt = (int) round($basePrice);
 
-        // Kalkulasi ongkos transport bertahap
-        if ($distance <= 0.0) {
-            $transportFee = 10000.0; // Minimal radius awal
-        } elseif ($distance <= 3.0) {
-            $transportFee = 10000.0;
+        // Kalkulasi ongkos transport realistis per jarak (mulai Rp 3.000 untuk <= 0.5 km, lalu Rp 2.500/km dibulatkan ke Rp 500)
+        if ($distance <= 0.5) {
+            $transportFee = 3000;
         } else {
-            $extraKm = ceil($distance - 3.0);
-            $transportFee = 10000.0 + ($extraKm * 2500.0);
+            $extraKm = $distance - 0.5;
+            $rawTransport = 3000 + ($extraKm * 2500);
+            $transportFee = (int) (ceil($rawTransport / 500) * 500);
         }
 
-        $platformFee = 5000.0;
-        $totalAmount = $basePrice + $transportFee + $platformFee;
+        $platformFee = 5000;
+        $totalAmount = $basePriceInt + $transportFee + $platformFee;
 
-        // Pembagian finansial antara perawat dan platform
-        $commissionAmount = round($basePrice * 0.15, 2);
-        $nurseEarnings = round(($basePrice * 0.85) + $transportFee, 2);
+        // Pembagian finansial presisi (invariant: nurseEarnings + adminTotalShare === totalAmount)
+        $commissionAmount = (int) round($basePriceInt * 0.15);
+        $nurseServiceShare = $basePriceInt - $commissionAmount;
+        $nurseEarnings = $nurseServiceShare + $transportFee;
 
         return [
-            'base_price' => $basePrice,
+            'base_price' => (float) $basePriceInt,
             'distance_km' => $distance,
-            'transport_fee' => $transportFee,
-            'platform_fee' => $platformFee,
-            'total_amount' => $totalAmount,
-            'commission_amount' => $commissionAmount,
-            'nurse_earnings' => $nurseEarnings,
+            'transport_fee' => (float) $transportFee,
+            'platform_fee' => (float) $platformFee,
+            'total_amount' => (float) $totalAmount,
+            'commission_amount' => (float) $commissionAmount,
+            'nurse_earnings' => (float) $nurseEarnings,
             'formatted' => [
-                'base_price' => 'Rp ' . number_format($basePrice, 0, ',', '.'),
+                'base_price' => 'Rp ' . number_format($basePriceInt, 0, ',', '.'),
                 'transport_fee' => 'Rp ' . number_format($transportFee, 0, ',', '.'),
                 'platform_fee' => 'Rp ' . number_format($platformFee, 0, ',', '.'),
                 'total_amount' => 'Rp ' . number_format($totalAmount, 0, ',', '.'),
