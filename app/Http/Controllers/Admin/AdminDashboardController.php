@@ -27,7 +27,7 @@ class AdminDashboardController extends Controller
         }
         $startDate = now('Asia/Jakarta')->subDays($days)->startOfDay();
 
-        // Kartu Ringkasan Finansial & Operasional
+        // Kartu Ringkasan Finansial & Operasional (Real dari transaksi lunas non-refund & ledger)
         $paidPayments = Payment::whereIn('payment_status', ['paid', 'settlement']);
         $totalGmv = (int) $paidPayments->sum(DB::raw('COALESCE(total_amount, gross_amount)'));
         $totalPlatformFee = (int) $paidPayments->sum('admin_fee');
@@ -40,6 +40,11 @@ class AdminDashboardController extends Controller
         }
 
         $totalPayoutWithdrawn = (int) PayoutRequest::whereIn('status', ['transferred', 'completed', 'approved'])->sum('amount');
+        if ($totalPayoutWithdrawn === 0) {
+            $totalPayoutWithdrawn = (int) WalletTransaction::where('type', 'withdrawal')
+                ->selectRaw('COALESCE(SUM(ABS(amount)), 0) as total')
+                ->value('total');
+        }
 
         $completedOrdersCount = Order::whereIn('status', ['selesai', 'completed'])->count();
         $totalOrdersCount = Order::count();
@@ -54,22 +59,22 @@ class AdminDashboardController extends Controller
             ->take(10)
             ->get();
 
-        // Data Chart 1: Grafik Tren Pemesanan ("Pesan Sekarang" vs "Pesan Untuk Nanti")
+        // Data Chart 1: Grafik Tren Pemesanan ("Pesan Sekarang" vs "Pesan Untuk Nanti") dalam WIB
         $ordersTrendRaw = Order::where('created_at', '>=', $startDate)
-            ->selectRaw("DATE(created_at) as date, COALESCE(booking_type, 'now') as b_type, COUNT(*) as total")
+            ->selectRaw("DATE(CONVERT_TZ(created_at, '+00:00', '+07:00')) as date, COALESCE(booking_type, 'now') as b_type, COUNT(*) as total")
             ->groupBy('date', 'b_type')
             ->get();
 
-        // Data Chart 2: Grafik Pendapatan Masuk vs Penarikan Payout Perawat
+        // Data Chart 2: Grafik Pendapatan Masuk vs Penarikan Payout Perawat (Real WIB)
         $revenueRaw = Payment::whereIn('payment_status', ['paid', 'settlement'])
             ->where('created_at', '>=', $startDate)
-            ->selectRaw('DATE(created_at) as date, SUM(COALESCE(total_amount, gross_amount)) as total_gmv')
+            ->selectRaw("DATE(CONVERT_TZ(created_at, '+00:00', '+07:00')) as date, SUM(COALESCE(total_amount, gross_amount)) as total_gmv")
             ->groupBy('date')
             ->get();
 
         $payoutRaw = PayoutRequest::whereIn('status', ['transferred', 'completed', 'approved', 'pending'])
             ->where('created_at', '>=', $startDate)
-            ->selectRaw('DATE(created_at) as date, SUM(amount) as total_payout')
+            ->selectRaw("DATE(CONVERT_TZ(created_at, '+00:00', '+07:00')) as date, SUM(amount) as total_payout")
             ->groupBy('date')
             ->get();
 
