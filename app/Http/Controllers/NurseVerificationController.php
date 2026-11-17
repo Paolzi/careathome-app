@@ -168,24 +168,27 @@ class NurseVerificationController extends Controller
             'sip_expiry' => $parsedSipExpiry ?: $rawSipExpiry,
         ]);
 
+        $nurseProfile = NurseProfile::firstOrCreate(['user_id' => $user->id]);
+
         $request->validate([
-            'nik' => ['required', 'string', 'min:8', 'max:20'],
-            'str_number' => ['required', 'string', 'max:50'],
+            'nik' => ['required', 'string', 'min:8', 'max:20', \Illuminate\Validation\Rule::unique('nurse_profiles', 'nik')->ignore($nurseProfile->id)],
+            'str_number' => ['required', 'string', 'max:50', \Illuminate\Validation\Rule::unique('nurse_profiles', 'str_number')->ignore($nurseProfile->id)],
             'str_expiry' => ['required', 'date'],
-            'sip_number' => ['required', 'string', 'max:100'],
+            'sip_number' => ['required', 'string', 'max:100', \Illuminate\Validation\Rule::unique('nurse_profiles', 'sip_number')->ignore($nurseProfile->id)],
             'sip_expiry' => ['nullable', 'date'],
             'sip_institution' => ['nullable', 'string', 'max:255'],
             'specialization' => ['nullable', 'string', 'max:255'],
         ], [
             'nik.required' => 'Nomor Induk Kependudukan (NIK) wajib diisi.',
             'nik.min' => 'NIK minimal terdiri dari 8 karakter/angka.',
+            'nik.unique' => 'NIK sudah digunakan oleh akun perawat lain.',
             'str_number.required' => 'Nomor STR wajib diisi.',
+            'str_number.unique' => 'Nomor STR sudah digunakan oleh akun perawat lain.',
             'str_expiry.required' => 'Tanggal masa berlaku STR wajib diisi.',
             'str_expiry.date' => 'Format tanggal masa berlaku STR tidak valid.',
             'sip_number.required' => 'Nomor SIP wajib diisi.',
+            'sip_number.unique' => 'Nomor SIP sudah digunakan oleh akun perawat lain.',
         ]);
-
-        $nurseProfile = NurseProfile::firstOrCreate(['user_id' => $user->id]);
 
         // Jika sudah terverifikasi resmi oleh admin, cegah overwrite status
         if ($nurseProfile->verification_status === 'verified') {

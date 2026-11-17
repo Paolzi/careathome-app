@@ -1,4 +1,7 @@
-<x-app-layout> <div class="py-8" x-data="nurseFeedApp()"> <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6"> <!-- Flash Status Messages --> @if (session('status'))
+<x-app-layout>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <div class="py-8" x-data="nurseFeedApp()"> <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6"> <!-- Flash Status Messages --> @if (session('status'))
                 <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800 flex items-center justify-between shadow-xs"> <div class="flex items-center gap-2"> <span><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></span> <span>{{ session('status') }}</span> </div> </div> @endif
 
             @if (session('error'))
@@ -47,7 +50,25 @@
                                     <div class="p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-[10px] text-amber-950 font-semibold"> {{ $actCheck['message'] }}
                                     </div> @endif
 
-                                <div class="pt-2 border-t border-slate-200/60 space-y-2"> @if ($act->status === 'diterima')
+                                <div class="pt-2 border-t border-slate-200/60 space-y-2">
+                                    @php
+                                        $actLat = $act->latitude ?? $act->patient_latitude;
+                                        $actLng = $act->longitude ?? $act->patient_longitude;
+                                        $actGmaps = ($actLat && $actLng)
+                                            ? ('https://www.google.com/maps/dir/?api=1&' . ($profile->latitude && $profile->longitude ? "origin={$profile->latitude},{$profile->longitude}&" : '') . "destination={$actLat},{$actLng}&travelmode=driving")
+                                            : ('https://www.google.com/maps/search/?api=1&query=' . urlencode($act->address));
+                                    @endphp
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <button type="button" @click="openRouteModal(@js($act))"
+                                            class="py-1.5 px-2.5 rounded-xl bg-[#D1EB8F] hover:bg-[#78956A] text-[#46571A] hover:text-[#F9F4EA] border border-[#78956A] text-[11px] font-bold transition text-center cursor-pointer">
+                                            Lihat Rute (App)
+                                        </button>
+                                        <a href="{{ $actGmaps }}" target="_blank" rel="noopener noreferrer"
+                                            class="py-1.5 px-2.5 rounded-xl bg-[#FFFDF9] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A] text-[11px] font-bold transition text-center">
+                                            Google Maps
+                                        </a>
+                                    </div>
+                                    @if ($act->status === 'diterima')
                                         <button type="button"
                                             @if($canActFeed) @click="updateOrderStatus({{ $act->id }}, 'dalam_perjalanan')" @else disabled @endif
                                             class="w-full py-2 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 {{ $canActFeed ? 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer' : 'bg-slate-200 text-slate-500 cursor-not-allowed opacity-75' }}"> <span> Mulai Perjalanan</span> </button> @elseif ($act->status === 'dalam_perjalanan')
@@ -60,10 +81,106 @@
                                     <a href="{{ route('perawat.dashboard') }}" class="w-full py-2 px-3 rounded-xl bg-[#064e3b] hover:bg-emerald-900 text-white font-bold text-xs transition flex items-center justify-center gap-1.5"> <span> Selesai Perawatan &amp; Isi E-Report &rarr;</span> </a> </div> </div> @endforeach
                     </div> </div> @endif
 
-        </div> </div> <!-- Alpine.js Feed Logic --> <script> function nurseFeedApp() {
+        </div>
+
+        <!-- MODAL PETA RUTE MENUJU RUMAH PASIEN -->
+        <div x-show="routeModalOpen" x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+            <div @click.away="routeModalOpen = false"
+                class="bg-[#FFFDF9] rounded-3xl max-w-2xl w-full shadow-2xl border border-[#78956A] overflow-hidden text-[#46571A] flex flex-col">
+                <div class="px-6 py-4 bg-[#78956A] text-[#F9F4EA] flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold tracking-wider text-[#D1EB8F]" x-text="'Navigasi Kunjungan #' + (routeOrder?.order_number || '')"></span>
+                        <h3 class="text-base font-bold mt-0.5" x-text="'Rute ke Rumah ' + (routeOrder?.patient_name || 'Pasien')"></h3>
+                    </div>
+                    <button type="button" @click="routeModalOpen = false" class="p-1.5 rounded-xl hover:bg-white/10 cursor-pointer">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="p-5 space-y-3 text-xs">
+                    <div class="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-[#F9F4EA] border border-[#78956A]/40">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase text-[#78956A] block">Jarak Rute Jalan</span>
+                            <span class="text-sm font-extrabold text-[#46571A]" x-text="routeDistanceKm"></span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold uppercase text-[#78956A] block">Estimasi Waktu Tempuh</span>
+                            <span class="text-sm font-extrabold text-[#46571A]" x-text="routeDurationMin"></span>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-[#46571A]/85"><strong>Alamat Pasien:</strong> <span x-text="routeOrder?.address || '-'"></span></p>
+                    <div id="feedRouteLeafletMap" class="w-full h-72 rounded-2xl border border-[#78956A] z-0"></div>
+                </div>
+                <div class="px-6 py-4 bg-[#F9F4EA] border-t border-[#78956A]/30 flex flex-wrap items-center justify-between gap-2">
+                    <a :href="routeOrder ? ('https://www.google.com/maps/dir/?api=1&' + (nurseLat && nurseLng ? `origin=${nurseLat},${nurseLng}&` : '') + `destination=${routeOrder.latitude || routeOrder.patient_latitude},${routeOrder.longitude || routeOrder.patient_longitude}&travelmode=driving`) : '#'"
+                        target="_blank" rel="noopener noreferrer"
+                        class="px-4 py-2 rounded-xl bg-[#FF9ABC] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A] text-xs font-bold transition flex items-center gap-1.5">
+                        <span>Buka Navigasi di Google Maps</span>
+                    </a>
+                    <button type="button" @click="routeModalOpen = false"
+                        class="px-4 py-2 rounded-xl border border-[#78956A] bg-[#FFFDF9] text-xs font-bold text-[#46571A] cursor-pointer">Tutup</button>
+                </div>
+            </div>
+        </div>
+        </div> <!-- Alpine.js Feed Logic --> <script> function nurseFeedApp() {
             return {
                 toastMessage: '',
                 toastType: 'success',
+                nurseLat: {{ $profile->latitude ?? 'null' }},
+                nurseLng: {{ $profile->longitude ?? 'null' }},
+                routeModalOpen: false,
+                routeOrder: null,
+                routeMap: null,
+                routeDistanceKm: '-',
+                routeDurationMin: '-',
+
+                openRouteModal(order) {
+                    this.routeOrder = order;
+                    this.routeDistanceKm = order.distance_km ? `${Number(order.distance_km).toFixed(1)} km` : '-';
+                    this.routeDurationMin = order.distance_km ? `~${Math.max(3, Math.round(Number(order.distance_km) * 3))} menit` : '-';
+                    this.routeModalOpen = true;
+
+                    this.$nextTick(async () => {
+                        if (typeof L === 'undefined') return;
+                        const nLat = parseFloat(this.nurseLat || -7.307743);
+                        const nLng = parseFloat(this.nurseLng || 112.729963);
+                        const pLat = parseFloat(order.latitude || order.patient_latitude || nLat);
+                        const pLng = parseFloat(order.longitude || order.patient_longitude || nLng);
+
+                        if (this.routeMap) {
+                            this.routeMap.remove();
+                            this.routeMap = null;
+                        }
+
+                        this.routeMap = L.map('feedRouteLeafletMap').setView([(nLat + pLat) / 2, (nLng + pLng) / 2], 14);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            maxZoom: 19,
+                            attribution: '&copy; OpenStreetMap'
+                        }).addTo(this.routeMap);
+
+                        const nurseMarker = L.marker([nLat, nLng]).addTo(this.routeMap).bindPopup('<strong>Posisi Anda (Perawat)</strong>').openPopup();
+                        const patientMarker = L.marker([pLat, pLng]).addTo(this.routeMap).bindPopup(`<strong>Rumah Pasien: ${order.patient_name || 'Pasien'}</strong><br>${order.address || ''}`);
+
+                        try {
+                            const url = `https://router.project-osrm.org/route/v1/driving/${nLng},${nLat};${pLng},${pLat}?overview=full&geometries=geojson`;
+                            const res = await fetch(url);
+                            const json = await res.json();
+                            if (json && json.routes && json.routes[0]) {
+                                const r = json.routes[0];
+                                const coords = r.geometry.coordinates.map(c => [c[1], c[0]]);
+                                const poly = L.polyline(coords, { color: '#46571A', weight: 5, opacity: 0.85 }).addTo(this.routeMap);
+                                this.routeMap.fitBounds(poly.getBounds().pad(0.25));
+                                this.routeDistanceKm = (Math.max(0.1, r.distance / 1000)).toFixed(1) + ' km';
+                                this.routeDurationMin = '~' + Math.max(2, Math.round(r.duration / 60)) + ' menit';
+                            } else {
+                                this.routeMap.fitBounds(L.featureGroup([nurseMarker, patientMarker]).getBounds().pad(0.3));
+                            }
+                        } catch (e) {
+                            this.routeMap.fitBounds(L.featureGroup([nurseMarker, patientMarker]).getBounds().pad(0.3));
+                        }
+                        setTimeout(() => this.routeMap && this.routeMap.invalidateSize(), 150);
+                    });
+                },
 
                 async handleAcceptOrder(orderId, orderNumber, cardScope) {
                     if (!confirm(`Apakah Anda yakin ingin menerima penugasan medis pesanan #${orderNumber}?`)) {
