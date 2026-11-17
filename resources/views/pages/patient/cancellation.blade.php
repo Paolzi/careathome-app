@@ -24,53 +24,53 @@
     <main class="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
         <!-- Page Header Banner Khusus Pembatalan & Refund -->
-        <div class="bg-gradient-to-r from-rose-950 via-slate-900 to-slate-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-rose-900/40 relative overflow-hidden">
-            <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="bg-[#78956A] rounded-3xl p-6 sm:p-8 text-[#F9F4EA] shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-[#FF9ABC] relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-[#FF9ABC] rounded-full blur-3xl pointer-events-none"></div>
 
             <div class="space-y-2 relative z-10">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-400/30 text-rose-300 text-xs font-semibold">
-                    <span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF9ABC] border border-[#FF9ABC] text-[#FF9ABC] text-xs font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-[#D1EB8F] animate-pulse"></span>
                     Kebijakan Pembatalan &amp; Pengembalian Dana Escrow 100%
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
                     Pusat Pembatalan Pesanan &amp; Refund Escrow
                 </h1>
-                <p class="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                <p class="text-[#F9F4EA]/90 text-xs sm:text-sm max-w-2xl leading-relaxed">
                     Ajukan pembatalan pesanan secara mandiri dengan perlindungan penuh hak pasien. Pesanan yang dibatalkan sebelum mitra perawat diberangkatkan dijamin <strong>100% pengembalian dana dari rekening penampung (Escrow)</strong> ke rekening Anda tanpa potongan platform.
                 </p>
             </div>
 
-            <div class="shrink-0 grid grid-cols-2 sm:grid-cols-2 gap-4 border-t sm:border-t-0 sm:border-l border-slate-700/60 pt-4 sm:pt-0 sm:pl-6 relative z-10 text-right">
+            <div class="shrink-0 grid grid-cols-2 sm:grid-cols-2 gap-4 border-t sm:border-t-0 sm:border-l border-[#78956A] pt-4 sm:pt-0 sm:pl-6 relative z-10 text-right">
                 <div class="p-3 bg-white/5 rounded-2xl border border-white/10 text-left">
-                    <span class="text-[10px] text-slate-300 uppercase tracking-wider font-bold block">Total Dibatalkan</span>
-                    <span class="text-2xl font-black text-rose-400">{{ $totalCancelled }} Pesanan</span>
+                    <span class="text-[10px] text-[#F9F4EA]/90 uppercase tracking-wider font-bold block">Total Dibatalkan</span>
+                    <span class="text-2xl font-black text-[#46571A]">{{ $totalCancelled }} Pesanan</span>
                 </div>
                 <div class="p-3 bg-white/5 rounded-2xl border border-white/10 text-left">
-                    <span class="text-[10px] text-emerald-300 uppercase tracking-wider font-bold block">Dana Dikembalikan</span>
-                    <span class="text-xl sm:text-2xl font-black text-emerald-400">Rp {{ number_format($totalRefundAmount, 0, ',', '.') }}</span>
+                    <span class="text-[10px] text-[#D1EB8F] uppercase tracking-wider font-bold block">Dana Dikembalikan</span>
+                    <span class="text-xl sm:text-2xl font-black text-[#D1EB8F]">Rp {{ number_format($totalRefundAmount, 0, ',', '.') }}</span>
                 </div>
             </div>
         </div>
 
         <!-- 3. ATURAN PEMBATALAN & GARANSI REFUND ESCROW -->
-        <div class="p-5 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-3 text-xs leading-relaxed">
+        <div class="p-5 rounded-3xl bg-white border border-[#78956A]/50 shadow-2xs space-y-3 text-xs leading-relaxed">
             <h3 class="font-bold text-[#46571A] flex items-center gap-2">
                 <svg class="w-4 h-4 text-[#78956A]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 </svg>
                 <span>Ketentuan Garansi 100% Pengembalian Dana (Escrow Protection)</span>
             </h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-600 pt-1">
-                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                    <span class="font-bold text-slate-800 block text-[11px]">1. Pembatalan Mandiri</span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-[#46571A]/85 pt-1">
+                <div class="p-3.5 rounded-2xl bg-[#F9F4EA] border border-[#78956A]/50 space-y-1">
+                    <span class="font-bold text-[#46571A] block text-[11px]">1. Pembatalan Mandiri</span>
                     <p class="text-[11px]">Dapat dilakukan kapan saja selama status pesanan masih <em>Menunggu Konfirmasi</em> atau <em>Diterima Perawat</em>.</p>
                 </div>
-                <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-emerald-950 space-y-1">
-                    <span class="font-bold text-emerald-900 block text-[11px]">2. 100% Refund Otomatis</span>
+                <div class="p-3.5 rounded-2xl bg-[#D1EB8F]/45 border border-[#78956A]/50 text-[#46571A] space-y-1">
+                    <span class="font-bold text-[#46571A] block text-[11px]">2. 100% Refund Otomatis</span>
                     <p class="text-[11px]">Dana yang telah disetor ke rekening penampung (Escrow) dikembalikan penuh tanpa biaya penalti maupun potongan platform fee.</p>
                 </div>
-                <div class="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100 text-amber-950 space-y-1">
-                    <span class="font-bold text-amber-900 block text-[11px]">3. Perawat Dalam Perjalanan</span>
+                <div class="p-3.5 rounded-2xl bg-[#F9F4EA] border border-[#78956A]/50 text-[#46571A] space-y-1">
+                    <span class="font-bold text-[#46571A] block text-[11px]">3. Perawat Dalam Perjalanan</span>
                     <p class="text-[11px]">Jika nakes telah bergerak ke lokasi, pembatalan diarahkan melalui konfirmasi pusat bantuan untuk perlindungan kompensasi transport.</p>
                 </div>
             </div>
@@ -78,12 +78,12 @@
 
         <!-- 4. PESANAN YANG MEMENUHI SYARAT PEMBATALAN -->
         <div class="space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div class="flex items-center justify-between border-b border-[#78956A]/50 pb-3">
                 <div>
-                    <h2 class="text-base font-extrabold text-slate-900">Pesanan Aktif yang Dapat Dibatalkan</h2>
-                    <p class="text-xs text-slate-500">Pilih pesanan di bawah ini jika Anda ingin mengajukan pembatalan sebelum tindakan dimulai.</p>
+                    <h2 class="text-base font-extrabold text-[#46571A]">Pesanan Aktif yang Dapat Dibatalkan</h2>
+                    <p class="text-xs text-[#78956A]">Pilih pesanan di bawah ini jika Anda ingin mengajukan pembatalan sebelum tindakan dimulai.</p>
                 </div>
-                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#F9F4EA] text-[#46571A] border border-[#78956A]/50">
                     {{ $cancellableOrders->count() }} Pesanan
                 </span>
             </div>
@@ -122,28 +122,28 @@
                                     </span>
                                 </div>
 
-                                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
-                                    <div class="flex justify-between text-slate-600">
+                                <div class="p-3 rounded-2xl bg-[#F9F4EA] border border-[#78956A]/50 text-xs space-y-1">
+                                    <div class="flex justify-between text-[#46571A]/85">
                                         <span>Jadwal:</span>
-                                        <span class="font-bold text-slate-900">{{ $order->scheduled_date->format('d M Y') }} ({{ str_contains($order->scheduled_time ?? '', 'WIB') ? $order->scheduled_time : ($order->scheduled_time . ' WIB') }})</span>
+                                        <span class="font-bold text-[#46571A]">{{ $order->scheduled_date->format('d M Y') }} ({{ str_contains($order->scheduled_time ?? '', 'WIB') ? $order->scheduled_time : ($order->scheduled_time . ' WIB') }})</span>
                                     </div>
-                                    <div class="flex justify-between text-slate-600">
+                                    <div class="flex justify-between text-[#46571A]/85">
                                         <span>Mitra Nakes:</span>
-                                        <span class="font-bold text-slate-900">{{ $order->nurse->name ?? 'Menunggu Konfirmasi Nakes' }}</span>
+                                        <span class="font-bold text-[#46571A]">{{ $order->nurse->name ?? 'Menunggu Konfirmasi Nakes' }}</span>
                                     </div>
-                                    <div class="flex justify-between text-slate-600 pt-1 border-t border-slate-200">
+                                    <div class="flex justify-between text-[#46571A]/85 pt-1 border-t border-[#78956A]/50">
                                         <span>Nilai Transaksi:</span>
-                                        <span class="font-black text-slate-900">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                                        <span class="font-black text-[#46571A]">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-                                <span class="text-[11px] text-slate-500">
+                            <div class="pt-3 border-t border-[#78956A]/50 flex items-center justify-between gap-3">
+                                <span class="text-[11px] text-[#78956A]">
                                     {{ $order->payment_status === 'paid' ? 'Garansi refund 100% dana escrow.' : 'Dapat dibatalkan tanpa biaya.' }}
                                 </span>
                                 <button type="button" @click="openCancelModal(@js($order))"
-                                    class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition cursor-pointer">
+                                    class="px-4 py-2 rounded-xl bg-[#FF9ABC]/25 hover:bg-[#FF9ABC]/40 text-[#46571A] border border-[#FF9ABC] text-xs font-bold transition cursor-pointer">
                                     Batalkan Pesanan Ini
                                 </button>
                             </div>
@@ -155,12 +155,12 @@
 
         <!-- 5. RIWAYAT PESANAN DIBATALKAN & AUDIT REFUND ESCROW -->
         <div class="space-y-4 pt-6">
-            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div class="flex items-center justify-between border-b border-[#78956A]/50 pb-3">
                 <div>
-                    <h2 class="text-base font-extrabold text-slate-900">Riwayat Pembatalan &amp; Pengembalian Dana</h2>
-                    <p class="text-xs text-slate-500">Arsip pencatatan pesanan yang dibatalkan beserta transparansi pengembalian dana escrow ke pasien.</p>
+                    <h2 class="text-base font-extrabold text-[#46571A]">Riwayat Pembatalan &amp; Pengembalian Dana</h2>
+                    <p class="text-xs text-[#78956A]">Arsip pencatatan pesanan yang dibatalkan beserta transparansi pengembalian dana escrow ke pasien.</p>
                 </div>
-                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#FF9ABC]/25 text-[#46571A] border border-[#FF9ABC]">
                     {{ $totalCancelled }} Riwayat Dibatalkan
                 </span>
             </div>
@@ -180,25 +180,25 @@
             @else
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     @foreach ($cancelledOrders as $order)
-                        <div class="bg-white rounded-3xl border border-rose-200/80 p-6 space-y-4 shadow-sm">
+                        <div class="bg-white rounded-3xl border border-[#FF9ABC] p-6 space-y-4 shadow-sm">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <span class="text-[10px] font-mono font-bold text-slate-400">{{ $order->order_number }}</span>
-                                    <h4 class="text-sm font-bold text-slate-900 mt-0.5">{{ $order->serviceCatalog->name ?? 'Tindakan Keperawatan' }}</h4>
-                                    <p class="text-[11px] text-slate-500 mt-0.5">Jadwal Sebelumnya: {{ $order->scheduled_date->format('d M Y') }} • {{ $order->scheduled_time }}</p>
+                                    <span class="text-[10px] font-mono font-bold text-[#78956A]">{{ $order->order_number }}</span>
+                                    <h4 class="text-sm font-bold text-[#46571A] mt-0.5">{{ $order->serviceCatalog->name ?? 'Tindakan Keperawatan' }}</h4>
+                                    <p class="text-[11px] text-[#78956A] mt-0.5">Jadwal Sebelumnya: {{ $order->scheduled_date->format('d M Y') }} • {{ $order->scheduled_time }}</p>
                                 </div>
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#FF9ABC]/25 text-[#46571A] border border-[#FF9ABC]">
                                     {{ in_array($order->status, ['ditolak', 'declined']) ? 'Ditolak Perawat' : 'Dibatalkan' }}
                                 </span>
                             </div>
 
                             <!-- Alasan Pembatalan & Status Refund Escrow -->
-                            <div class="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/70 text-xs space-y-2">
+                            <div class="p-4 rounded-2xl bg-[#FF9ABC]/25 border border-[#FF9ABC] text-xs space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <span class="font-bold text-rose-900">Alasan Pembatalan:</span>
-                                    <span class="text-[10px] text-slate-500">{{ $order->cancelled_at?->timezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB</span>
+                                    <span class="font-bold text-[#46571A]">Alasan Pembatalan:</span>
+                                    <span class="text-[10px] text-[#78956A]">{{ $order->cancelled_at?->timezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB</span>
                                 </div>
-                                <p class="text-rose-800 italic">{{ $order->cancellation_reason ?: 'Dibatalkan oleh pasien.' }}</p>
+                                <p class="text-[#46571A] italic">{{ $order->cancellation_reason ?: 'Dibatalkan oleh pasien.' }}</p>
 
                                 @if ($order->refund_status === 'refunded' || $order->payment_status === 'refunded')
                                     <div class="pt-2 border-t border-[#78956A]/30 flex items-center justify-between text-[#46571A] font-bold">
@@ -210,19 +210,19 @@
                                         </span>
                                         <span class="text-sm">Rp {{ number_format($order->refund_amount ?: $order->total_amount, 0, ',', '.') }}</span>
                                     </div>
-                                    <span class="text-[10px] text-emerald-700 block mt-0.5">
+                                    <span class="text-[10px] text-[#46571A] block mt-0.5">
                                         {{ $order->refund_notes ?: 'Pengembalian dana 100% telah selesai diproses.' }}
                                     </span>
                                 @else
-                                    <div class="pt-1 text-[11px] text-slate-500">
+                                    <div class="pt-1 text-[11px] text-[#78956A]">
                                         Status Transaksi: <strong>Tidak ada pemotongan saldo (Belum Bayar)</strong>
                                     </div>
                                 @endif
                             </div>
 
-                            <div class="text-xs font-bold text-slate-800 pt-3 border-t border-slate-100 flex justify-between items-center">
-                                <span class="text-slate-500">Total Nilai Pesanan:</span>
-                                <span class="text-sm font-extrabold text-slate-900">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                            <div class="text-xs font-bold text-[#46571A] pt-3 border-t border-[#78956A]/50 flex justify-between items-center">
+                                <span class="text-[#78956A]">Total Nilai Pesanan:</span>
+                                <span class="text-sm font-extrabold text-[#46571A]">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
                             </div>
                         </div>
                     @endforeach
@@ -234,7 +234,7 @@
 
     <!-- 6. MODAL KONFIRMASI PEMBATALAN PESANAN -->
     <div x-show="cancelModalOpen" x-cloak
-        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+        class="fixed inset-0 z-50 overflow-y-auto bg-[#46571A]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
         x-transition:enter="ease-out duration-200"
         x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100"
@@ -243,18 +243,18 @@
         x-transition:leave-end="opacity-0">
 
         <div @click.away="if (!processingCancel) cancelModalOpen = false"
-            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 max-h-[90vh] flex flex-col"
+            class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-[#78956A]/50 overflow-hidden text-[#46571A] max-h-[90vh] flex flex-col"
             x-transition:enter="ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100">
 
             <!-- Modal Header -->
-            <div class="px-6 py-4 bg-gradient-to-r from-rose-700 to-rose-900 text-white flex items-center justify-between shrink-0">
+            <div class="px-6 py-4 bg-[#78956A] text-[#F9F4EA] flex items-center justify-between shrink-0">
                 <div>
-                    <span class="text-[10px] uppercase font-bold tracking-wider text-rose-200">Konfirmasi Pembatalan &amp; Refund</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-[#F9F4EA]">Konfirmasi Pembatalan &amp; Refund</span>
                     <h3 class="text-base font-bold mt-0.5" x-text="'Batalkan Pesanan #' + (selectedOrder?.order_number || '')"></h3>
                 </div>
-                <button type="button" @click="cancelModalOpen = false" :disabled="processingCancel" class="text-rose-200 hover:text-white p-1">
+                <button type="button" @click="cancelModalOpen = false" :disabled="processingCancel" class="text-[#F9F4EA] hover:text-white p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -266,15 +266,15 @@
 
                 <!-- Escrow Refund Assurance Notice -->
                 <div class="p-4 rounded-2xl border text-xs leading-relaxed"
-                    :class="selectedOrder?.payment_status === 'paid' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-700'">
+                    :class="selectedOrder?.payment_status === 'paid' ? 'bg-[#D1EB8F]/45 border-[#78956A]/50 text-[#46571A]' : 'bg-[#F9F4EA] border-[#78956A]/50 text-[#46571A]'">
                     <template x-if="selectedOrder?.payment_status === 'paid'">
                         <div class="flex items-start gap-3">
                             <svg class="w-6 h-6 text-[#78956A] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                             </svg>
                             <div class="space-y-1">
-                                <span class="font-bold block text-emerald-950">Jaminan 100% Pengembalian Dana Escrow</span>
-                                <p class="text-emerald-800">
+                                <span class="font-bold block text-[#46571A]">Jaminan 100% Pengembalian Dana Escrow</span>
+                                <p class="text-[#46571A]">
                                     Pesanan ini telah lunas dan dana tersimpan di rekening penampung. Karena dibatalkan sebelum perawat berangkat, dana senilai <strong x-text="'Rp ' + Number(selectedOrder?.total_amount || 0).toLocaleString('id-ID')"></strong> akan otomatis dikembalikan penuh (100% Refund tanpa potongan).
                                 </p>
                             </div>
@@ -284,8 +284,8 @@
                         <div class="flex items-start gap-3">
                             <span class="text-2xl">ℹ️</span>
                             <div class="space-y-1">
-                                <span class="font-bold block text-slate-900">Pembatalan Pesanan Belum Dibayar</span>
-                                <p class="text-slate-600">
+                                <span class="font-bold block text-[#46571A]">Pembatalan Pesanan Belum Dibayar</span>
+                                <p class="text-[#46571A]/85">
                                     Pesanan ini belum melalui proses pembayaran escrow, sehingga pembatalan dapat dilakukan langsung tanpa ada proses pengembalian dana.
                                 </p>
                             </div>
@@ -295,35 +295,35 @@
 
                 <!-- Form Pilihan Alasan Pembatalan -->
                 <div class="space-y-2">
-                    <label class="block font-bold text-slate-800">Pilih Alasan Pembatalan Pesanan:</label>
+                    <label class="block font-bold text-[#46571A]">Pilih Alasan Pembatalan Pesanan:</label>
                     <div class="space-y-1.5">
                         <label class="p-2.5 rounded-xl border cursor-pointer transition flex items-center gap-2"
-                            :class="cancelReason === 'Perubahan jadwal mendadak / ada keperluan lain' ? 'border-rose-400 bg-rose-50 text-rose-900 font-bold' : 'border-slate-200 hover:bg-slate-50'">
-                            <input type="radio" value="Perubahan jadwal mendadak / ada keperluan lain" x-model="cancelReason" class="text-rose-600" />
+                            :class="cancelReason === 'Perubahan jadwal mendadak / ada keperluan lain' ? 'border-[#FF9ABC] bg-[#FF9ABC]/25 text-[#46571A] font-bold' : 'border-[#78956A]/50 hover:bg-[#F9F4EA]'">
+                            <input type="radio" value="Perubahan jadwal mendadak / ada keperluan lain" x-model="cancelReason" class="text-[#46571A]" />
                             <span>Perubahan jadwal mendadak / ada keperluan lain</span>
                         </label>
 
                         <label class="p-2.5 rounded-xl border cursor-pointer transition flex items-center gap-2"
-                            :class="cancelReason === 'Perawat belum kunjung merespons konfirmasi' ? 'border-rose-400 bg-rose-50 text-rose-900 font-bold' : 'border-slate-200 hover:bg-slate-50'">
-                            <input type="radio" value="Perawat belum kunjung merespons konfirmasi" x-model="cancelReason" class="text-rose-600" />
+                            :class="cancelReason === 'Perawat belum kunjung merespons konfirmasi' ? 'border-[#FF9ABC] bg-[#FF9ABC]/25 text-[#46571A] font-bold' : 'border-[#78956A]/50 hover:bg-[#F9F4EA]'">
+                            <input type="radio" value="Perawat belum kunjung merespons konfirmasi" x-model="cancelReason" class="text-[#46571A]" />
                             <span>Perawat belum kunjung merespons konfirmasi</span>
                         </label>
 
                         <label class="p-2.5 rounded-xl border cursor-pointer transition flex items-center gap-2"
-                            :class="cancelReason === 'Kondisi darurat / pasien dialihkan ke IGD Rumah Sakit' ? 'border-rose-400 bg-rose-50 text-rose-900 font-bold' : 'border-slate-200 hover:bg-slate-50'">
-                            <input type="radio" value="Kondisi darurat / pasien dialihkan ke IGD Rumah Sakit" x-model="cancelReason" class="text-rose-600" />
+                            :class="cancelReason === 'Kondisi darurat / pasien dialihkan ke IGD Rumah Sakit' ? 'border-[#FF9ABC] bg-[#FF9ABC]/25 text-[#46571A] font-bold' : 'border-[#78956A]/50 hover:bg-[#F9F4EA]'">
+                            <input type="radio" value="Kondisi darurat / pasien dialihkan ke IGD Rumah Sakit" x-model="cancelReason" class="text-[#46571A]" />
                             <span>Kondisi darurat / pasien dialihkan ke IGD Rumah Sakit</span>
                         </label>
 
                         <label class="p-2.5 rounded-xl border cursor-pointer transition flex items-center gap-2"
-                            :class="cancelReason === 'Salah memilih tindakan keperawatan di katalog' ? 'border-rose-400 bg-rose-50 text-rose-900 font-bold' : 'border-slate-200 hover:bg-slate-50'">
-                            <input type="radio" value="Salah memilih tindakan keperawatan di katalog" x-model="cancelReason" class="text-rose-600" />
+                            :class="cancelReason === 'Salah memilih tindakan keperawatan di katalog' ? 'border-[#FF9ABC] bg-[#FF9ABC]/25 text-[#46571A] font-bold' : 'border-[#78956A]/50 hover:bg-[#F9F4EA]'">
+                            <input type="radio" value="Salah memilih tindakan keperawatan di katalog" x-model="cancelReason" class="text-[#46571A]" />
                             <span>Salah memilih tindakan keperawatan di katalog</span>
                         </label>
 
                         <label class="p-2.5 rounded-xl border cursor-pointer transition flex items-center gap-2"
-                            :class="cancelReason === 'Lainnya' ? 'border-rose-400 bg-rose-50 text-rose-900 font-bold' : 'border-slate-200 hover:bg-slate-50'">
-                            <input type="radio" value="Lainnya" x-model="cancelReason" class="text-rose-600" />
+                            :class="cancelReason === 'Lainnya' ? 'border-[#FF9ABC] bg-[#FF9ABC]/25 text-[#46571A] font-bold' : 'border-[#78956A]/50 hover:bg-[#F9F4EA]'">
+                            <input type="radio" value="Lainnya" x-model="cancelReason" class="text-[#46571A]" />
                             <span>Alasan lainnya</span>
                         </label>
                     </div>
@@ -331,25 +331,25 @@
 
                 <!-- Catatan Tambahan (Opsional) -->
                 <div class="space-y-1">
-                    <label class="block font-bold text-slate-700">Catatan Tambahan (Opsional):</label>
+                    <label class="block font-bold text-[#46571A]">Catatan Tambahan (Opsional):</label>
                     <textarea x-model="cancelNotes" rows="2" placeholder="Tuliskan keterangan tambahan bila ada..."
-                        class="w-full rounded-xl border border-slate-200 text-xs p-2.5 focus:border-rose-500 focus:ring-rose-500"></textarea>
+                        class="w-full rounded-xl border border-[#78956A]/50 text-xs p-2.5 focus:border-[#FF9ABC] focus:ring-[#78956A]"></textarea>
                 </div>
 
                 <!-- Alert Messages -->
                 <template x-if="cancelSuccessMsg">
-                    <div class="p-3.5 rounded-xl bg-emerald-100 text-emerald-900 text-xs font-semibold leading-relaxed" x-text="cancelSuccessMsg"></div>
+                    <div class="p-3.5 rounded-xl bg-[#D1EB8F] text-[#46571A] text-xs font-semibold leading-relaxed" x-text="cancelSuccessMsg"></div>
                 </template>
                 <template x-if="cancelErrorMsg">
-                    <div class="p-3.5 rounded-xl bg-rose-100 text-rose-900 text-xs font-semibold leading-relaxed" x-text="cancelErrorMsg"></div>
+                    <div class="p-3.5 rounded-xl bg-[#FF9ABC]/40 text-[#46571A] text-xs font-semibold leading-relaxed" x-text="cancelErrorMsg"></div>
                 </template>
 
             </div>
 
             <!-- Modal Footer -->
-            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0">
+            <div class="p-4 bg-[#F9F4EA] border-t border-[#78956A]/50 flex items-center justify-end gap-2.5 shrink-0">
                 <button type="button" @click="cancelModalOpen = false" :disabled="processingCancel"
-                    class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700 transition">
+                    class="px-4 py-2 rounded-xl border border-[#78956A]/50 bg-white hover:bg-[#F9F4EA] text-xs font-bold text-[#46571A] transition">
                     Kembali
                 </button>
                 <button type="button" @click="submitCancel()" :disabled="processingCancel"
@@ -366,8 +366,8 @@
     </div>
 
     <!-- 7. FOOTER -->
-    <footer class="mt-auto border-t border-slate-200 bg-white py-6">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
+    <footer class="mt-auto border-t border-[#78956A]/50 bg-white py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-[#78956A]">
             CareAtHome Health-Tech Platform &copy; 2026. Transparansi Rekening Penampung &amp; Jaminan Pengembalian Dana Terstandar Kemenkes RI.
         </div>
     </footer>

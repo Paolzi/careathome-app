@@ -24,30 +24,30 @@
     <main class="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
         <!-- Banner Header: Direct Instant Payment System -->
-        <div class="bg-gradient-to-r from-slate-900 via-teal-950 to-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-emerald-800/40 relative overflow-hidden">
-            <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="bg-[#78956A] rounded-3xl p-6 sm:p-8 text-[#F9F4EA] shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-[#78956A] relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-[#FF9ABC] rounded-full blur-3xl pointer-events-none"></div>
 
             <div class="space-y-2 relative z-10">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF9ABC] border border-[#78956A] text-[#D1EB8F] text-xs font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-[#D1EB8F] animate-pulse"></span>
                     Sistem Pembayaran Instan Berbasis Tabel (Direct Instant Payment Table)
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
                     Tagihan Layanan &amp; Pembayaran Langsung
                 </h1>
-                <p class="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+                <p class="text-xs sm:text-sm text-[#F9F4EA]/90 max-w-2xl leading-relaxed">
                     Rincian tagihan medis transparan dan terperinci. Bayar secara instan dengan <strong>satu klik tanpa unggah bukti transfer atau scan QRIS manual</strong>. Saldo langsung dialokasikan ke perawat (85% + transport) dan platform (15%).
                 </p>
             </div>
 
             <div class="flex items-center gap-3 relative z-10">
                 <div class="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 text-center min-w-[110px]">
-                    <span class="text-[10px] text-slate-300 block uppercase font-bold tracking-wider">Menunggu Bayar</span>
-                    <span class="text-xl font-extrabold text-amber-300" x-text="unpaidOrdersCount"></span>
+                    <span class="text-[10px] text-[#F9F4EA]/90 block uppercase font-bold tracking-wider">Menunggu Bayar</span>
+                    <span class="text-xl font-extrabold text-[#D1EB8F]" x-text="unpaidOrdersCount"></span>
                 </div>
                 <div class="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 text-center min-w-[110px]">
-                    <span class="text-[10px] text-slate-300 block uppercase font-bold tracking-wider">Telah Lunas</span>
-                    <span class="text-xl font-extrabold text-emerald-300">{{ $totalHeld }}</span>
+                    <span class="text-[10px] text-[#F9F4EA]/90 block uppercase font-bold tracking-wider">Telah Lunas</span>
+                    <span class="text-xl font-extrabold text-[#D1EB8F]">{{ $totalHeld }}</span>
                 </div>
             </div>
         </div>
@@ -69,21 +69,21 @@
         </div>
 
         <!-- 3. TABEL PEMBAYARAN INSTAN (DIRECT INSTANT PAYMENT TABLE) -->
-        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden space-y-4">
+        <div class="bg-white rounded-3xl border border-[#78956A]/50 shadow-sm overflow-hidden space-y-4">
             
-            <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="p-6 border-b border-[#78956A]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 class="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                    <h2 class="text-base font-extrabold text-[#46571A] tracking-tight flex items-center gap-2">
                         <span>Daftar Tagihan Aktif (Checkout Table)</span>
-                        <span class="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold"
+                        <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#F9F4EA] text-[#46571A] border border-[#78956A]/50 font-bold"
                             x-text="unpaidOrdersCount + ' Tagihan Menunggu'"></span>
                     </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Rincian komponen tarif medis, transportasi perawat, dan biaya layanan. Tekan tombol pada baris tagihan untuk pembayaran instan.</p>
+                    <p class="text-xs text-[#78956A] mt-0.5">Rincian komponen tarif medis, transportasi perawat, dan biaya layanan. Tekan tombol pada baris tagihan untuk pembayaran instan.</p>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <span class="text-[11px] text-slate-400 italic flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span class="text-[11px] text-[#78956A] italic flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-[#FF9ABC]"></span>
                         Otomatisasi Verifikasi 100% Real-Time
                     </span>
                 </div>
@@ -97,16 +97,16 @@
                         </svg>
                     </div>
                     <div class="space-y-1">
-                        <h3 class="text-base font-bold text-slate-900">Semua Tagihan Anda Telah Berstatus Lunas</h3>
-                        <p class="text-xs text-slate-500 max-w-md mx-auto">
+                        <h3 class="text-base font-bold text-[#46571A]">Semua Tagihan Anda Telah Berstatus Lunas</h3>
+                        <p class="text-xs text-[#78956A] max-w-md mx-auto">
                             Tidak ada pesanan aktif yang menunggu pembayaran saat ini. Anda dapat melihat riwayat kunjungan medis atau memesan layanan baru.
                         </p>
                     </div>
                     <div class="pt-2 flex items-center justify-center gap-3">
-                        <a href="{{ route('pasien.katalog') }}" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition">
+                        <a href="{{ route('pasien.katalog') }}" class="px-5 py-2.5 rounded-xl bg-[#FF9ABC] hover:bg-[#FF9ABC] text-[#46571A] text-xs font-bold shadow-xs transition">
                             Pesan Layanan di Katalog &rarr;
                         </a>
-                        <a href="{{ route('pasien.pesanan') }}" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                        <a href="{{ route('pasien.pesanan') }}" class="px-5 py-2.5 rounded-xl bg-[#F9F4EA] hover:bg-[#D1EB8F]/50 text-[#46571A] text-xs font-bold transition">
                             Lihat Riwayat Layanan
                         </a>
                     </div>
@@ -127,19 +127,19 @@
                                 <th class="py-3.5 px-4 font-bold text-center">Aksi Langsung</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                        <tbody class="divide-y divide-[#78956A]/30 text-[#46571A] font-medium">
                             @foreach ($unpaidOrders as $order)
                                 @php
                                     $breakdown = $paymentService->calculateBreakdown($order);
                                 @endphp
-                                <tr class="hover:bg-emerald-50/30 transition group"
+                                <tr class="hover:bg-[#D1EB8F]/45 transition group"
                                     id="order-row-{{ $order->id }}"
                                     x-data="{ isRowPaying: false, isRowPaid: false }">
                                     
                                     <!-- No. Pesanan & Layanan -->
                                     <td class="py-4 px-4">
                                         <div class="space-y-0.5">
-                                            <span class="font-mono text-[10px] font-bold text-slate-400 block">{{ $order->order_number }}</span>
+                                            <span class="font-mono text-[10px] font-bold text-[#78956A] block">{{ $order->order_number }}</span>
                                             <div class="flex items-center gap-1.5 font-extrabold text-[#46571A] text-xs">
                                                 <svg class="w-4 h-4 text-[#78956A] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
@@ -159,10 +159,10 @@
                                     <!-- Jadwal Kunjungan -->
                                     <td class="py-4 px-4 whitespace-nowrap">
                                         <div class="space-y-0.5">
-                                            <span class="font-bold text-slate-800 block">
+                                            <span class="font-bold text-[#46571A] block">
                                                 {{ $order->scheduled_date ? $order->scheduled_date->format('d M Y') : '-' }}
                                             </span>
-                                            <span class="text-[11px] text-slate-500">Pukul {{ $order->scheduled_time ?? '09:00' }}</span>
+                                            <span class="text-[11px] text-[#78956A]">Pukul {{ $order->scheduled_time ?? '09:00' }}</span>
                                         </div>
                                     </td>
 
@@ -170,46 +170,46 @@
                                     <td class="py-4 px-4 whitespace-nowrap">
                                         @if ($order->nurse)
                                             <div class="flex items-center gap-2">
-                                                <div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center justify-center">
+                                                <div class="w-6 h-6 rounded-full bg-[#D1EB8F] text-[#46571A] text-[10px] font-bold flex items-center justify-center">
                                                     {{ strtoupper(substr($order->nurse->name, 0, 1)) }}
                                                 </div>
-                                                <span class="font-bold text-emerald-800 text-xs">{{ $order->nurse->name }}</span>
+                                                <span class="font-bold text-[#46571A] text-xs">{{ $order->nurse->name }}</span>
                                             </div>
                                         @else
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F9F4EA] text-[#46571A]/85 border border-[#78956A]/50">
                                                 Broadcast Sekitar (Open)
                                             </span>
                                         @endif
                                     </td>
 
                                     <!-- Tarif Tindakan Medis -->
-                                    <td class="py-4 px-4 text-right font-semibold text-slate-800 whitespace-nowrap">
+                                    <td class="py-4 px-4 text-right font-semibold text-[#46571A] whitespace-nowrap">
                                         Rp {{ number_format($breakdown['base_price'], 0, ',', '.') }}
                                     </td>
 
                                     <!-- Ongkir Transport GPS -->
                                     <td class="py-4 px-4 text-right whitespace-nowrap">
                                         <div class="space-y-0.5">
-                                            <span class="font-semibold text-slate-800">Rp {{ number_format($breakdown['transport_fee'], 0, ',', '.') }}</span>
-                                            <span class="text-[9px] text-slate-400 block">({{ $order->distance_km ?? 0 }} km)</span>
+                                            <span class="font-semibold text-[#46571A]">Rp {{ number_format($breakdown['transport_fee'], 0, ',', '.') }}</span>
+                                            <span class="text-[9px] text-[#78956A] block">({{ $order->distance_km ?? 0 }} km)</span>
                                         </div>
                                     </td>
 
                                     <!-- Biaya Platform -->
-                                    <td class="py-4 px-4 text-right font-semibold text-slate-600 whitespace-nowrap">
+                                    <td class="py-4 px-4 text-right font-semibold text-[#46571A]/85 whitespace-nowrap">
                                         Rp {{ number_format($breakdown['platform_fee'], 0, ',', '.') }}
                                     </td>
 
                                     <!-- Total Akhir -->
                                     <td class="py-4 px-4 text-right whitespace-nowrap">
-                                        <span class="text-sm font-black text-emerald-700">
+                                        <span class="text-sm font-black text-[#46571A]">
                                             Rp {{ number_format($breakdown['total_amount'], 0, ',', '.') }}
                                         </span>
                                     </td>
 
                                     <!-- Status Pembayaran -->
                                     <td class="py-4 px-4 text-center whitespace-nowrap">
-                                        <span x-show="!isRowPaid" class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs inline-block">
+                                        <span x-show="!isRowPaid" class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#F9F4EA] text-[#46571A] border border-[#78956A]/50 shadow-2xs inline-block">
                                             Belum Dibayar
                                         </span>
                                         <span x-show="isRowPaid" x-cloak class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#D1EB8F] text-[#46571A] border border-[#78956A] inline-flex items-center justify-center gap-1">
@@ -258,7 +258,7 @@
             @endif
 
             <!-- Footer Penjelasan Sistem -->
-            <div class="p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
+            <div class="p-4 bg-[#F9F4EA] border-t border-[#78956A]/50 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-[#78956A] gap-2">
                 <div class="flex items-center gap-2">
                     <span class="p-1.5 rounded-lg bg-[#D1EB8F] text-[#46571A] border border-[#78956A]">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -267,7 +267,7 @@
                     </span>
                     <span>Direct Simulated Instant Settlement &bull; Alokasi Saldo Otomatis (85% Perawat + 15% Platform).</span>
                 </div>
-                <div class="text-[11px] text-slate-400">
+                <div class="text-[11px] text-[#78956A]">
                     Bypass verifikasi manual admin &bull; Transaksi aman dan real-time.
                 </div>
             </div>
@@ -276,22 +276,22 @@
 
         <!-- 4. TABEL RIWAYAT TRANSAKSI LUNAS (SELESAI) -->
         @if ($escrowHeldOrders->isNotEmpty())
-            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden space-y-4 pt-2">
-                <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div class="bg-white rounded-3xl border border-[#78956A]/50 shadow-sm overflow-hidden space-y-4 pt-2">
+                <div class="p-6 border-b border-[#78956A]/50 flex items-center justify-between">
                     <div>
-                        <h2 class="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                        <h2 class="text-base font-extrabold text-[#46571A] tracking-tight flex items-center gap-2">
                             <span>Riwayat Pembayaran Lunas</span>
-                            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
+                            <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#D1EB8F]/45 text-[#46571A] border border-[#78956A]/50 font-bold">
                                 {{ $escrowHeldOrders->count() }} Transaksi
                             </span>
                         </h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Daftar transaksi pesanan yang telah berhasil dibayar dan dana telah dialokasikan ke mitra perawat.</p>
+                        <p class="text-xs text-[#78956A] mt-0.5">Daftar transaksi pesanan yang telah berhasil dibayar dan dana telah dialokasikan ke mitra perawat.</p>
                     </div>
                 </div>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border-collapse">
-                        <thead class="bg-slate-100 text-slate-700 text-[10px] uppercase tracking-wider font-bold">
+                        <thead class="bg-[#F9F4EA] text-[#46571A] text-[10px] uppercase tracking-wider font-bold">
                             <tr>
                                 <th class="py-3 px-4">No. Pesanan</th>
                                 <th class="py-3 px-4">Layanan &amp; Nakes</th>
@@ -303,31 +303,31 @@
                                 <th class="py-3 px-4 text-center">Dokumen</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100 text-slate-600">
+                        <tbody class="divide-y divide-[#78956A]/30 text-[#46571A]/85">
                             @foreach ($escrowHeldOrders as $paid)
                                 @php
                                     $paidBreakdown = $paymentService->calculateBreakdown($paid);
                                 @endphp
-                                <tr class="hover:bg-slate-50/60 transition">
-                                    <td class="py-3.5 px-4 font-mono font-bold text-slate-900">
+                                <tr class="hover:bg-[#F9F4EA] transition">
+                                    <td class="py-3.5 px-4 font-mono font-bold text-[#46571A]">
                                         {{ $paid->order_number }}
                                     </td>
                                     <td class="py-3.5 px-4">
                                         <div class="space-y-0.5">
-                                            <span class="font-bold text-slate-900 block">{{ $paid->serviceCatalog->name ?? 'Layanan Medis' }}</span>
-                                            <span class="text-[10px] text-slate-400">Nakes: {{ $paid->nurse->name ?? 'Mitra Nakes' }}</span>
+                                            <span class="font-bold text-[#46571A] block">{{ $paid->serviceCatalog->name ?? 'Layanan Medis' }}</span>
+                                            <span class="text-[10px] text-[#78956A]">Nakes: {{ $paid->nurse->name ?? 'Mitra Nakes' }}</span>
                                         </div>
                                     </td>
                                     <td class="py-3.5 px-4 whitespace-nowrap">
                                         {{ $paid->scheduled_date ? $paid->scheduled_date->format('d M Y') : '-' }} &bull; {{ $paid->scheduled_time }}
                                     </td>
-                                    <td class="py-3.5 px-4 text-right font-semibold text-emerald-700 whitespace-nowrap">
+                                    <td class="py-3.5 px-4 text-right font-semibold text-[#46571A] whitespace-nowrap">
                                         Rp {{ number_format($paidBreakdown['nurse_earning'], 0, ',', '.') }}
                                     </td>
-                                    <td class="py-3.5 px-4 text-right font-semibold text-slate-600 whitespace-nowrap">
+                                    <td class="py-3.5 px-4 text-right font-semibold text-[#46571A]/85 whitespace-nowrap">
                                         Rp {{ number_format($paidBreakdown['admin_fee'], 0, ',', '.') }}
                                     </td>
-                                    <td class="py-3.5 px-4 text-right font-black text-slate-900 whitespace-nowrap">
+                                    <td class="py-3.5 px-4 text-right font-black text-[#46571A] whitespace-nowrap">
                                         Rp {{ number_format($paidBreakdown['total_amount'], 0, ',', '.') }}
                                     </td>
                                     <td class="py-3.5 px-4 text-center whitespace-nowrap">
@@ -339,7 +339,7 @@
                                         </span>
                                     </td>
                                     <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                                        <a href="{{ route('pasien.pesanan') }}" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
+                                        <a href="{{ route('pasien.pesanan') }}" class="text-xs font-bold text-[#46571A] hover:text-[#46571A] underline">
                                             Lihat Rekam Medis &rarr;
                                         </a>
                                     </td>
