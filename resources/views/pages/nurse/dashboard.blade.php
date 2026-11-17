@@ -1,4 +1,7 @@
-<x-app-layout> <div class="py-8" x-data="nurseDashboardApp({{ $profile->is_online ? 'true' : 'false' }}, '{{ $profile->verification_status }}', {{ $profile->latitude ?? 'null' }}, {{ $profile->longitude ?? 'null' }})"> <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6"> <!-- Banner Status Legalitas & Notifikasi Verifikasi (Approved / Rejected / Pending) --> @php
+<x-app-layout>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <div class="py-8" x-data="nurseDashboardApp({{ $profile->is_online ? 'true' : 'false' }}, '{{ $profile->verification_status }}', {{ $profile->latitude ?? 'null' }}, {{ $profile->longitude ?? 'null' }})"> <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6"> <!-- Banner Status Legalitas & Notifikasi Verifikasi (Approved / Rejected / Pending) --> @php
                 $latestAuditNotif = auth()->user() ? auth()->user()->notifications()->whereIn('data->type', ['document_approved', 'document_rejected'])->first() : null;
             @endphp
 
@@ -91,6 +94,27 @@
                                         </span> </div> <div class="text-xs text-slate-600 space-y-1.5 bg-white p-3.5 rounded-xl border border-slate-200/80"> <div class="flex items-center justify-between"> <span class="text-slate-400">Jadwal Perawatan:</span> <span class="font-bold text-slate-900"> {{ $ord->scheduled_date?->format('d M Y') }} • {{ str_contains($ord->scheduled_time ?? '', 'WIB') ? $ord->scheduled_time : ($ord->scheduled_time . ' WIB') }}
                                             </span> </div> <div class="flex items-center justify-between"> <span class="text-slate-400">Jarak Rute Jalan (OSRM):</span> <span class="font-bold text-[#064e3b]">{{ number_format((float) $ord->distance_km, 1, ',', '.') }} km</span> </div> <div class="flex items-start justify-between gap-2"> <span class="text-slate-400 shrink-0">Lokasi Pasien:</span> <span class="text-right text-slate-700 truncate max-w-[220px]" title="{{ $ord->address }}">{{ $ord->address }}</span> </div> <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 text-[#064e3b] font-extrabold"> <span>Pendapatan Bersih Perawat:</span> <span>Rp {{ number_format($ord->nurse_earnings, 0, ',', '.') }}</span> </div> </div> @if (!$canAct)
                                         <div class="p-3 rounded-xl bg-amber-100/90 border border-amber-300 text-[11px] text-amber-950 flex items-start gap-2"> <span class="text-sm shrink-0"><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg></span> <div> <strong class="font-extrabold block">Menunggu Jadwal Perawatan (WIB)</strong> <span>{{ $actionCheck['message'] }}</span> </div> </div> @endif
+
+                                    <!-- Rute ke Rumah Pasien (Peta Aplikasi & Google Maps) -->
+                                    @php
+                                        $patLat = $ord->latitude ?? $ord->patient_latitude;
+                                        $patLng = $ord->longitude ?? $ord->patient_longitude;
+                                        $gmapsUrl = ($patLat && $patLng)
+                                            ? ('https://www.google.com/maps/dir/?api=1&' . ($profile->latitude && $profile->longitude ? "origin={$profile->latitude},{$profile->longitude}&" : '') . "destination={$patLat},{$patLng}&travelmode=driving")
+                                            : ('https://www.google.com/maps/search/?api=1&query=' . urlencode($ord->address));
+                                    @endphp
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button type="button" @click="openRouteModal(@js($ord))"
+                                            class="py-2 px-3 rounded-xl bg-[#D1EB8F] hover:bg-[#78956A] text-[#46571A] hover:text-[#F9F4EA] border border-[#78956A] text-[11px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
+                                            <span>Lihat Rute (Peta App)</span>
+                                        </button>
+                                        <a href="{{ $gmapsUrl }}" target="_blank" rel="noopener noreferrer"
+                                            class="py-2 px-3 rounded-xl bg-[#FFFDF9] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A] text-[11px] font-bold transition flex items-center justify-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                                            <span>Buka Google Maps</span>
+                                        </a>
+                                    </div>
 
                                     <!-- Aksi Tahapan Kunjungan Nakes (Validasi 30 Menit Sebelum Jam Perawatan) --> <div class="space-y-2"> @if ($ord->status === 'diterima')
                                             <button type="button"
@@ -281,7 +305,48 @@
                             class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition"> Batal
                         </button> <button type="submit"
                             class="px-5 py-2.5 rounded-xl bg-[#10b981] hover:bg-emerald-600 text-slate-950 hover:text-white text-xs font-extrabold shadow transition cursor-pointer"> Tarik Saldo Sekarang
-                        </button> </div> </form> </div> </div> </div> <!-- Alpine App Logic for Nurse Dashboard --> <script> function nurseDashboardApp(initialOnline, verificationStatus, initialLat, initialLng) {
+                        </button> </div> </form> </div> </div>
+
+    <!-- MODAL PETA RUTE MENUJU RUMAH PASIEN (IN-APP OSRM + GOOGLE MAPS) -->
+    <div x-show="routeModalOpen" x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+        <div @click.away="routeModalOpen = false"
+            class="bg-[#FFFDF9] rounded-3xl max-w-2xl w-full shadow-2xl border border-[#78956A] overflow-hidden text-[#46571A] flex flex-col">
+            <div class="px-6 py-4 bg-[#78956A] text-[#F9F4EA] flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-[#D1EB8F]" x-text="'Navigasi Kunjungan #' + (routeOrder?.order_number || '')"></span>
+                    <h3 class="text-base font-bold mt-0.5" x-text="'Rute ke Rumah ' + (routeOrder?.patient_name || 'Pasien')"></h3>
+                </div>
+                <button type="button" @click="routeModalOpen = false" class="p-1.5 rounded-xl hover:bg-white/10 cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-3 text-xs">
+                <div class="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-[#F9F4EA] border border-[#78956A]/40">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-[#78956A] block">Jarak Rute Jalan</span>
+                        <span class="text-sm font-extrabold text-[#46571A]" x-text="routeDistanceKm"></span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-[#78956A] block">Estimasi Waktu Tempuh</span>
+                        <span class="text-sm font-extrabold text-[#46571A]" x-text="routeDurationMin"></span>
+                    </div>
+                </div>
+                <p class="text-[11px] text-[#46571A]/85"><strong>Alamat Pasien:</strong> <span x-text="routeOrder?.address || '-'"></span></p>
+                <div id="nurseRouteLeafletMap" class="w-full h-72 rounded-2xl border border-[#78956A] z-0"></div>
+            </div>
+            <div class="px-6 py-4 bg-[#F9F4EA] border-t border-[#78956A]/30 flex flex-wrap items-center justify-between gap-2">
+                <a :href="routeOrder ? ('https://www.google.com/maps/dir/?api=1&' + (lat && lng ? `origin=${lat},${lng}&` : '') + `destination=${routeOrder.latitude || routeOrder.patient_latitude},${routeOrder.longitude || routeOrder.patient_longitude}&travelmode=driving`) : '#'"
+                    target="_blank" rel="noopener noreferrer"
+                    class="px-4 py-2 rounded-xl bg-[#FF9ABC] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A] text-xs font-bold transition flex items-center gap-1.5">
+                    <span>Buka Navigasi di Google Maps</span>
+                </a>
+                <button type="button" @click="routeModalOpen = false"
+                    class="px-4 py-2 rounded-xl border border-[#78956A] bg-[#FFFDF9] text-xs font-bold text-[#46571A] cursor-pointer">Tutup</button>
+            </div>
+        </div>
+    </div>
+    </div> <!-- Alpine App Logic for Nurse Dashboard --> <script> function nurseDashboardApp(initialOnline, verificationStatus, initialLat, initialLng) {
             return {
                 isOnline: initialOnline,
                 verificationStatus: verificationStatus,
@@ -303,6 +368,59 @@
                 photoPreviews: [],
                 payoutModalOpen: false,
                 payoutAmount: {{ $totalBalance >= 100000 ? 100000 : max(10000, (int) $totalBalance) }},
+                routeModalOpen: false,
+                routeOrder: null,
+                routeMap: null,
+                routeDistanceKm: '-',
+                routeDurationMin: '-',
+
+                openRouteModal(order) {
+                    this.routeOrder = order;
+                    this.routeDistanceKm = order.distance_km ? `${Number(order.distance_km).toFixed(1)} km` : '-';
+                    this.routeDurationMin = order.distance_km ? `~${Math.max(3, Math.round(Number(order.distance_km) * 3))} menit` : '-';
+                    this.routeModalOpen = true;
+
+                    this.$nextTick(async () => {
+                        if (typeof L === 'undefined') return;
+                        const nLat = parseFloat(this.lat || -7.307743);
+                        const nLng = parseFloat(this.lng || 112.729963);
+                        const pLat = parseFloat(order.latitude || order.patient_latitude || nLat);
+                        const pLng = parseFloat(order.longitude || order.patient_longitude || nLng);
+
+                        if (this.routeMap) {
+                            this.routeMap.remove();
+                            this.routeMap = null;
+                        }
+
+                        this.routeMap = L.map('nurseRouteLeafletMap').setView([(nLat + pLat) / 2, (nLng + pLng) / 2], 14);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            maxZoom: 19,
+                            attribution: '&copy; OpenStreetMap'
+                        }).addTo(this.routeMap);
+
+                        const nurseMarker = L.marker([nLat, nLng]).addTo(this.routeMap).bindPopup('<strong>Posisi Anda (Perawat)</strong>').openPopup();
+                        const patientMarker = L.marker([pLat, pLng]).addTo(this.routeMap).bindPopup(`<strong>Rumah Pasien: ${order.patient_name || 'Pasien'}</strong><br>${order.address || ''}`);
+
+                        try {
+                            const url = `https://router.project-osrm.org/route/v1/driving/${nLng},${nLat};${pLng},${pLat}?overview=full&geometries=geojson`;
+                            const res = await fetch(url);
+                            const json = await res.json();
+                            if (json && json.routes && json.routes[0]) {
+                                const r = json.routes[0];
+                                const coords = r.geometry.coordinates.map(c => [c[1], c[0]]);
+                                const poly = L.polyline(coords, { color: '#46571A', weight: 5, opacity: 0.85 }).addTo(this.routeMap);
+                                this.routeMap.fitBounds(poly.getBounds().pad(0.25));
+                                this.routeDistanceKm = (Math.max(0.1, r.distance / 1000)).toFixed(1) + ' km';
+                                this.routeDurationMin = '~' + Math.max(2, Math.round(r.duration / 60)) + ' menit';
+                            } else {
+                                this.routeMap.fitBounds(L.featureGroup([nurseMarker, patientMarker]).getBounds().pad(0.3));
+                            }
+                        } catch (e) {
+                            this.routeMap.fitBounds(L.featureGroup([nurseMarker, patientMarker]).getBounds().pad(0.3));
+                        }
+                        setTimeout(() => this.routeMap && this.routeMap.invalidateSize(), 150);
+                    });
+                },
 
                 openEReportModal(order) {
                     this.activeOrderForReport = order;

@@ -25,7 +25,9 @@ new #[Layout('layouts.guest')] class extends Component
     public string $address = '';
 
     // Form inputs Perawat
+    public string $nik = '';
     public string $str_number = '';
+    public string $sip_number = '';
     public string $specialization = 'Perawatan Luka Kronis & Diabetes';
 
     // Koordinat GPS otomatis saat registrasi
@@ -53,12 +55,21 @@ new #[Layout('layouts.guest')] class extends Component
         if ($this->role === 'pasien') {
             $rules['birth_date'] = ['required', 'date'];
             $rules['address'] = ['required', 'string', 'max:500'];
+            $this->validate($rules);
         } else {
-            $rules['str_number'] = ['required', 'string', 'min:8', 'max:30'];
+            $rules['nik'] = ['required', 'string', 'min:8', 'max:20', 'unique:nurse_profiles,nik'];
+            $rules['str_number'] = ['required', 'string', 'min:8', 'max:50', 'unique:nurse_profiles,str_number'];
+            $rules['sip_number'] = ['required', 'string', 'min:5', 'max:100', 'unique:nurse_profiles,sip_number'];
             $rules['specialization'] = ['required', 'string'];
+            $this->validate($rules, [
+                'nik.required' => 'Nomor Induk Kependudukan (NIK) wajib diisi.',
+                'nik.unique' => 'NIK sudah terdaftar oleh akun perawat lain. Registrasi tidak dapat dilanjutkan.',
+                'str_number.required' => 'Nomor STR wajib diisi.',
+                'str_number.unique' => 'Nomor STR sudah terdaftar oleh akun perawat lain. Registrasi tidak dapat dilanjutkan.',
+                'sip_number.required' => 'Nomor SIP wajib diisi.',
+                'sip_number.unique' => 'Nomor SIP sudah terdaftar oleh akun perawat lain. Registrasi tidak dapat dilanjutkan.',
+            ]);
         }
-
-        $this->validate($rules);
 
         // Buat User Baru
         $user = User::create([
@@ -79,7 +90,9 @@ new #[Layout('layouts.guest')] class extends Component
             \App\Models\NurseProfile::firstOrCreate(
                 ['user_id' => $user->id],
                 [
+                    'nik' => $this->nik,
                     'str_number' => $this->str_number,
+                    'sip_number' => $this->sip_number,
                     'specialization' => $this->specialization,
                     'verification_status' => 'draft',
                     'is_available' => false,
@@ -266,8 +279,22 @@ new #[Layout('layouts.guest')] class extends Component
                 </div>
             </div>
         @else
-            <!-- NIRA/STR & Peminatan Spesialisasi -->
+            <!-- NIK, STR, SIP & Peminatan Spesialisasi (Unik per Perawat) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="nik" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Nomor Induk Kependudukan (NIK) <span class="text-rose-500">*</span>
+                    </label>
+                    <input 
+                        wire:model="nik" 
+                        id="nik" 
+                        type="text" 
+                        placeholder="Contoh: 3578101503960001" 
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition"
+                        required />
+                    @error('nik') <span class="text-rose-500 text-xs mt-1 block">{{ $message }}</span> @enderror
+                </div>
+
                 <div>
                     <label for="str_number" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                         Nomor Registrasi STR / NIRA <span class="text-rose-500">*</span>
@@ -280,6 +307,20 @@ new #[Layout('layouts.guest')] class extends Component
                         class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition"
                         required />
                     @error('str_number') <span class="text-rose-500 text-xs mt-1 block">{{ $message }}</span> @enderror
+                </div>
+
+                <div>
+                    <label for="sip_number" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Nomor Surat Izin Praktik (SIP) <span class="text-rose-500">*</span>
+                    </label>
+                    <input 
+                        wire:model="sip_number" 
+                        id="sip_number" 
+                        type="text" 
+                        placeholder="Contoh: 446.2/DINKES-SBY/2026" 
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition"
+                        required />
+                    @error('sip_number') <span class="text-rose-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
                 <div>
