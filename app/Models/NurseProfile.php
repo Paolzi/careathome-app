@@ -33,6 +33,8 @@ class NurseProfile extends Model
         'reviewed_at',
         'is_available',
         'is_online',
+        'suspended_until',
+        'suspension_reason',
         'latitude',
         'longitude',
         'location_updated_at',
@@ -50,6 +52,7 @@ class NurseProfile extends Model
             'sip_expired_at' => 'date',
             'is_available' => 'boolean',
             'is_online' => 'boolean',
+            'suspended_until' => 'datetime',
             'latitude' => 'float',
             'longitude' => 'float',
             'location_updated_at' => 'datetime',
@@ -57,6 +60,11 @@ class NurseProfile extends Model
             'balance' => 'decimal:2',
             'rating_avg' => 'decimal:2',
         ];
+    }
+
+    public function isTemporarilySuspended(): bool
+    {
+        return $this->suspended_until !== null && $this->suspended_until->isFuture();
     }
 
     protected static function booted(): void

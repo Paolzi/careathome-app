@@ -5,6 +5,46 @@
                 $latestAuditNotif = auth()->user() ? auth()->user()->notifications()->whereIn('data->type', ['document_approved', 'document_rejected'])->first() : null;
             @endphp
 
+            @if ($profile->isTemporarilySuspended())
+                <div x-data="{
+                        targetMs: {{ $profile->suspended_until->getTimestamp() * 1000 }},
+                        countdownText: '',
+                        init() {
+                            this.tick();
+                            setInterval(() => this.tick(), 1000);
+                        },
+                        tick() {
+                            const diff = Math.max(0, Math.floor((this.targetMs - Date.now()) / 1000));
+                            if (diff <= 0) { this.countdownText = 'Masa suspend berakhir (silakan muat ulang halaman)'; return; }
+                            const h = Math.floor(diff / 3600);
+                            const m = Math.floor((diff % 3600) / 60);
+                            const s = diff % 60;
+                            this.countdownText = `${h} jam ${String(m).padStart(2,'0')} menit ${String(s).padStart(2,'0')} detik`;
+                        }
+                    }"
+                    class="p-5 sm:p-6 rounded-3xl bg-[#FF9ABC]/35 border-2 border-[#78956A] text-[#46571A] shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-6 h-6 text-[#46571A] shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        </svg>
+                        <div class="space-y-1">
+                            <span class="inline-block px-2.5 py-0.5 rounded-full bg-[#FF9ABC] border border-[#78956A] text-[#46571A] text-[10px] font-extrabold uppercase tracking-wider">
+                                SANKSI SUSPEND SEMENTARA (1 HARI)
+                            </span>
+                            <h4 class="font-extrabold text-base text-[#46571A]">
+                                Akun Anda Disuspend Hingga {{ $profile->suspended_until->timezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB
+                            </h4>
+                            <p class="text-xs font-bold text-[#46571A]">
+                                Sisa waktu suspend: <span class="font-mono px-2 py-0.5 rounded-lg bg-[#FFFDF9] border border-[#78956A]" x-text="countdownText"></span>
+                            </p>
+                            <p class="text-xs text-[#46571A]/90 leading-relaxed">
+                                {{ $profile->suspension_reason ?: 'Anda tidak dapat mengaktifkan status kerja maupun muncul di katalog layanan selama masa sanksi berlangsung.' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             @if ($profile->verification_status === 'rejected')
                 <div class="p-5 sm:p-6 rounded-3xl bg-[#78956A] text-[#F9F4EA] shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-2 border-[#FF9ABC]"> <div class="flex items-start gap-3.5"> <span class="text-3xl shrink-0"><svg class="w-4 h-4 inline-block shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg></span> <div class="space-y-1"> <span class="inline-block px-2.5 py-0.5 rounded-full bg-[#FF9ABC] border border-[#FF9ABC] text-[#F9F4EA] text-[10px] font-black uppercase tracking-wider"> PEMBERITAHUAN PENTING: BERKAS LEGALITAS DITOLAK ADMIN
                             </span> <h4 class="font-extrabold text-base text-white">Pengajuan Legalitas STR &amp; SIP Anda Ditolak — Silakan Revisi</h4> <p class="text-xs text-[#F9F4EA] leading-relaxed"> <strong>Alasan Penolakan Admin:</strong> &ldquo;{{ $profile->rejection_reason ?? ($latestAuditNotif->data['rejection_reason'] ?? 'Berkas dokumen belum sesuai standar atau kurang jelas terbaca.') }}&rdquo;

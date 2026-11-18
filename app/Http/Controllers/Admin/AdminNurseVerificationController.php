@@ -11,6 +11,7 @@ use App\Notifications\NurseDocumentApprovedNotification;
 use App\Notifications\NurseDocumentRejectedNotification;
 use App\Services\KtkiValidationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
@@ -226,6 +227,30 @@ class AdminNurseVerificationController extends Controller
         }
 
         return back()->with('status', "Berkas legalitas perawat {$nurseProfile->user?->name} telah DITOLAK (Status: REJECTED) dengan alasan: \"{$reason}\". Notifikasi revisi telah dikirimkan ke perawat.");
+    }
+
+    /**
+     * Cabut sanksi suspend sementara (1 hari) pada perawat.
+     */
+    public function unsuspend(NurseProfile $nurseProfile): RedirectResponse
+    {
+        $oldUntil = $nurseProfile->suspended_until?->toIso8601String();
+        $nurseProfile->update([
+            'suspended_until' => null,
+            'suspension_reason' => null,
+        ]);
+
+        AuditLog::log('admin_unsuspended_nurse', $nurseProfile, ['suspended_until' => $oldUntil], ['suspended_until' => null]);
+
+        if ($nurseProfile->user) {
+            $nurseProfile->user->notify(new \App\Notifications\SystemActivityNotification(
+                'nurse_unsuspended',
+                'Masa Suspend Dicabut Admin',
+                'Sanksi suspend sementara Anda telah dicabut oleh Administrator. Anda dapat kembali mengaktifkan status kerja di dashboard.'
+            ));
+        }
+
+        return back()->with('status', "Suspend sementara untuk perawat {$nurseProfile->user?->name} telah dicabut.");
     }
 
     /**
