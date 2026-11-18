@@ -142,6 +142,17 @@ class AdminDashboardController extends Controller
             ->sortByDesc('balance')
             ->values();
 
+        $suspendedNurses = NurseProfile::with('user')
+            ->whereNotNull('suspended_until')
+            ->where('suspended_until', '>', now())
+            ->orderBy('suspended_until')
+            ->get();
+
+        $auditLogs = \App\Models\AuditLog::with('user')
+            ->latest()
+            ->take(20)
+            ->get();
+
         return view('admin.dashboard', [
             'days' => $days,
             'totalGmv' => $totalGmv,
@@ -164,6 +175,8 @@ class AdminDashboardController extends Controller
             'recentPayments' => $recentPayments,
             'recentMutations' => $recentMutations,
             'topNurses' => $topNurses,
+            'suspendedNurses' => $suspendedNurses,
+            'auditLogs' => $auditLogs,
         ]);
     }
 }

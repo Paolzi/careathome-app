@@ -137,6 +137,8 @@ class NurseApiController extends Controller
         ?int $serviceId = null,
         bool $onlyAvailable = false
     ): array {
+        \App\Services\NurseNoShowPenaltyService::processOverdueOrders();
+
         $nowWib = Carbon::now('Asia/Jakarta');
         $scheduledDate = $scheduledDate ?: $nowWib->toDateString();
         $scheduledTime = $scheduledTime ?: $nowWib->format('H:i');
@@ -149,6 +151,10 @@ class NurseApiController extends Controller
             })
             ->whereHas('user', function ($q) {
                 $q->where('status', '!=', 'suspended');
+            })
+            ->where(function ($q) {
+                $q->whereNull('suspended_until')
+                  ->orWhere('suspended_until', '<=', now());
             });
 
         if ($serviceId) {

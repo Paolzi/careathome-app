@@ -86,7 +86,40 @@
                                 @endforeach
                             </td>
                             <td class="p-4">
-                                @if($u->status === 'active')
+                                @if($u->nurseProfile && $u->nurseProfile->isTemporarilySuspended())
+                                    <div x-data="{
+                                        targetMs: {{ $u->nurseProfile->suspended_until->getTimestamp() * 1000 }},
+                                        remainingText: '',
+                                        init() {
+                                            this.tick();
+                                            setInterval(() => this.tick(), 1000);
+                                        },
+                                        tick() {
+                                            const diff = Math.max(0, Math.floor((this.targetMs - Date.now()) / 1000));
+                                            if (diff <= 0) { this.remainingText = 'Selesai (Segera Aktif)'; return; }
+                                            const h = Math.floor(diff / 3600);
+                                            const m = Math.floor((diff % 3600) / 60);
+                                            const s = diff % 60;
+                                            this.remainingText = `${h}j ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}d`;
+                                        }
+                                    }">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#FF9ABC] text-[#46571A] border border-[#78956A]">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-[#46571A]"></span>
+                                            Suspend Sementara (1 Hari)
+                                        </span>
+                                        <div class="text-[11px] font-bold text-[#46571A] mt-1">
+                                            Aktif kembali dalam: <span class="font-mono" x-text="remainingText"></span>
+                                        </div>
+                                        <div class="text-[10px] text-[#78956A]">
+                                            Target: {{ $u->nurseProfile->suspended_until->timezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB
+                                        </div>
+                                        @if($u->nurseProfile->suspension_reason)
+                                            <div class="text-[10px] text-[#46571A]/80 mt-0.5 italic max-w-xs truncate" title="{{ $u->nurseProfile->suspension_reason }}">
+                                                {{ $u->nurseProfile->suspension_reason }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                @elseif($u->status === 'active')
                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#D1EB8F]/45 text-[#46571A] border border-[#78956A]/50">
                                         <span class="w-1.5 h-1.5 rounded-full bg-[#FF9ABC]"></span>
                                         Aktif
@@ -116,7 +149,15 @@
                                 @if(auth()->id() === $u->id)
                                     <span class="text-xs text-[#78956A] italic">Akun Anda</span>
                                 @else
-                                    @if($u->status === 'active')
+                                    @if($u->nurseProfile && $u->nurseProfile->isTemporarilySuspended())
+                                        <form action="{{ route('admin.nurses.unsuspend', $u->nurseProfile->id) }}" method="POST" class="inline">
+                                            @csrf
+                                            <button type="submit"
+                                                class="px-3.5 py-1.5 rounded-xl bg-[#D1EB8F] hover:bg-[#FF9ABC] text-[#46571A] border border-[#78956A] text-xs font-bold transition cursor-pointer">
+                                                Cabut Suspend
+                                            </button>
+                                        </form>
+                                    @elseif($u->status === 'active')
                                         <button 
                                             type="button"
                                             @click="openSuspend({{ $u->id }}, '{{ addslashes($u->name) }}')"

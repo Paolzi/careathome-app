@@ -200,4 +200,82 @@
             }
         });
     </script>
+
+    <!-- MONITORING PERAWAT DISUSPEND SEMENTARA & LOG AKTIVITAS SISTEM -->
+    <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Panel 1: Perawat Disuspend Sementara (Sanksi 1 Hari) -->
+        <div class="bg-[#FFFDF9] rounded-3xl border border-[#78956A] p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-[#78956A]/30 pb-3">
+                <div>
+                    <h3 class="text-sm font-extrabold text-[#46571A]">Perawat Disuspend Sementara (Sanksi 1 Hari)</h3>
+                    <p class="text-[11px] text-[#78956A]">Otomatis disuspend jika tidak berangkat hingga jam kunjungan berakhir.</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#FF9ABC] text-[#46571A] border border-[#78956A]">
+                    {{ ($suspendedNurses ?? collect())->count() }} Nakes
+                </span>
+            </div>
+
+            @if (($suspendedNurses ?? collect())->isEmpty())
+                <div class="p-6 text-center text-xs text-[#78956A] bg-[#F9F4EA] rounded-2xl border border-[#78956A]/30">
+                    Tidak ada perawat yang sedang dalam masa suspend sementara saat ini.
+                </div>
+            @else
+                <div class="space-y-3 max-h-80 overflow-y-auto">
+                    @foreach ($suspendedNurses as $sp)
+                        <div class="p-4 rounded-2xl bg-[#FF9ABC]/20 border border-[#78956A] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div class="space-y-1">
+                                <span class="font-extrabold text-[#46571A] block">{{ $sp->user?->name ?? 'Perawat #' . $sp->user_id }}</span>
+                                <span class="text-[11px] text-[#46571A]/85 block">{{ $sp->suspension_reason ?? 'Sanksi ketidakhadiran kunjungan.' }}</span>
+                                <span class="text-[10px] font-bold text-[#78956A] block">
+                                    Berakhir: {{ $sp->suspended_until?->timezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB
+                                </span>
+                            </div>
+                            <form action="{{ route('admin.nurses.unsuspend', $sp->id) }}" method="POST" class="shrink-0">
+                                @csrf
+                                <button type="submit" class="px-3.5 py-2 rounded-xl bg-[#D1EB8F] hover:bg-[#FF9ABC] text-[#46571A] border border-[#78956A] text-xs font-bold transition cursor-pointer">
+                                    Cabut Suspend
+                                </button>
+                            </form>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <!-- Panel 2: Log Aktivitas Sistem & Pelanggaran Nakes -->
+        <div class="bg-[#FFFDF9] rounded-3xl border border-[#78956A] p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-[#78956A]/30 pb-3">
+                <div>
+                    <h3 class="text-sm font-extrabold text-[#46571A]">Log Aktivitas &amp; Sanksi Sistem (Audit Log)</h3>
+                    <p class="text-[11px] text-[#78956A]">Rekam jejak aktivitas pesanan, pembayaran, pembatalan, dan auto-suspend.</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#D1EB8F] text-[#46571A] border border-[#78956A]">
+                    {{ ($auditLogs ?? collect())->count() }} Terbaru
+                </span>
+            </div>
+
+            <div class="space-y-2 max-h-80 overflow-y-auto divide-y divide-[#78956A]/20 text-xs">
+                @forelse ($auditLogs ?? [] as $log)
+                    <div class="pt-2.5 first:pt-0 flex items-start justify-between gap-3">
+                        <div class="space-y-0.5 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold border border-[#78956A] {{ str_contains($log->action, 'suspend') || str_contains($log->action, 'cancel') ? 'bg-[#FF9ABC]/40 text-[#46571A]' : 'bg-[#D1EB8F]/60 text-[#46571A]' }}">
+                                    {{ $log->action }}
+                                </span>
+                                <span class="font-bold text-[#46571A] truncate">{{ $log->user?->name ?? 'Sistem Otomatis' }}</span>
+                            </div>
+                            <p class="text-[11px] text-[#78956A] truncate">
+                                {{ is_array($log->new_values) ? ($log->new_values['reason'] ?? ($log->new_values['order_number'] ?? json_encode($log->new_values))) : '-' }}
+                            </p>
+                        </div>
+                        <span class="text-[10px] text-[#78956A] whitespace-nowrap shrink-0">
+                            {{ $log->created_at?->timezone('Asia/Jakarta')->format('d M, H:i') }} WIB
+                        </span>
+                    </div>
+                @empty
+                    <div class="p-6 text-center text-[#78956A] text-xs">Belum ada log aktivitas tercatat.</div>
+                @endforelse
+            </div>
+        </div>
+    </div>
 </x-admin-layout>

@@ -178,6 +178,13 @@ class OrderApiController extends Controller
                 ], 422);
             }
 
+            if ($profile->isTemporarilySuspended()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Perawat yang dipilih sedang dalam masa sanksi suspend hingga ' . $profile->suspended_until->timezone('Asia/Jakarta')->format('d M Y, H:i') . ' WIB.',
+                ], 422);
+            }
+
             $avail = NurseSchedule::checkAvailability(
                 (int) $selectedNurseId,
                 $bookingType,

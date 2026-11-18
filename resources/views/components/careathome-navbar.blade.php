@@ -6,19 +6,23 @@
     $initials = strtoupper(substr($user?->name ?? 'CA', 0, 2));
 
     $nurseStatus = null;
+    $nurseSuspendedTemp = false;
     $userNotifications = collect();
     $unreadNotifCount = 0;
 
     if ($user) {
         try {
+            \App\Services\NurseNoShowPenaltyService::processOverdueOrders();
             \App\Services\OrderReminderService::dispatchDueReminders();
         } catch (\Throwable $e) {
-            // Abaikan error pengingat jadwal agar navbar tetap aman dirender
+            // Abaikan error agar navbar tetap aman dirender
         }
         $userNotifications = $user->notifications()->take(15)->get();
         $unreadNotifCount = $user->unreadNotifications()->count();
         if ($isNurse) {
-            $nurseStatus = \App\Models\NurseProfile::where('user_id', $user->id)->value('verification_status');
+            $np = \App\Models\NurseProfile::where('user_id', $user->id)->first();
+            $nurseStatus = $np?->verification_status;
+            $nurseSuspendedTemp = $np ? $np->isTemporarilySuspended() : false;
         }
     }
 @endphp
@@ -110,7 +114,14 @@
                 @if ($user)
                     <!-- Compact Status Badge -->
                     @if ($isNurse)
-                        @if ($nurseStatus === 'verified')
+                        @if ($nurseSuspendedTemp)
+                            <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FF9ABC] text-[#46571A] border border-[#78956A] whitespace-nowrap">
+                                <svg class="w-3.5 h-3.5 text-[#46571A]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                                </svg>
+                                <span>Suspend Sementara</span>
+                            </span>
+                        @elseif ($nurseStatus === 'verified')
                             <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#D1EB8F] text-[#46571A] border border-[#78956A] whitespace-nowrap">
                                 <svg class="w-3.5 h-3.5 text-[#46571A]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

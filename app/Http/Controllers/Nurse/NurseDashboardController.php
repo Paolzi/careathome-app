@@ -224,6 +224,13 @@ class NurseDashboardController extends Controller
         $desiredStatus = (bool) $request->input('is_online');
 
         if ($desiredStatus) {
+            if ($profile->isTemporarilySuspended()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Akun Anda sedang dalam sanksi suspend 1 hari hingga ' . $profile->suspended_until->timezone('Asia/Jakarta')->format('d M Y, H:i') . ' WIB. Alasan: ' . ($profile->suspension_reason ?: 'Tidak hadir pada jadwal kunjungan.'),
+                ], 403);
+            }
+
             if ($profile->verification_status !== 'verified') {
                 return response()->json([
                     'status' => 'error',

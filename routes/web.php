@@ -93,6 +93,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('verifikasi-nakes/{nurseProfile}/tolak', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'reject'])->name('nurses.tolak');
         Route::post('nurses/{nurseProfile}/verify-ktki', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'verifyKtki'])->name('nurses.verify-ktki');
         Route::get('documents/{document}/preview', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'previewDocument'])->name('documents.preview');
+        Route::post('nurses/{nurseProfile}/unsuspend', [\App\Http\Controllers\Admin\AdminNurseVerificationController::class, 'unsuspend'])->name('nurses.unsuspend');
 
         // Master Data Layanan & Tarif
         Route::resource('services', \App\Http\Controllers\Admin\AdminServiceCatalogController::class)->names('services');
