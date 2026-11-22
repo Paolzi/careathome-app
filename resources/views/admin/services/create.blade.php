@@ -24,9 +24,9 @@
                         @error('name') <span class="text-[10px] text-[#46571A]">{{ $message }}</span> @enderror
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-[#46571A] mb-1.5">Emoji Ikon</label>
-                        <input type="text" name="image_emoji" value="{{ old('image_emoji', '🩺') }}" maxlength="10"
-                            class="w-full text-xs rounded-xl border-[#78956A]/50 text-center focus:border-[#78956A] focus:ring-[#78956A]">
+                        <label class="block text-xs font-bold text-[#46571A] mb-1.5">Kode Ikon (Opsional)</label>
+                        <input type="text" name="image_emoji" value="{{ old('image_emoji', '') }}" maxlength="10" placeholder="medis"
+                            class="w-full text-xs rounded-xl border-[#46571A]/40 bg-[#F9F4EA] text-[#46571A] placeholder:text-[#78956A] text-center focus:border-[#46571A] focus:ring-[#46571A]">
                     </div>
                 </div>
 

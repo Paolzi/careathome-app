@@ -71,6 +71,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('pasien/pesanan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'index'])->name('pasien.pesanan');
         Route::get('pasien/pembayaran', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'paymentView'])->name('pasien.pembayaran');
         Route::get('pasien/pembatalan', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancellationView'])->name('pasien.pembatalan');
+        Route::post('pasien/pembatalan/payout', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'requestRefundPayout'])->name('pasien.payout.request');
         Route::post('pasien/pesanan/{order}/bayar/token', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'getPaymentToken'])->name('pasien.pesanan.payment-token');
         Route::post('pasien/pesanan/{order}/bayar', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'pay'])->name('pasien.pesanan.pay');
         Route::post('pasien/pesanan/{order}/batal', [\App\Http\Controllers\Patient\OrderScheduleController::class, 'cancel'])->name('pasien.pesanan.cancel');

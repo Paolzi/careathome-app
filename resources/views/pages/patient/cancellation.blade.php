@@ -23,13 +23,31 @@
     <!-- 2. MAIN CONTAINER -->
     <main class="grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
+        @if (session('status'))
+            <div class="p-4 rounded-2xl bg-[#D1EB8F] border border-[#78956A] text-[#46571A] text-xs sm:text-sm font-bold flex items-center gap-3 shadow-xs">
+                <svg class="w-5 h-5 shrink-0 text-[#46571A]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        @endif
+
+        @if (session('error') || $errors->any())
+            <div class="p-4 rounded-2xl bg-[#FF9ABC]/35 border border-[#FF9ABC] text-[#46571A] text-xs sm:text-sm font-bold flex items-center gap-3 shadow-xs">
+                <svg class="w-5 h-5 shrink-0 text-[#46571A]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                <span>{{ session('error') ?? $errors->first() }}</span>
+            </div>
+        @endif
+
         <!-- Page Header Banner Khusus Pembatalan & Refund -->
         <div class="bg-[#78956A] rounded-3xl p-6 sm:p-8 text-[#F9F4EA] shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-[#FF9ABC] relative overflow-hidden">
             <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-[#FF9ABC] rounded-full blur-3xl pointer-events-none"></div>
 
             <div class="space-y-2 relative z-10">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF9ABC] border border-[#FF9ABC] text-[#FF9ABC] text-xs font-semibold">
-                    <span class="w-2 h-2 rounded-full bg-[#D1EB8F] animate-pulse"></span>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D1EB8F] border border-[#46571A]/20 text-[#46571A] text-xs font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-[#46571A] animate-pulse"></span>
                     Kebijakan Pembatalan &amp; Pengembalian Dana Escrow 100%
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -40,14 +58,27 @@
                 </p>
             </div>
 
-            <div class="shrink-0 grid grid-cols-2 sm:grid-cols-2 gap-4 border-t sm:border-t-0 sm:border-l border-[#78956A] pt-4 sm:pt-0 sm:pl-6 relative z-10 text-right">
-                <div class="p-3 bg-white/5 rounded-2xl border border-white/10 text-left">
-                    <span class="text-[10px] text-[#F9F4EA]/90 uppercase tracking-wider font-bold block">Total Dibatalkan</span>
-                    <span class="text-2xl font-black text-[#46571A]">{{ $totalCancelled }} Pesanan</span>
+            <div class="shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t sm:border-t-0 sm:border-l border-[#F9F4EA]/25 pt-4 sm:pt-0 sm:pl-6 relative z-10">
+                <div class="p-3.5 bg-[#F9F4EA] rounded-2xl border border-[#46571A]/15 text-left flex flex-col justify-between">
+                    <span class="text-[10px] text-[#78956A] uppercase tracking-wider font-bold block">Total Dibatalkan</span>
+                    <span class="text-2xl font-black text-[#46571A] mt-1">{{ $totalCancelled }} Pesanan</span>
+                    @if ($totalWithdrawn > 0)
+                        <span class="text-[10px] text-[#78956A] mt-1 block">Sudah diambil: Rp {{ number_format($totalWithdrawn, 0, ',', '.') }}</span>
+                    @endif
                 </div>
-                <div class="p-3 bg-white/5 rounded-2xl border border-white/10 text-left">
-                    <span class="text-[10px] text-[#D1EB8F] uppercase tracking-wider font-bold block">Dana Dikembalikan</span>
-                    <span class="text-xl sm:text-2xl font-black text-[#D1EB8F]">Rp {{ number_format($totalRefundAmount, 0, ',', '.') }}</span>
+                <div class="p-3.5 bg-[#F9F4EA] rounded-2xl border border-[#46571A]/15 text-left flex flex-col justify-between gap-2">
+                    <div>
+                        <span class="text-[10px] text-[#78956A] uppercase tracking-wider font-bold block">Dana Dikembalikan</span>
+                        <span class="text-xl sm:text-2xl font-black text-[#46571A] block mt-0.5">Rp {{ number_format($availableRefundBalance, 0, ',', '.') }}</span>
+                    </div>
+                    <button type="button" @click="openPayoutModal()"
+                        {{ $availableRefundBalance <= 0 ? 'disabled' : '' }}
+                        class="w-full py-2 px-3 rounded-xl text-xs font-extrabold transition flex items-center justify-center gap-1.5 border {{ $availableRefundBalance > 0 ? 'bg-[#FF9ABC] hover:bg-[#D1EB8F] text-[#46571A] border-[#46571A]/20 shadow-xs cursor-pointer' : 'bg-[#F9F4EA] text-[#78956A] border-[#78956A]/30 opacity-60 cursor-not-allowed' }}">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+                        </svg>
+                        <span>Payout / Ambil Uang</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -230,7 +261,139 @@
             @endif
         </div>
 
+        <!-- 5B. RIWAYAT PENARIKAN DANA PENGEMBALIAN (PAYOUT PASIEN) -->
+        <div class="space-y-4 pt-4">
+            <div class="flex items-center justify-between border-b border-[#78956A]/50 pb-3">
+                <div>
+                    <h2 class="text-base font-extrabold text-[#46571A]">Riwayat Penarikan Dana Pengembalian (Payout)</h2>
+                    <p class="text-xs text-[#78956A]">Daftar pencairan dana pengembalian yang telah Anda ambil.</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#D1EB8F] text-[#46571A] border border-[#78956A]/50">
+                    Total Diambil: Rp {{ number_format($totalWithdrawn, 0, ',', '.') }}
+                </span>
+            </div>
+
+            @if ($patientPayouts->isEmpty())
+                <div class="p-6 rounded-3xl bg-[#FFFDF9] border border-[#78956A]/50 text-center text-xs text-[#78956A]">
+                    Belum ada riwayat penarikan dana pengembalian.
+                </div>
+            @else
+                <div class="bg-white rounded-3xl border border-[#78956A]/50 overflow-hidden shadow-xs">
+                    <div class="divide-y divide-[#78956A]/20">
+                        @foreach ($patientPayouts as $payout)
+                            <div class="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="space-y-0.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-mono font-bold text-[#46571A]">{{ $payout->reference_number }}</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#D1EB8F] text-[#46571A] border border-[#78956A]/40">
+                                            Berhasil Diambil
+                                        </span>
+                                    </div>
+                                    <p class="text-[11px] text-[#78956A]">
+                                        {{ $payout->processed_at?->timezone('Asia/Jakarta')->format('d M Y, H:i') ?? $payout->created_at?->timezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB
+                                    </p>
+                                </div>
+                                <div class="text-sm font-black text-[#46571A]">
+                                    - Rp {{ number_format($payout->amount, 0, ',', '.') }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        </div>
+
     </main>
+
+    <!-- 6A. MODAL PAYOUT / AMBIL UANG PENGEMBALIAN DANA PASIEN -->
+    <div x-show="payoutModalOpen" x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-[#46571A]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+        x-transition:enter="ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0">
+
+        <div @click.away="payoutModalOpen = false"
+            class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-[#78956A]/50 overflow-hidden text-[#46571A]"
+            x-transition:enter="ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100">
+
+            <div class="px-6 py-4 bg-[#78956A] text-[#F9F4EA] flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase tracking-wider font-extrabold text-[#D1EB8F] block">Pencairan Dana Pengembalian</span>
+                    <h3 class="text-base font-extrabold leading-tight">Payout / Ambil Uang</h3>
+                </div>
+                <button type="button" @click="payoutModalOpen = false" class="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#F9F4EA]">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form action="{{ route('pasien.payout.request') }}" method="POST" class="p-6 space-y-4">
+                @csrf
+
+                <div class="p-4 rounded-2xl bg-[#D1EB8F]/45 border border-[#78956A]/50 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-[#46571A]">Dana Dikembalikan Tersedia:</span>
+                    <strong class="text-lg font-black text-[#46571A]">Rp {{ number_format($availableRefundBalance, 0, ',', '.') }}</strong>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-[#46571A] mb-1.5">Pilihan Nominal Cepat</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button type="button" @click="setPayoutAmount(Math.min(50000, availableRefundBalance))"
+                            :class="payoutAmount === Math.min(50000, availableRefundBalance) ? 'bg-[#D1EB8F] text-[#46571A] border-[#78956A] font-bold' : 'bg-[#F9F4EA] text-[#46571A] border-[#78956A]/50 hover:bg-[#D1EB8F]/45'"
+                            class="py-2 px-2 rounded-xl border text-[11px] transition cursor-pointer">
+                            Rp 50 rb
+                        </button>
+                        <button type="button" @click="setPayoutAmount(Math.min(100000, availableRefundBalance))"
+                            :class="payoutAmount === Math.min(100000, availableRefundBalance) ? 'bg-[#D1EB8F] text-[#46571A] border-[#78956A] font-bold' : 'bg-[#F9F4EA] text-[#46571A] border-[#78956A]/50 hover:bg-[#D1EB8F]/45'"
+                            class="py-2 px-2 rounded-xl border text-[11px] transition cursor-pointer">
+                            Rp 100 rb
+                        </button>
+                        <button type="button" @click="setPayoutAmount(Math.min(250000, availableRefundBalance))"
+                            :class="payoutAmount === Math.min(250000, availableRefundBalance) ? 'bg-[#D1EB8F] text-[#46571A] border-[#78956A] font-bold' : 'bg-[#F9F4EA] text-[#46571A] border-[#78956A]/50 hover:bg-[#D1EB8F]/45'"
+                            class="py-2 px-2 rounded-xl border text-[11px] transition cursor-pointer">
+                            Rp 250 rb
+                        </button>
+                        <button type="button" @click="setPayoutAmount(availableRefundBalance)"
+                            :class="payoutAmount === availableRefundBalance ? 'bg-[#D1EB8F] text-[#46571A] border-[#78956A] font-bold' : 'bg-[#F9F4EA] text-[#46571A] border-[#78956A]/50 hover:bg-[#D1EB8F]/45'"
+                            class="py-2 px-2 rounded-xl border text-[11px] transition cursor-pointer">
+                            Ambil Semua
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="patient_payout_amount" class="block text-xs font-bold text-[#46571A] mb-1">
+                        Masukkan Nominal Penarikan (Rp) <span class="text-[#46571A]">*</span>
+                    </label>
+                    <input id="patient_payout_amount" type="number" name="amount" x-model.number="payoutAmount"
+                        min="1" max="{{ max(1, (int) $availableRefundBalance) }}" required
+                        class="w-full rounded-xl border border-[#78956A]/60 bg-[#F9F4EA] px-3.5 py-2.5 text-sm font-bold text-[#46571A] focus:border-[#78956A] focus:ring-[#78956A]"
+                        placeholder="Masukkan nominal yang ingin diambil" />
+                    <p class="text-[11px] text-[#78956A] mt-1.5">
+                        Sisa dana dikembalikan setelah diambil:
+                        <strong class="text-[#46571A]" x-text="'Rp ' + Math.max(0, availableRefundBalance - (Number(payoutAmount) || 0)).toLocaleString('id-ID')"></strong>
+                    </p>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" @click="payoutModalOpen = false"
+                        class="px-4 py-2.5 rounded-xl border border-[#78956A]/50 bg-[#F9F4EA] hover:bg-[#D1EB8F]/40 text-xs font-bold text-[#46571A] transition cursor-pointer">
+                        Batal
+                    </button>
+                    <button type="submit"
+                        class="px-5 py-2.5 rounded-xl bg-[#FF9ABC] hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A]/40 text-xs font-extrabold shadow transition cursor-pointer">
+                        Ambil Uang
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- 6. MODAL KONFIRMASI PEMBATALAN PESANAN -->
     <div x-show="cancelModalOpen" x-cloak
@@ -282,7 +445,9 @@
                     </template>
                     <template x-if="selectedOrder?.payment_status !== 'paid'">
                         <div class="flex items-start gap-3">
-                            <span class="text-2xl">ℹ️</span>
+                            <svg class="w-6 h-6 text-[#78956A] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
                             <div class="space-y-1">
                                 <span class="font-bold block text-[#46571A]">Pembatalan Pesanan Belum Dibayar</span>
                                 <p class="text-[#46571A]/85">
@@ -383,6 +548,19 @@
                 processingCancel: false,
                 cancelSuccessMsg: '',
                 cancelErrorMsg: '',
+                payoutModalOpen: false,
+                availableRefundBalance: {{ (int) $availableRefundBalance }},
+                payoutAmount: {{ (int) $availableRefundBalance > 0 ? (int) $availableRefundBalance : 0 }},
+
+                openPayoutModal() {
+                    if (this.availableRefundBalance <= 0) return;
+                    this.payoutAmount = this.availableRefundBalance;
+                    this.payoutModalOpen = true;
+                },
+
+                setPayoutAmount(amount) {
+                    this.payoutAmount = Math.max(0, Math.min(Number(amount) || 0, this.availableRefundBalance));
+                },
 
                 openCancelModal(order) {
                     this.selectedOrder = order;

@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Patient;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Order;
+use App\Models\PatientPayout;
 use App\Models\ServiceCatalog;
 use App\Models\User;
 use App\Services\OrderPaymentService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class OrderScheduleController extends Controller
@@ -22,22 +26,28 @@ class OrderScheduleController extends Controller
     }
 
     /**
+     * Resolve user pasien yang sedang login (atau fallback demo pasien).
+     */
+    protected function resolveCurrentPatient(): ?User
+    {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if ($currentUser) {
+            return $currentUser;
+        }
+
+        return User::whereHas('roles', function ($query) {
+            $query->where('name', 'pasien');
+        })->first() ?? User::first();
+    }
+
+    /**
      * Helper privat untuk memuat data pesanan pasien.
      */
     protected function getPatientOrders(Request $request): array
     {
-        /** @var User|null $currentUser */
-        $currentUser = Auth::user();
-        $userId = $currentUser?->id;
-
-        if (!$userId) {
-            $defaultPatient = User::whereHas('roles', function ($query) {
-                $query->where('name', 'pasien');
-            })->first() ?? User::first();
-
-            $userId = $defaultPatient?->id ?? 1;
-            $currentUser = $defaultPatient;
-        }
+        $currentUser = $this->resolveCurrentPatient();
+        $userId = $currentUser?->id ?? 1;
 
         $activeOrders = Order::with(['serviceCatalog', 'nurse.nurseProfile', 'latestPayment', 'eReport'])
             ->where(function ($query) use ($userId, $currentUser) {
@@ -105,6 +115,7 @@ class OrderScheduleController extends Controller
      */
     public function cancellationView(Request $request): View
     {
+        $currentUser = $this->resolveCurrentPatient();
         [$activeOrders, $pastOrders] = $this->getPatientOrders($request);
 
         $cancellableOrders = $activeOrders->filter(function ($o) {
@@ -112,13 +123,149 @@ class OrderScheduleController extends Controller
         });
 
         $cancelledOrders = $pastOrders->whereIn('status', ['dibatalkan', 'ditolak', 'declined']);
+        $totalRefundGross = (int) $cancelledOrders->sum('refund_amount');
+
+        $patientPayouts = $currentUser
+            ? PatientPayout::where('user_id', $currentUser->id)
+                ->latest('processed_at')
+                ->latest('id')
+                ->get()
+            : collect();
+
+        $totalWithdrawn = (int) $patientPayouts->where('status', 'completed')->sum('amount');
+        $availableRefundBalance = max(0, $totalRefundGross - $totalWithdrawn);
 
         return view('pages.patient.cancellation', [
             'cancellableOrders' => $cancellableOrders,
             'cancelledOrders' => $cancelledOrders,
             'totalCancelled' => $cancelledOrders->count(),
-            'totalRefundAmount' => $cancelledOrders->sum('refund_amount'),
+            'totalRefundAmount' => $availableRefundBalance,
+            'totalRefundGross' => $totalRefundGross,
+            'totalWithdrawn' => $totalWithdrawn,
+            'availableRefundBalance' => $availableRefundBalance,
+            'patientPayouts' => $patientPayouts,
         ]);
+    }
+
+    /**
+     * Proses pencairan (payout / ambil uang) dari saldo dana pengembalian pasien.
+     */
+    public function requestRefundPayout(Request $request): RedirectResponse|JsonResponse
+    {
+        $patient = $this->resolveCurrentPatient();
+        if (!$patient) {
+            $msg = 'Akun pasien tidak ditemukan.';
+            return $request->expectsJson()
+                ? response()->json(['status' => 'error', 'message' => $msg], 403)
+                : back()->with('error', $msg);
+        }
+
+        $validated = $request->validate([
+            'amount' => ['required', 'integer', 'min:1'],
+        ], [
+            'amount.required' => 'Nominal penarikan dana wajib diisi.',
+            'amount.integer' => 'Nominal penarikan dana harus berupa angka bulat.',
+            'amount.min' => 'Nominal penarikan dana minimal Rp 1.',
+        ]);
+
+        $amount = (int) $validated['amount'];
+
+        try {
+            $result = DB::transaction(function () use ($patient, $amount) {
+                $lockedUser = User::where('id', $patient->id)->lockForUpdate()->firstOrFail();
+
+                $totalRefundGross = (int) Order::where(function ($query) use ($lockedUser) {
+                        $query->where('patient_id', $lockedUser->id);
+                        if ($lockedUser->name) {
+                            $query->orWhere('patient_name', $lockedUser->name);
+                        }
+                    })
+                    ->whereIn('status', ['dibatalkan', 'ditolak', 'declined'])
+                    ->sum('refund_amount');
+
+                $totalWithdrawn = (int) PatientPayout::where('user_id', $lockedUser->id)
+                    ->where('status', 'completed')
+                    ->lockForUpdate()
+                    ->sum('amount');
+
+                $availableBalance = max(0, $totalRefundGross - $totalWithdrawn);
+
+                if ($availableBalance <= 0) {
+                    throw new \DomainException('Saldo dana pengembalian Anda saat ini Rp 0 dan belum dapat ditarik.');
+                }
+
+                if ($amount > $availableBalance) {
+                    throw new \DomainException('Saldo dana pengembalian Anda (Rp ' . number_format($availableBalance, 0, ',', '.') . ') tidak mencukupi untuk penarikan sebesar Rp ' . number_format($amount, 0, ',', '.') . '.');
+                }
+
+                $remainingBalance = max(0, $availableBalance - $amount);
+                $nowWib = now('Asia/Jakarta');
+
+                $payout = PatientPayout::create([
+                    'user_id' => $lockedUser->id,
+                    'amount' => $amount,
+                    'status' => 'completed',
+                    'reference_number' => 'RFD-' . $nowWib->format('YmdHis') . '-' . $lockedUser->id . '-' . random_int(100, 999),
+                    'notes' => 'Penarikan dana pengembalian (payout pasien) sebesar Rp ' . number_format($amount, 0, ',', '.') . ' pada ' . $nowWib->format('d M Y, H:i') . ' WIB',
+                    'processed_at' => $nowWib,
+                ]);
+
+                AuditLog::log('patient_refund_payout', $payout, [
+                    'available_balance_before' => $availableBalance,
+                ], [
+                    'amount' => $amount,
+                    'available_balance_after' => $remainingBalance,
+                    'reference_number' => $payout->reference_number,
+                ]);
+
+                return [
+                    'payout' => $payout,
+                    'remaining_balance' => $remainingBalance,
+                ];
+            });
+
+            try {
+                $timeStr = now('Asia/Jakarta')->format('d M Y, H:i') . ' WIB';
+                $patient->notify(new \App\Notifications\SystemActivityNotification(
+                    'patient_refund_payout',
+                    'Penarikan Dana Pengembalian Berhasil',
+                    'Penarikan dana pengembalian sebesar Rp ' . number_format($amount, 0, ',', '.') . " berhasil diproses ({$timeStr}). Sisa dana pengembalian: Rp " . number_format($result['remaining_balance'], 0, ',', '.') . '.'
+                ));
+
+                foreach (User::role('admin')->get() as $adminUser) {
+                    $adminUser->notify(new \App\Notifications\SystemActivityNotification(
+                        'patient_refund_payout',
+                        'Aktivitas Payout Dana Pasien',
+                        "Pasien {$patient->name} menarik dana pengembalian sebesar Rp " . number_format($amount, 0, ',', '.') . '.'
+                    ));
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            $successMsg = 'Dana pengembalian sebesar Rp ' . number_format($amount, 0, ',', '.') . ' berhasil diambil! Sisa dana pengembalian: Rp ' . number_format($result['remaining_balance'], 0, ',', '.') . '.';
+
+            return $request->expectsJson()
+                ? response()->json([
+                    'status' => 'success',
+                    'message' => $successMsg,
+                    'data' => [
+                        'reference_number' => $result['payout']->reference_number,
+                        'amount' => $amount,
+                        'remaining_balance' => $result['remaining_balance'],
+                    ],
+                ])
+                : back()->with('status', $successMsg);
+        } catch (\DomainException $e) {
+            return $request->expectsJson()
+                ? response()->json(['status' => 'error', 'message' => $e->getMessage()], 422)
+                : back()->with('error', $e->getMessage())->withInput();
+        } catch (\Throwable $e) {
+            $errMsg = 'Terjadi kesalahan sistem saat memproses penarikan dana: ' . $e->getMessage();
+            return $request->expectsJson()
+                ? response()->json(['status' => 'error', 'message' => $errMsg], 500)
+                : back()->with('error', $errMsg)->withInput();
+        }
     }
 
     /**

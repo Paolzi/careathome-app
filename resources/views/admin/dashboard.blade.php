@@ -179,8 +179,8 @@
                         datasets: [{
                             data: totalAll > 0 ? counts : [1, 0, 0, 0],
                             backgroundColor: totalAll > 0
-                                ? ['#FF9ABC', '#0ea5e9', '#f59e0b', '#f43f5e']
-                                : ['#e2e8f0', '#e2e8f0', '#e2e8f0', '#e2e8f0'],
+                                ? ['#D1EB8F', '#78956A', '#46571A', '#FF9ABC']
+                                : ['#F9F4EA', '#F9F4EA', '#F9F4EA', '#F9F4EA'],
                             borderWidth: 2,
                             borderColor: '#ffffff',
                         }]
