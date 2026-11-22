@@ -213,10 +213,34 @@ class OrderApiController extends Controller
         $distanceKm = max(0.1, round((float) $distanceKm, 1));
         $breakdown = Order::calculatePriceBreakdown((float) $service->price, $distanceKm);
 
+        $estimatedTravelMinutes = max(3, (int) ceil(($distanceKm / 30.0) * 60.0));
+        if ($selectedNurseId && isset($validated['latitude']) && isset($validated['longitude'])) {
+            $nurseProfile = \App\Models\NurseProfile::where('user_id', $selectedNurseId)->first();
+            if ($nurseProfile && $nurseProfile->latitude !== null && $nurseProfile->longitude !== null) {
+                $routeMeta = OsrmRoutingService::getDrivingRoute(
+                    (float) $nurseProfile->latitude,
+                    (float) $nurseProfile->longitude,
+                    (float) $validated['latitude'],
+                    (float) $validated['longitude']
+                );
+                if (!empty($routeMeta['duration_minutes'])) {
+                    $estimatedTravelMinutes = (int) $routeMeta['duration_minutes'];
+                }
+            }
+        }
+
         $scheduledTimeDisplay = $validated['scheduled_time'];
         if (! str_contains(strtoupper($scheduledTimeDisplay), 'WIB')) {
             $scheduledTimeDisplay .= ' WIB';
         }
+
+        $estimatedArrivalAt = $bookingType === 'now'
+            ? $nowWib->copy()->addMinutes($estimatedTravelMinutes)
+            : \Carbon\Carbon::createFromFormat(
+                'Y-m-d H:i',
+                $validated['scheduled_date'] . ' ' . \App\Models\NurseSchedule::extractStartTime($scheduledTimeDisplay, $nowWib),
+                'Asia/Jakarta'
+            );
 
         $order = Order::create([
             'order_number' => Order::generateOrderNumber(),
@@ -234,6 +258,8 @@ class OrderApiController extends Controller
             'patient_latitude' => $validated['latitude'] ?? null,
             'patient_longitude' => $validated['longitude'] ?? null,
             'distance_km' => $breakdown['distance_km'],
+            'estimated_travel_minutes' => $estimatedTravelMinutes,
+            'estimated_arrival_at' => $estimatedArrivalAt,
             'clinical_notes' => $validated['clinical_notes'] ?? null,
             'medical_photo_path' => $photoPath,
             'base_price' => $breakdown['base_price'],
@@ -419,6 +445,8 @@ class OrderApiController extends Controller
                 'routing' => [
                     'distance_km' => $authoritativeDistanceKm,
                     'duration_minutes' => $authoritativeDurationMin,
+                    'estimated_arrival_wib' => $order->getArrivalEstimateSummary()['eta_time_wib'],
+                    'eta_headline' => $order->getArrivalEstimateSummary()['headline'],
                     'geometry' => $routeData['geometry'],
                     'source' => $routeData['source'],
                 ],

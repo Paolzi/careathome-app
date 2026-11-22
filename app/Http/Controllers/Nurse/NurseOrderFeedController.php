@@ -338,7 +338,37 @@ class NurseOrderFeedController extends Controller
             }
         }
 
+        $nowWib = now('Asia/Jakarta');
         $order->status = $status;
+
+        if ($status === 'dalam_perjalanan') {
+            if (!$order->departed_at) {
+                $order->departed_at = $nowWib;
+            }
+
+            $nurseProfile = NurseProfile::where('user_id', $user->id)->first();
+            $patientLat = $order->patient_latitude ?? $order->latitude;
+            $patientLng = $order->patient_longitude ?? $order->longitude;
+            $travelMinutes = max(3, (int) ceil((max(0.1, (float) ($order->distance_km ?? 2.5)) / 30.0) * 60.0));
+
+            if ($nurseProfile && $nurseProfile->latitude !== null && $nurseProfile->longitude !== null && $patientLat !== null && $patientLng !== null) {
+                $routeMeta = \App\Services\OsrmRoutingService::getDrivingRoute(
+                    (float) $nurseProfile->latitude,
+                    (float) $nurseProfile->longitude,
+                    (float) $patientLat,
+                    (float) $patientLng
+                );
+                if (!empty($routeMeta['duration_minutes'])) {
+                    $travelMinutes = (int) $routeMeta['duration_minutes'];
+                }
+            }
+
+            $order->estimated_travel_minutes = $travelMinutes;
+            $order->estimated_arrival_at = $nowWib->copy()->addMinutes($travelMinutes);
+        } elseif ($status === 'tiba' && !$order->arrived_at) {
+            $order->arrived_at = $nowWib;
+        }
+
         $order->save();
 
         /** @var User|null $patientUser */
