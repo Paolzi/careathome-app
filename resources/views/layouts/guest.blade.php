@@ -11,11 +11,6 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased bg-[#F9F4EA] min-h-screen text-[#46571A] flex flex-col justify-between selection:bg-[#FF9ABC] selection:text-[#46571A] relative overflow-x-hidden">
-        
-        <!-- Ambient Background Glows -->
-        <div class="fixed top-0 left-1/4 w-96 h-96 bg-[#FF9ABC]/15 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="fixed bottom-0 right-1/4 w-96 h-96 bg-[#D1EB8F]/25 rounded-full blur-3xl pointer-events-none"></div>
-
         <!-- Top Mini Navigation -->
         <header class="sticky top-0 z-40 w-full h-16 px-6 sm:px-10 flex items-center justify-between border-b border-[#78956A]/25 backdrop-blur-md bg-[#FFFDF9]/95 shadow-sm">
             <a href="/" class="group flex items-center gap-3 transition-transform hover:scale-[1.01]" wire:navigate>
