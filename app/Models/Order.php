@@ -53,6 +53,10 @@ class Order extends Model
         'patient_latitude',
         'patient_longitude',
         'distance_km',
+        'estimated_travel_minutes',
+        'estimated_arrival_at',
+        'departed_at',
+        'arrived_at',
         'clinical_notes',
         'medical_photo_path',
         'base_price',
@@ -78,6 +82,10 @@ class Order extends Model
         'patient_latitude' => 'float',
         'patient_longitude' => 'float',
         'distance_km' => 'float',
+        'estimated_travel_minutes' => 'integer',
+        'estimated_arrival_at' => 'datetime',
+        'departed_at' => 'datetime',
+        'arrived_at' => 'datetime',
         'base_price' => 'float',
         'transport_fee' => 'float',
         'platform_fee' => 'float',
@@ -307,6 +315,82 @@ class Order extends Model
             'message' => $isAllowed
                 ? 'Waktu kunjungan telah memasuki jendela aktif (WIB)'
                 : 'Tombol akan aktif 30 menit sebelum jadwal perawatan (Pukul ' . $unlockAt->format('H:i') . ' WIB)',
+        ];
+    }
+
+    /**
+     * Ringkasan estimasi waktu kedatangan perawat (ETA) yang logis untuk ditampilkan di jadwal pasien.
+     */
+    public function getArrivalEstimateSummary(): array
+    {
+        $nowWib = \Carbon\Carbon::now('Asia/Jakarta');
+        $distance = max(0.1, (float) ($this->distance_km ?? 2.5));
+        $travelMinutes = $this->estimated_travel_minutes
+            ? (int) $this->estimated_travel_minutes
+            : max(3, (int) ceil(($distance / 30.0) * 60.0));
+
+        if (in_array($this->status, ['tiba', 'tindakan_berlangsung', 'selesai', 'completed'], true)) {
+            $arrivedAt = $this->arrived_at ? $this->arrived_at->timezone('Asia/Jakarta') : null;
+
+            return [
+                'state' => 'arrived',
+                'travel_minutes' => $travelMinutes,
+                'remaining_minutes' => 0,
+                'eta_time_wib' => $arrivedAt ? $arrivedAt->format('H:i') . ' WIB' : null,
+                'headline' => $arrivedAt
+                    ? 'Tiba di lokasi pukul ' . $arrivedAt->format('H:i') . ' WIB'
+                    : 'Perawat telah tiba di lokasi',
+                'subtext' => $this->status === 'tindakan_berlangsung'
+                    ? 'Tindakan keperawatan sedang berlangsung'
+                    : 'Perawat sudah berada di rumah pasien',
+            ];
+        }
+
+        if ($this->status === 'dalam_perjalanan') {
+            $etaAt = ($this->estimated_arrival_at ?? $nowWib->copy()->addMinutes($travelMinutes))
+                ->copy()
+                ->timezone('Asia/Jakarta');
+            $remainingSeconds = $nowWib->diffInSeconds($etaAt, false);
+            $remainingMinutes = max(1, (int) ceil(max(0, $remainingSeconds) / 60));
+
+            return [
+                'state' => 'on_the_way',
+                'travel_minutes' => $travelMinutes,
+                'remaining_minutes' => $remainingMinutes,
+                'eta_time_wib' => $etaAt->format('H:i') . ' WIB',
+                'headline' => 'Perkiraan Tiba ~' . $etaAt->format('H:i') . ' WIB',
+                'subtext' => "Dalam perjalanan (± {$remainingMinutes} menit lagi)",
+            ];
+        }
+
+        if (($this->booking_type ?? 'scheduled') === 'now') {
+            $baseTime = $this->created_at
+                ? $this->created_at->copy()->timezone('Asia/Jakarta')
+                : $nowWib->copy();
+            $etaAt = ($this->estimated_arrival_at ?? $baseTime->addMinutes($travelMinutes))
+                ->copy()
+                ->timezone('Asia/Jakarta');
+
+            return [
+                'state' => 'scheduled',
+                'travel_minutes' => $travelMinutes,
+                'remaining_minutes' => $travelMinutes,
+                'eta_time_wib' => $etaAt->format('H:i') . ' WIB',
+                'headline' => 'Estimasi Tiba ~' . $etaAt->format('H:i') . ' WIB',
+                'subtext' => "Pesan Sekarang • Perkiraan tempuh ± {$travelMinutes} menit",
+            ];
+        }
+
+        $scheduledStart = $this->getScheduledStartCarbonWib();
+        $etaAt = ($this->estimated_arrival_at ?? $scheduledStart)->copy()->timezone('Asia/Jakarta');
+
+        return [
+            'state' => 'scheduled',
+            'travel_minutes' => $travelMinutes,
+            'remaining_minutes' => $travelMinutes,
+            'eta_time_wib' => $etaAt->format('H:i') . ' WIB',
+            'headline' => 'Target Tiba ' . $etaAt->format('H:i') . ' WIB',
+            'subtext' => "Sesuai jadwal • Estimasi tempuh perawat ± {$travelMinutes} menit",
         ];
     }
 }
