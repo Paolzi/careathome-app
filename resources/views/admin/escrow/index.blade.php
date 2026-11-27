@@ -10,7 +10,7 @@
             <p class="text-[#78956A] text-sm mt-1">Audit mutasi wallet perawat & platform secara real-time dengan rekonsiliasi otomatis.</p>
         </div>
         <div class="flex items-center gap-3">
-            <a href="{{ route('admin.escrow.export', request()->all()) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-[#78956A] text-[#F9F4EA] rounded-xl text-sm font-semibold hover:bg-[#78956A] transition">
+            <a href="{{ route('admin.escrow.export', request()->all()) }}" class="inline-flex items-center justify-center whitespace-nowrap shrink-0 gap-2 px-4 py-2 bg-[#78956A] text-[#F9F4EA] rounded-xl text-sm font-semibold hover:bg-[#46571A] transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 Export CSV
             </a>
@@ -78,7 +78,7 @@
                 <input type="date" name="date_to" value="{{ request('date_to') }}" class="w-full text-sm border-[#78956A] rounded-xl focus:border-[#78956A] focus:ring-[#78956A]">
             </div>
             <div class="flex gap-2">
-                <button type="submit" class="flex-1 px-4 py-2 bg-[#FF9ABC] text-[#46571A] rounded-xl text-sm font-bold hover:bg-[#FF9ABC] transition">Filter</button>
+                <button type="submit" class="flex-1 px-4 py-2 bg-[#FF9ABC] text-[#46571A] rounded-xl text-sm font-bold hover:bg-[#FF9ABC]/85 transition">Filter</button>
                 <a href="{{ route('admin.escrow.index') }}" class="px-3 py-2 bg-[#F9F4EA] text-[#46571A]/85 rounded-xl text-sm font-semibold hover:bg-[#D1EB8F]/50 transition">Reset</a>
             </div>
         </form>
@@ -86,51 +86,51 @@
 
     <!-- Transactions Table -->
     <div class="bg-white rounded-3xl border border-[#78956A]/50 shadow-sm overflow-hidden">
-        <div class="p-6 border-b border-[#78956A]/50 flex items-center justify-between">
+        <div class="p-6 border-b border-[#78956A]/50 flex items-center justify-between gap-3">
             <h2 class="text-base font-bold text-[#46571A]">Buku Besar Transaksi Wallet (Append-Only Ledger)</h2>
-            <span class="text-xs text-[#78956A]">Total data: {{ $transactions->total() }}</span>
+            <span class="text-xs text-[#78956A] whitespace-nowrap shrink-0">Total data: {{ $transactions->total() }}</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-sm">
                 <thead>
                     <tr class="bg-[#F9F4EA] border-b border-[#78956A]/50 text-[#78956A] text-xs font-bold uppercase tracking-wider">
-                        <th class="p-4 pl-6">ID & Waktu</th>
-                        <th class="p-4">Pemilik Wallet</th>
-                        <th class="p-4">Tipe</th>
-                        <th class="p-4 text-right">Nominal</th>
-                        <th class="p-4 text-right">Saldo Akhir</th>
-                        <th class="p-4 pr-6">Keterangan</th>
+                        <th class="px-4 py-3 pl-6 whitespace-nowrap">ID & Waktu</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Pemilik Wallet</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Tipe</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">Nominal</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">Saldo Akhir</th>
+                        <th class="px-4 py-3 pr-6 whitespace-nowrap">Keterangan</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#78956A]/30">
                     @forelse($transactions as $trx)
-                        <tr class="hover:bg-[#F9F4EA] transition">
-                            <td class="p-4 pl-6 font-mono text-xs text-[#46571A]/85">
+                        <tr class="hover:bg-[#F9F4EA] transition align-middle">
+                            <td class="px-4 py-3 pl-6 align-middle font-mono text-xs text-[#46571A]/85 whitespace-nowrap">
                                 <div class="font-bold">#{{ $trx->id }}</div>
                                 <div class="text-[#78956A] text-[11px]">{{ $trx->created_at->format('d/m/Y H:i') }}</div>
                             </td>
-                            <td class="p-4">
+                            <td class="px-4 py-3 align-middle whitespace-nowrap">
                                 <div class="font-semibold text-[#46571A]">{{ $trx->wallet->user->name ?? 'User #' . $trx->wallet->user_id }}</div>
                                 <div class="text-xs text-[#78956A]">{{ $trx->wallet->user->email ?? '-' }}</div>
                             </td>
-                            <td class="p-4">
+                            <td class="px-4 py-3 align-middle whitespace-nowrap">
                                 @if(in_array($trx->type, ['order_income', 'payout_release']))
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#D1EB8F] text-[#46571A]">
+                                    <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1 rounded-full text-xs font-semibold bg-[#D1EB8F] text-[#46571A]">
                                         + {{ $trx->type }}
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#FF9ABC]/40 text-[#46571A]">
+                                    <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1 rounded-full text-xs font-semibold bg-[#FF9ABC]/40 text-[#46571A]">
                                         - {{ $trx->type }}
                                     </span>
                                 @endif
                             </td>
-                            <td class="p-4 text-right font-bold {{ in_array($trx->type, ['order_income', 'payout_release']) ? 'text-[#78956A]' : 'text-[#46571A]' }}">
+                            <td class="px-4 py-3 align-middle text-right font-bold whitespace-nowrap {{ in_array($trx->type, ['order_income', 'payout_release']) ? 'text-[#78956A]' : 'text-[#46571A]' }}">
                                 Rp {{ number_format($trx->amount, 0, ',', '.') }}
                             </td>
-                            <td class="p-4 text-right font-mono font-semibold text-[#46571A]">
+                            <td class="px-4 py-3 align-middle text-right font-mono font-semibold text-[#46571A] whitespace-nowrap">
                                 Rp {{ number_format($trx->balance_after, 0, ',', '.') }}
                             </td>
-                            <td class="p-4 pr-6 text-xs text-[#78956A] max-w-xs truncate" title="{{ $trx->description }}">
+                            <td class="px-4 py-3 pr-6 align-middle text-xs text-[#78956A] max-w-xs truncate" title="{{ $trx->description }}">
                                 {{ $trx->description }}
                             </td>
                         </tr>
