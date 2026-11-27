@@ -45,7 +45,7 @@
                 </select>
             </div>
             <div class="flex gap-2">
-                <button type="submit" class="flex-1 px-4 py-2 bg-[#FF9ABC] text-[#46571A] rounded-xl text-sm font-bold hover:bg-[#FF9ABC] transition">Filter</button>
+                <button type="submit" class="flex-1 px-4 py-2 bg-[#FF9ABC] text-[#46571A] rounded-xl text-sm font-bold hover:bg-[#FF9ABC]/85 transition">Filter</button>
                 <a href="{{ route('admin.users.index') }}" class="px-3 py-2 bg-[#F9F4EA] text-[#46571A]/85 rounded-xl text-sm font-semibold hover:bg-[#D1EB8F]/50 transition">Reset</a>
             </div>
         </form>
@@ -57,21 +57,21 @@
             <table class="w-full text-left border-collapse text-sm">
                 <thead>
                     <tr class="bg-[#F9F4EA] border-b border-[#78956A]/50 text-[#78956A] text-xs font-bold uppercase tracking-wider">
-                        <th class="p-4 pl-6">Pengguna</th>
-                        <th class="p-4">Role</th>
-                        <th class="p-4">Status & Info</th>
-                        <th class="p-4">Terdaftar</th>
-                        <th class="p-4 pr-6 text-right">Aksi Status</th>
+                        <th class="px-4 py-3 pl-6 whitespace-nowrap">Pengguna</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Role</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Status & Info</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Terdaftar</th>
+                        <th class="px-4 py-3 pr-6 text-right whitespace-nowrap">Aksi Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#78956A]/30">
                     @forelse($users as $u)
-                        <tr class="hover:bg-[#F9F4EA] transition">
-                            <td class="p-4 pl-6">
+                        <tr class="hover:bg-[#F9F4EA] transition align-middle">
+                            <td class="px-4 py-3 pl-6 align-middle whitespace-nowrap">
                                 <div class="font-bold text-[#46571A]">{{ $u->name }}</div>
                                 <div class="text-xs text-[#78956A]">{{ $u->email }}</div>
                             </td>
-                            <td class="p-4">
+                            <td class="px-4 py-3 align-middle whitespace-nowrap">
                                 @foreach($u->roles as $role)
                                     @php
                                         $badgeColor = match($role->name) {
@@ -80,12 +80,12 @@
                                             default => 'bg-[#D1EB8F] text-[#46571A]',
                                         };
                                     @endphp
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold {{ $badgeColor }}">
+                                    <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1 rounded-full text-xs font-semibold {{ $badgeColor }}">
                                         {{ ucfirst($role->name) }}
                                     </span>
                                 @endforeach
                             </td>
-                            <td class="p-4">
+                            <td class="px-4 py-3 align-middle">
                                 @if($u->nurseProfile && $u->nurseProfile->isTemporarilySuspended())
                                     <div x-data="{
                                         targetMs: {{ $u->nurseProfile->suspended_until->getTimestamp() * 1000 }},
@@ -103,7 +103,7 @@
                                             this.remainingText = `${h}j ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}d`;
                                         }
                                     }">
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#FF9ABC] text-[#46571A] border border-[#78956A]">
+                                        <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0 gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#FF9ABC] text-[#46571A] border border-[#78956A]">
                                             <span class="w-1.5 h-1.5 rounded-full bg-[#46571A]"></span>
                                             Suspend Sementara (1 Hari)
                                         </span>
@@ -120,18 +120,18 @@
                                         @endif
                                     </div>
                                 @elseif($u->status === 'active')
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#D1EB8F]/45 text-[#46571A] border border-[#78956A]/50">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-[#FF9ABC]"></span>
+                                    <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0 gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#D1EB8F]/45 text-[#46571A] border border-[#78956A]/50">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-[#46571A]"></span>
                                         Aktif
                                     </span>
                                     @if($u->nurseProfile)
-                                        <div class="text-[11px] text-[#78956A] mt-1">
+                                        <div class="text-[11px] text-[#78956A] mt-1 whitespace-nowrap">
                                             Status Nakes: {{ ucfirst($u->nurseProfile->verification_status) }} 
                                             ({{ $u->nurseProfile->is_online ? 'Sedang Bekerja' : 'Offline' }})
                                         </div>
                                     @endif
                                 @else
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#FF9ABC]/25 text-[#46571A] border border-[#FF9ABC]">
+                                    <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0 gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#FF9ABC]/25 text-[#46571A] border border-[#FF9ABC]">
                                         <span class="w-1.5 h-1.5 rounded-full bg-[#FF9ABC]"></span>
                                         Suspended
                                     </span>
@@ -142,10 +142,10 @@
                                     @endif
                                 @endif
                             </td>
-                            <td class="p-4 text-xs text-[#78956A]">
+                            <td class="px-4 py-3 align-middle text-xs text-[#78956A] whitespace-nowrap">
                                 {{ $u->created_at->format('d M Y') }}
                             </td>
-                            <td class="p-4 pr-6 text-right">
+                            <td class="px-4 py-3 pr-6 align-middle text-right whitespace-nowrap">
                                 @if(auth()->id() === $u->id)
                                     <span class="text-xs text-[#78956A] italic">Akun Anda</span>
                                 @else
@@ -153,7 +153,7 @@
                                         <form action="{{ route('admin.nurses.unsuspend', $u->nurseProfile->id) }}" method="POST" class="inline">
                                             @csrf
                                             <button type="submit"
-                                                class="px-3.5 py-1.5 rounded-xl bg-[#D1EB8F] hover:bg-[#FF9ABC] text-[#46571A] border border-[#78956A] text-xs font-bold transition cursor-pointer">
+                                                class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3.5 py-1.5 rounded-xl bg-[#D1EB8F] hover:bg-[#FF9ABC] text-[#46571A] border border-[#78956A] text-xs font-bold transition cursor-pointer">
                                                 Cabut Suspend
                                             </button>
                                         </form>
@@ -161,14 +161,14 @@
                                         <button 
                                             type="button"
                                             @click="openSuspend({{ $u->id }}, '{{ addslashes($u->name) }}')"
-                                            class="px-3 py-1.5 bg-[#FF9ABC]/25 hover:bg-[#FF9ABC]/40 text-[#46571A] border border-[#FF9ABC] rounded-xl text-xs font-bold transition">
+                                            class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1.5 bg-[#FF9ABC]/25 hover:bg-[#FF9ABC]/40 text-[#46571A] border border-[#FF9ABC] rounded-xl text-xs font-bold transition">
                                             Tangguhkan
                                         </button>
                                     @else
                                         <form action="{{ route('admin.users.toggleStatus', $u->id) }}" method="POST" class="inline">
                                             @csrf
                                             <input type="hidden" name="status" value="active">
-                                            <button type="submit" onclick="return confirm('Aktifkan kembali akun pengguna ini?')" class="px-3 py-1.5 bg-[#D1EB8F]/45 hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A]/50 rounded-xl text-xs font-bold transition">
+                                            <button type="submit" onclick="return confirm('Aktifkan kembali akun pengguna ini?')" class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1.5 bg-[#D1EB8F]/45 hover:bg-[#D1EB8F] text-[#46571A] border border-[#78956A]/50 rounded-xl text-xs font-bold transition">
                                                 Aktifkan
                                             </button>
                                         </form>
@@ -208,7 +208,7 @@
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t border-[#78956A]/50">
                     <button type="button" @click="suspendModal = false" class="px-4 py-2 text-[#46571A]/85 hover:bg-[#F9F4EA] rounded-xl text-sm font-semibold">Batal</button>
-                    <button type="submit" class="px-5 py-2 bg-[#FF9ABC] hover:bg-[#FF9ABC] text-[#46571A] rounded-xl text-sm font-bold shadow-md shadow-[#78956A]/25">Konfirmasi Tangguhkan</button>
+                    <button type="submit" class="px-5 py-2 bg-[#FF9ABC] hover:bg-[#FF9ABC]/85 text-[#46571A] rounded-xl text-sm font-bold shadow-md shadow-[#78956A]/25">Konfirmasi Tangguhkan</button>
                 </div>
             </form>
         </div>

@@ -56,16 +56,16 @@
 
     <!-- Filter Status -->
     <div class="flex items-center gap-2 border-b border-[#78956A]/50 pb-4 overflow-x-auto">
-        <a href="{{ route('admin.payouts.index') }}" class="px-4 py-2 rounded-xl text-sm font-semibold transition {{ !request('status') ? 'bg-[#78956A] text-[#F9F4EA]' : 'bg-white text-[#F9F4EA] hover:bg-[#F9F4EA]' }}">
+        <a href="{{ route('admin.payouts.index') }}" class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition {{ !request('status') ? 'bg-[#78956A] text-[#F9F4EA]' : 'bg-white text-[#46571A] border border-[#78956A]/30 hover:bg-[#F9F4EA]' }}">
             Semua
         </a>
-        <a href="{{ route('admin.payouts.index', ['status' => 'pending']) }}" class="px-4 py-2 rounded-xl text-sm font-semibold transition {{ request('status') === 'pending' ? 'bg-[#FF9ABC] text-[#46571A]' : 'bg-white text-[#46571A]/85 hover:bg-[#F9F4EA]' }}">
+        <a href="{{ route('admin.payouts.index', ['status' => 'pending']) }}" class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition {{ request('status') === 'pending' ? 'bg-[#FF9ABC] text-[#46571A]' : 'bg-white text-[#46571A]/85 border border-[#78956A]/30 hover:bg-[#F9F4EA]' }}">
             Pending Review ({{ $stats['pending'] }})
         </a>
-        <a href="{{ route('admin.payouts.index', ['status' => 'transferred']) }}" class="px-4 py-2 rounded-xl text-sm font-semibold transition {{ request('status') === 'transferred' ? 'bg-[#FF9ABC] text-[#46571A]' : 'bg-white text-[#46571A]/85 hover:bg-[#F9F4EA]' }}">
+        <a href="{{ route('admin.payouts.index', ['status' => 'transferred']) }}" class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition {{ request('status') === 'transferred' ? 'bg-[#FF9ABC] text-[#46571A]' : 'bg-white text-[#46571A]/85 border border-[#78956A]/30 hover:bg-[#F9F4EA]' }}">
             Ditransfer ({{ $stats['transferred'] }})
         </a>
-        <a href="{{ route('admin.payouts.index', ['status' => 'rejected']) }}" class="px-4 py-2 rounded-xl text-sm font-semibold transition {{ request('status') === 'rejected' ? 'bg-[#FF9ABC] text-[#46571A]' : 'bg-white text-[#46571A]/85 hover:bg-[#F9F4EA]' }}">
+        <a href="{{ route('admin.payouts.index', ['status' => 'rejected']) }}" class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition {{ request('status') === 'rejected' ? 'bg-[#FF9ABC] text-[#46571A]' : 'bg-white text-[#46571A]/85 border border-[#78956A]/30 hover:bg-[#F9F4EA]' }}">
             Ditolak ({{ $stats['rejected'] }})
         </a>
     </div>
@@ -76,66 +76,66 @@
             <table class="w-full text-left border-collapse text-sm">
                 <thead>
                     <tr class="bg-[#F9F4EA] border-b border-[#78956A]/50 text-[#78956A] text-xs font-bold uppercase tracking-wider">
-                        <th class="p-4 pl-6">ID & Tanggal</th>
-                        <th class="p-4">Perawat</th>
-                        <th class="p-4">Rekening Tujuan</th>
-                        <th class="p-4 text-right">Nominal</th>
-                        <th class="p-4">Status</th>
-                        <th class="p-4 pr-6 text-right">Aksi</th>
+                        <th class="px-4 py-3 pl-6 whitespace-nowrap">ID & Tanggal</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Perawat</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Rekening Tujuan</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">Nominal</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Status</th>
+                        <th class="px-4 py-3 pr-6 text-right whitespace-nowrap">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#78956A]/30">
                     @forelse($payouts as $p)
-                        <tr class="hover:bg-[#F9F4EA] transition">
-                            <td class="p-4 pl-6 font-mono text-xs">
+                        <tr class="hover:bg-[#F9F4EA] transition align-middle">
+                            <td class="px-4 py-3 pl-6 align-middle font-mono text-xs whitespace-nowrap">
                                 <span class="font-bold text-[#46571A]">#PO-{{ $p->id }}</span>
                                 <div class="text-[#78956A] text-[11px]">{{ $p->created_at->format('d/m/Y H:i') }}</div>
                             </td>
-                            <td class="p-4">
+                            <td class="px-4 py-3 align-middle whitespace-nowrap">
                                 <div class="font-semibold text-[#46571A]">{{ $p->nurseUser->name ?? '-' }}</div>
                                 <div class="text-xs text-[#78956A]">{{ $p->nurseUser->email ?? '-' }}</div>
                             </td>
-                            <td class="p-4">
+                            <td class="px-4 py-3 align-middle whitespace-nowrap">
                                 <div class="font-bold text-[#46571A]">{{ $p->bank_name }} - {{ $p->account_number }}</div>
                                 <div class="text-xs text-[#78956A]">a.n. {{ $p->account_holder }}</div>
                             </td>
-                            <td class="p-4 text-right font-black text-[#46571A]">
+                            <td class="px-4 py-3 align-middle text-right font-black text-[#46571A] whitespace-nowrap">
                                 Rp {{ number_format($p->amount, 0, ',', '.') }}
                             </td>
-                            <td class="p-4">
+                            <td class="px-4 py-3 align-middle whitespace-nowrap">
                                 @if($p->status === 'pending')
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#D1EB8F]/70 text-[#46571A]">
+                                    <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1 rounded-full text-xs font-semibold bg-[#D1EB8F]/70 text-[#46571A]">
                                         Pending Review
                                     </span>
                                 @elseif($p->status === 'transferred')
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#D1EB8F] text-[#46571A]">
+                                    <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1 rounded-full text-xs font-semibold bg-[#D1EB8F] text-[#46571A]">
                                         Ditransfer
                                     </span>
                                     <div class="text-[11px] text-[#78956A] mt-1">{{ optional($p->transferred_at)->format('d/m/Y') }}</div>
                                 @elseif($p->status === 'rejected')
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-[#FF9ABC]/40 text-[#46571A]">
+                                    <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1 rounded-full text-xs font-semibold bg-[#FF9ABC]/40 text-[#46571A]">
                                         Ditolak
                                     </span>
                                 @endif
                             </td>
-                            <td class="p-4 pr-6 text-right">
+                            <td class="px-4 py-3 pr-6 align-middle text-right whitespace-nowrap">
                                 @if($p->status === 'pending')
                                     <div class="flex items-center justify-end gap-2">
                                         <button 
                                             type="button"
                                             @click="openTransfer({{ $p->id }}, 'Rp {{ number_format($p->amount, 0, ',', '.') }}', '{{ addslashes($p->nurseUser->name ?? $p->nurse->name ?? 'Perawat') }}', '{{ addslashes($p->bank_name) }}', '{{ addslashes($p->account_number) }}', '{{ addslashes($p->account_holder) }}')"
-                                            class="px-3 py-1.5 bg-[#FF9ABC] hover:bg-[#FF9ABC] text-[#46571A] rounded-xl text-xs font-bold shadow-sm transition">
+                                            class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1.5 bg-[#FF9ABC] hover:bg-[#FF9ABC]/85 text-[#46571A] rounded-xl text-xs font-bold shadow-sm transition">
                                             Transfer
                                         </button>
                                         <button 
                                             type="button"
                                             @click="openReject({{ $p->id }}, 'Rp {{ number_format($p->amount, 0, ',', '.') }}', '{{ addslashes($p->nurseUser->name ?? $p->nurse->name ?? 'Perawat') }}')"
-                                            class="px-3 py-1.5 bg-[#FF9ABC]/25 hover:bg-[#FF9ABC]/40 text-[#46571A] border border-[#FF9ABC] rounded-xl text-xs font-bold transition">
+                                            class="inline-flex items-center justify-center whitespace-nowrap shrink-0 px-3 py-1.5 bg-[#FF9ABC]/25 hover:bg-[#FF9ABC]/40 text-[#46571A] border border-[#FF9ABC] rounded-xl text-xs font-bold transition">
                                             Tolak
                                         </button>
                                     </div>
                                 @elseif($p->status === 'transferred' && $p->proof_path)
-                                    <a href="{{ asset('storage/' . $p->proof_path) }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-[#78956A] hover:text-[#46571A] font-semibold underline">
+                                    <a href="{{ asset('storage/' . $p->proof_path) }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-[#78956A] hover:text-[#46571A] font-semibold underline whitespace-nowrap">
                                         Lihat Bukti
                                     </a>
                                 @elseif($p->status === 'rejected')
@@ -185,7 +185,7 @@
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t border-[#78956A]/50">
                     <button type="button" @click="transferModal = false" class="px-4 py-2 text-[#46571A]/85 hover:bg-[#F9F4EA] rounded-xl text-sm font-semibold">Batal</button>
-                    <button type="submit" class="px-5 py-2 bg-[#FF9ABC] hover:bg-[#FF9ABC] text-[#46571A] rounded-xl text-sm font-bold shadow-md shadow-[#78956A]/25">Konfirmasi Transfer</button>
+                    <button type="submit" class="px-5 py-2 bg-[#FF9ABC] hover:bg-[#FF9ABC]/85 text-[#46571A] rounded-xl text-sm font-bold shadow-md shadow-[#78956A]/25">Konfirmasi Transfer</button>
                 </div>
             </form>
         </div>
@@ -209,7 +209,7 @@
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t border-[#78956A]/50">
                     <button type="button" @click="rejectModal = false" class="px-4 py-2 text-[#46571A]/85 hover:bg-[#F9F4EA] rounded-xl text-sm font-semibold">Batal</button>
-                    <button type="submit" class="px-5 py-2 bg-[#FF9ABC] hover:bg-[#FF9ABC] text-[#46571A] rounded-xl text-sm font-bold shadow-md shadow-[#78956A]/25">Tolak & Kembalikan Saldo</button>
+                    <button type="submit" class="px-5 py-2 bg-[#FF9ABC] hover:bg-[#FF9ABC]/85 text-[#46571A] rounded-xl text-sm font-bold shadow-md shadow-[#78956A]/25">Tolak & Kembalikan Saldo</button>
                 </div>
             </form>
         </div>

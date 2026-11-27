@@ -107,7 +107,7 @@
                         Batal
                     </a>
                     <button type="submit"
-                        class="px-5 py-2.5 rounded-xl bg-[#FF9ABC] hover:bg-[#FF9ABC] text-[#46571A] font-bold text-xs shadow-xs transition">
+                        class="px-5 py-2.5 rounded-xl bg-[#FF9ABC] hover:bg-[#FF9ABC]/85 text-[#46571A] font-bold text-xs shadow-xs transition">
                         Simpan Layanan Baru
                     </button>
                 </div>
